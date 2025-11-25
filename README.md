@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # audio_x
 
 A new Flutter project.
@@ -14,3 +15,7 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+=======
+# Audio-X
+A new project started called Audio X 
+>>>>>>> f39fa7e14afdee5408fb845eb410f8b4c12dafff

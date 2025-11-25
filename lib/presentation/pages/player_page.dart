@@ -20,6 +20,7 @@ class PlayerPage extends StatefulWidget {
 class _PlayerPageState extends State<PlayerPage> {
   final LyricsService _lyricsService = LyricsService();
   Lyrics? _lyrics;
+  bool _showLyrics = false;
   bool _isLoadingLyrics = false;
 
   @override
@@ -91,14 +92,15 @@ class _PlayerPageState extends State<PlayerPage> {
       setState(() {
         _lyrics = lyrics;
         _isLoadingLyrics = false;
+        // Don't auto-switch to lyrics - let user tap the icon
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('✅ Found ${lyrics.lines.length} lyrics lines!')));
-
-      // Auto-open lyrics
-      _showLyricsSheet();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ Found ${lyrics.lines.length} lyrics lines! Tap lyrics icon to view'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
     } else {
       if (mounted) {
         setState(() {
@@ -112,63 +114,6 @@ class _PlayerPageState extends State<PlayerPage> {
     }
   }
 
-  void _showLyricsSheet() {
-    if (_lyrics == null) return;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              // Handle bar
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(color: Colors.grey[400], borderRadius: BorderRadius.circular(2)),
-              ),
-              // Lyrics header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Lyrics',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              // Lyrics content
-              Expanded(
-                child: Consumer<AudioController>(
-                  builder: (context, controller, _) => LyricsView(
-                    lyrics: _lyrics!,
-                    currentPosition: controller.position,
-                    onSeek: (position) => controller.seek(position),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -177,6 +122,18 @@ class _PlayerPageState extends State<PlayerPage> {
         centerTitle: true,
         leading: IconButton(icon: const Icon(Icons.keyboard_arrow_down), onPressed: () => Navigator.of(context).pop()),
         actions: [
+          // Lyrics toggle button - only show if lyrics available
+          if (_lyrics != null && !_isLoadingLyrics)
+            IconButton(
+              icon: Icon(_showLyrics ? Icons.album : Icons.lyrics, color: Theme.of(context).primaryColor),
+              tooltip: _showLyrics ? 'Show Album Art' : 'Show Lyrics',
+              onPressed: () {
+                setState(() {
+                  _showLyrics = !_showLyrics;
+                });
+              },
+            ),
+
           // 3-dot menu
           PopupMenuButton<String>(
             onSelected: (value) async {
@@ -215,91 +172,68 @@ class _PlayerPageState extends State<PlayerPage> {
 
           return Column(
             children: [
-              // Album Art Section (Always visible)
+              // Main content area (Album Art OR Lyrics)
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Artwork
-                      AspectRatio(
-                        aspectRatio: 1,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            color: Colors.grey[200],
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: currentSong.localArtworkPath != null
-                              ? Image.file(File(currentSong.localArtworkPath!), fit: BoxFit.cover)
-                              : const Icon(Icons.music_note, size: 100, color: Colors.grey),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Title & Artist
-                      Text(
-                        currentSong.title,
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        currentSong.artist,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
+                child: _showLyrics && _lyrics != null
+                    ? LyricsView(
+                        lyrics: _lyrics!,
+                        currentPosition: controller.position,
+                        onSeek: (position) => controller.seek(position),
+                      )
+                    : _buildAlbumArtSection(currentSong),
               ),
 
-              // Show Lyrics Button (Below album art, above progress bar)
-              if (_lyrics != null && !_isLoadingLyrics)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                  child: OutlinedButton.icon(
-                    onPressed: _showLyricsSheet,
-                    icon: const Icon(Icons.lyrics),
-                    label: const Text('Show Lyrics'),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 44),
-                      foregroundColor: Theme.of(context).primaryColor,
-                      side: BorderSide(color: Theme.of(context).primaryColor),
-                    ),
-                  ),
-                ),
-
-              if (_isLoadingLyrics)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                      const SizedBox(width: 12),
-                      Text('Loading lyrics...', style: TextStyle(color: Colors.grey[600])),
-                    ],
-                  ),
-                ),
-
-              // Player Controls
+              // Player controls section
               _buildPlayerControls(controller),
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildAlbumArtSection(Song currentSong) {
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Artwork
+          AspectRatio(
+            aspectRatio: 1,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                color: Colors.grey[200],
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10)),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: currentSong.localArtworkPath != null
+                  ? Image.file(File(currentSong.localArtworkPath!), fit: BoxFit.cover)
+                  : const Icon(Icons.music_note, size: 100, color: Colors.grey),
+            ),
+          ),
+          const SizedBox(height: 40),
+
+          // Title & Artist
+          Text(
+            currentSong.title,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            currentSong.artist,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }

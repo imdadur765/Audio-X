@@ -70,16 +70,32 @@ class MainActivity : FlutterActivity() {
                     }
                 }
                 "setPlaylist" -> {
-                    val uris = call.argument<List<String>>("uris")
+                    val songs = call.argument<List<Map<String, Any>>>("songs")
                     val initialIndex = call.argument<Int>("initialIndex") ?: 0
-                    if (uris != null) {
-                        val mediaItems = uris.map { MediaItem.fromUri(it) }
+                    if (songs != null) {
+                        val mediaItems = songs.map { song ->
+                            val uri = song["uri"] as? String ?: ""
+                            val title = song["title"] as? String ?: "Unknown Title"
+                            val artist = song["artist"] as? String ?: "Unknown Artist"
+                            val artworkUri = song["artworkUri"] as? String
+
+                            val metadata = androidx.media3.common.MediaMetadata.Builder()
+                                .setTitle(title)
+                                .setArtist(artist)
+                                .setArtworkUri(if (artworkUri != null) android.net.Uri.parse(artworkUri) else null)
+                                .build()
+
+                            MediaItem.Builder()
+                                .setUri(uri)
+                                .setMediaMetadata(metadata)
+                                .build()
+                        }
                         controller.setMediaItems(mediaItems, initialIndex, 0)
                         controller.prepare()
                         controller.play()
                         result.success(null)
                     } else {
-                        result.error("INVALID_ARGUMENT", "URIs are null", null)
+                        result.error("INVALID_ARGUMENT", "Songs list is null", null)
                     }
                 }
                 "getSongs" -> {

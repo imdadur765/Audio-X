@@ -25,13 +25,15 @@ class SongAdapter extends TypeAdapter<Song> {
       artworkUri: fields[5] as String?,
       duration: fields[6] as int,
       localArtworkPath: fields[7] as String?,
+      lyricsPath: fields[8] as String?,
+      lyricsSource: fields[9] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Song obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -47,7 +49,11 @@ class SongAdapter extends TypeAdapter<Song> {
       ..writeByte(6)
       ..write(obj.duration)
       ..writeByte(7)
-      ..write(obj.localArtworkPath);
+      ..write(obj.localArtworkPath)
+      ..writeByte(8)
+      ..write(obj.lyricsPath)
+      ..writeByte(9)
+      ..write(obj.lyricsSource);
   }
 
   @override

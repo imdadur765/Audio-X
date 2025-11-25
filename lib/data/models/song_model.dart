@@ -28,6 +28,12 @@ class Song extends HiveObject {
   @HiveField(7)
   String? localArtworkPath;
 
+  @HiveField(8)
+  String? lyricsPath; // Path to manual .lrc file
+
+  @HiveField(9)
+  String? lyricsSource; // 'lrclib', 'manual', 'cached', null
+
   Song({
     required this.id,
     required this.title,
@@ -37,5 +43,7 @@ class Song extends HiveObject {
     this.artworkUri,
     required this.duration,
     this.localArtworkPath,
+    this.lyricsPath,
+    this.lyricsSource,
   });
 }

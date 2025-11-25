@@ -46,6 +46,10 @@ dependencies:
   path_provider: ^2.1.1
   permission_handler: ^11.0.1
   get_it: ^7.6.0
+  
+  # Lyrics Feature
+  http: ^1.1.0
+  file_picker: ^10.3.6  # Working version from I-Music project
 
 dev_dependencies:
   flutter_test:

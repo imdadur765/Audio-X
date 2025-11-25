@@ -27,9 +27,9 @@ class AudioHandler {
     }
   }
 
-  Future<void> setPlaylist(List<String> uris, {int initialIndex = 0}) async {
+  Future<void> setPlaylist(List<Map<String, dynamic>> songs, {int initialIndex = 0}) async {
     try {
-      await _channel.invokeMethod('setPlaylist', {'uris': uris, 'initialIndex': initialIndex});
+      await _channel.invokeMethod('setPlaylist', {'songs': songs, 'initialIndex': initialIndex});
     } on PlatformException catch (e) {
       print("Failed to set playlist: '${e.message}'.");
     }

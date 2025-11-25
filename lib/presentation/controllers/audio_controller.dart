@@ -153,10 +153,20 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       // Prepare player in paused state
       final index = _songs.indexOf(song);
       if (index != -1) {
-        final uris = _songs.map((s) => s.uri).toList();
-
         // Set playlist WITHOUT auto-playing
-        await _audioHandler.setPlaylist(uris, initialIndex: index);
+        final songMaps = _songs
+            .map(
+              (s) => {
+                'id': s.id,
+                'title': s.title,
+                'artist': s.artist,
+                'album': s.album,
+                'uri': s.uri,
+                'artworkUri': s.artworkUri,
+              },
+            )
+            .toList();
+        await _audioHandler.setPlaylist(songMaps, initialIndex: index);
 
         // IMPORTANT: Pause immediately to prevent auto-play
         await _audioHandler.pause();
@@ -218,8 +228,19 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> playSong(Song song) async {
     final index = _songs.indexOf(song);
     if (index != -1) {
-      final uris = _songs.map((s) => s.uri).toList();
-      await _audioHandler.setPlaylist(uris, initialIndex: index);
+      final songMaps = _songs
+          .map(
+            (s) => {
+              'id': s.id,
+              'title': s.title,
+              'artist': s.artist,
+              'album': s.album,
+              'uri': s.uri,
+              'artworkUri': s.artworkUri,
+            },
+          )
+          .toList();
+      await _audioHandler.setPlaylist(songMaps, initialIndex: index);
       _isPlaying = true;
       _currentSong = song;
       _duration = Duration(milliseconds: song.duration);

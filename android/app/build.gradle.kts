@@ -24,8 +24,8 @@ android {
         applicationId = "com.example.audio_x"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 24
+        targetSdk = 35  // Target Android 15 for Play Store compliance
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -48,4 +48,5 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:$media3_version")
     implementation("androidx.media3:media3-session:$media3_version")
     implementation("androidx.media3:media3-common:$media3_version")
+    implementation("androidx.media:media:1.6.0")
 }

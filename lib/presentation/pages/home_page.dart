@@ -17,12 +17,21 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late HomeController _homeController;
+  final ScrollController _scrollController = ScrollController();
+  double _scrollOffset = 0;
 
   @override
   void initState() {
     super.initState();
     _homeController = HomeController();
+    _scrollController.addListener(_onScroll);
     _loadData();
+  }
+
+  void _onScroll() {
+    setState(() {
+      _scrollOffset = _scrollController.offset;
+    });
   }
 
   Future<void> _loadData() async {
@@ -42,6 +51,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _homeController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -58,6 +68,7 @@ class _HomePageState extends State<HomePage> {
     return ChangeNotifierProvider.value(
       value: _homeController,
       child: Scaffold(
+        backgroundColor: Colors.grey[50],
         body: Consumer2<HomeController, AudioController>(
           builder: (context, homeController, audioController, child) {
             if (audioController.songs.isEmpty) {
@@ -65,10 +76,12 @@ class _HomePageState extends State<HomePage> {
             }
 
             if (homeController.isLoading) {
-              return const Center(child: CircularProgressIndicator());
+              return _buildLoadingState();
             }
 
             return CustomScrollView(
+              controller: _scrollController,
+              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
               slivers: [
                 _buildHeader(),
                 _buildRecentlyPlayed(homeController, audioController),
@@ -76,7 +89,7 @@ class _HomePageState extends State<HomePage> {
                 _buildQuickPlaylists(homeController, audioController),
                 _buildGenreSections(homeController, audioController),
                 _buildAllSongsSection(homeController, audioController),
-                const SliverToBoxAdapter(child: SizedBox(height: 80)), // Space for mini player
+                const SliverToBoxAdapter(child: SizedBox(height: 120)), // Increased bottom padding
               ],
             );
           },
@@ -86,11 +99,41 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildHeader() {
+    final opacity = (_scrollOffset / 100).clamp(0.0, 1.0);
+
     return SliverAppBar(
-      expandedHeight: 140,
+      expandedHeight: 200,
       floating: false,
       pinned: true,
+      backgroundColor: Colors.white,
+      elevation: opacity * 4,
+      shadowColor: Colors.black.withOpacity(0.1),
+      actions: [
+        Container(
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(opacity),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              if (opacity > 0.5)
+                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5)),
+            ],
+          ),
+          child: IconButton(
+            icon: Icon(Icons.search_rounded, color: opacity > 0.5 ? Colors.deepPurple : Colors.white),
+            onPressed: () {},
+          ),
+        ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
+        title: AnimatedOpacity(
+          opacity: opacity,
+          duration: const Duration(milliseconds: 200),
+          child: Text(
+            _getGreeting(),
+            style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+        ),
         background: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -101,7 +144,7 @@ class _HomePageState extends State<HomePage> {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -110,25 +153,49 @@ class _HomePageState extends State<HomePage> {
                     _getGreeting(),
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 32,
+                      fontSize: 36,
                       fontWeight: FontWeight.bold,
-                      shadows: [Shadow(offset: Offset(0, 2), blurRadius: 4, color: Colors.black26)],
+                      shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  const Text('Your personal music feed', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  const SizedBox(height: 8),
+                  const Text('Your personal music feed', style: TextStyle(color: Colors.white70, fontSize: 16)),
                 ],
               ),
             ),
           ),
         ),
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.search_rounded, color: Colors.white),
-          onPressed: () {},
-        ),
-      ],
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(color: Colors.deepPurple.shade100, shape: BoxShape.circle),
+            child: const Icon(Icons.music_note_rounded, size: 40, color: Colors.deepPurple),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Loading Your Music',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.deepPurple.shade800),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: 30,
+            height: 30,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple.shade600),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -142,11 +209,14 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Padding(
-            padding: EdgeInsets.fromLTRB(16, 24, 16, 12),
-            child: Text('Recently Played', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            padding: EdgeInsets.fromLTRB(24, 32, 24, 16),
+            child: Text(
+              'Recently Played',
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black87),
+            ),
           ),
           SizedBox(
-            height: 200,
+            height: 190, // Reduced height
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -163,60 +233,98 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildRecentSongCard(Song song, AudioController audioController) {
+    final isCurrentlyPlaying = audioController.currentSong?.id == song.id;
+    final isPlaying = isCurrentlyPlaying && audioController.isPlaying;
+
     return GestureDetector(
-      onTap: () async {
-        await audioController.playSong(song);
-        await _homeController.trackRecentlyPlayed(song.id);
-        if (mounted) {
-          Navigator.of(context).push(MaterialPageRoute(builder: (context) => PlayerPage(song: song)));
-        }
-      },
+      onTap: () => _playSong(song, audioController),
       child: Container(
-        width: 140,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
+        width: 140, // Reduced width
+        margin: const EdgeInsets.symmetric(horizontal: 6), // Reduced margin
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Hero(
-              tag: 'song_${song.id}',
-              child: Container(
-                width: 140,
-                height: 140,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 4)),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: song.localArtworkPath != null
-                      ? Image.file(File(song.localArtworkPath!), fit: BoxFit.cover)
-                      : Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Colors.deepPurple.shade300, Colors.purple.shade500],
+            Stack(
+              children: [
+                Hero(
+                  tag: 'song_${song.id}',
+                  child: Container(
+                    width: 140, // Reduced width
+                    height: 140, // Reduced height
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 6)),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: song.localArtworkPath != null
+                          ? Image.file(
+                              File(song.localArtworkPath!),
+                              fit: BoxFit.cover,
+                              cacheWidth: 280, // Optimized image loading
+                              cacheHeight: 280,
+                            )
+                          : Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [Colors.deepPurple.shade300, Colors.purple.shade500],
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.music_note_rounded,
+                                size: 40,
+                                color: Colors.white70,
+                              ), // Reduced icon
                             ),
-                          ),
-                          child: const Icon(Icons.music_note_rounded, size: 48, color: Colors.white70),
-                        ),
+                    ),
+                  ),
                 ),
-              ),
+                if (isPlaying)
+                  Positioned(
+                    top: 6, // Adjusted position
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.all(4), // Reduced padding
+                      decoration: BoxDecoration(
+                        color: Colors.deepPurple,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.deepPurple.withOpacity(0.5),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.volume_up_rounded, color: Colors.white, size: 14), // Reduced icon
+                    ),
+                  ),
+              ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 8), // Reduced spacing
             Text(
               song.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13, // Reduced font
+                color: Colors.black87,
+              ),
             ),
+            const SizedBox(height: 2),
             Text(
               song.artist,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 11, // Reduced font
+              ),
             ),
           ],
         ),
@@ -229,15 +337,22 @@ class _HomePageState extends State<HomePage> {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
-    final artists = homeController.topArtists.values.take(6).toList();
+    final artists = homeController.topArtists.values.take(4).toList(); // Reduced to 4 artists
 
     return SliverToBoxAdapter(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Padding(
-            padding: EdgeInsets.fromLTRB(16, 24, 16, 12),
-            child: Text('Your Top Artists', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            padding: EdgeInsets.fromLTRB(24, 24, 24, 12), // Reduced padding
+            child: Text(
+              'Your Top Artists',
+              style: TextStyle(
+                fontSize: 22, // Reduced font
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
           ),
           GridView.builder(
             shrinkWrap: true,
@@ -245,8 +360,8 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              childAspectRatio: 1.5,
-              crossAxisSpacing: 12,
+              childAspectRatio: 1.4, // Slightly reduced aspect ratio
+              crossAxisSpacing: 12, // Reduced spacing
               mainAxisSpacing: 12,
             ),
             itemCount: artists.length,
@@ -272,14 +387,18 @@ class _HomePageState extends State<HomePage> {
       },
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16), // Reduced radius
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Colors.deepPurple.shade400.withValues(alpha: 0.8), Colors.purple.shade600.withValues(alpha: 0.8)],
+            colors: [Colors.deepPurple.shade400, Colors.purple.shade600],
           ),
           boxShadow: [
-            BoxShadow(color: Colors.deepPurple.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4)),
+            BoxShadow(
+              color: Colors.deepPurple.withOpacity(0.3),
+              blurRadius: 12, // Reduced blur
+              offset: const Offset(0, 6), // Reduced offset
+            ),
           ],
         ),
         child: Stack(
@@ -287,7 +406,7 @@ class _HomePageState extends State<HomePage> {
             // Background image if available
             if (artist.imageUrl != null)
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 child: Image.network(
                   artist.imageUrl!,
                   fit: BoxFit.cover,
@@ -299,17 +418,17 @@ class _HomePageState extends State<HomePage> {
             // Gradient overlay
             Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
                 ),
               ),
             ),
             // Content
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(12), // Reduced padding
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -321,12 +440,24 @@ class _HomePageState extends State<HomePage> {
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      shadows: [Shadow(offset: Offset(0, 1), blurRadius: 4, color: Colors.black45)],
+                      fontSize: 16, // Reduced font
+                      shadows: [
+                        Shadow(
+                          offset: Offset(0, 1), // Reduced shadow
+                          blurRadius: 4,
+                          color: Colors.black45,
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text('${artist.songCount} songs', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  const SizedBox(height: 2), // Reduced spacing
+                  Text(
+                    '${artist.songCount} songs',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11, // Reduced font
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -342,14 +473,21 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Padding(
-            padding: EdgeInsets.fromLTRB(16, 24, 16, 12),
-            child: Text('Made For You', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            padding: EdgeInsets.fromLTRB(24, 24, 24, 12), // Reduced padding
+            child: Text(
+              'Made For You',
+              style: TextStyle(
+                fontSize: 22, // Reduced font
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
           ),
           SizedBox(
-            height: 180,
+            height: 160, // Reduced height
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
                 _buildPlaylistCard(
                   'Most Played',
@@ -403,31 +541,49 @@ class _HomePageState extends State<HomePage> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 160,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
+        width: 150, // Reduced width
+        margin: const EdgeInsets.symmetric(horizontal: 6), // Reduced margin
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16), // Reduced radius
           gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: gradientColors),
           boxShadow: [
-            BoxShadow(color: gradientColors.first.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 6)),
+            BoxShadow(
+              color: gradientColors.first.withOpacity(0.4),
+              blurRadius: 12, // Reduced blur
+              offset: const Offset(0, 6), // Reduced offset
+            ),
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16), // Reduced padding
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(icon, color: Colors.white, size: 48),
+              Container(
+                padding: const EdgeInsets.all(10), // Reduced padding
+                decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                child: Icon(icon, color: Colors.white, size: 26), // Reduced icon
+              ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16, // Reduced font
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  const SizedBox(height: 4), // Reduced spacing
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11, // Reduced font
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -442,11 +598,14 @@ class _HomePageState extends State<HomePage> {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
+    // Limit to 3 genres to prevent overflow
+    final limitedGenres = homeController.genreSongs.entries.take(3).toList();
+
     return SliverList(
       delegate: SliverChildBuilderDelegate((context, index) {
-        final entry = homeController.genreSongs.entries.elementAt(index);
+        final entry = limitedGenres[index];
         return _buildGenreSection(entry.key, entry.value, audioController);
-      }, childCount: homeController.genreSongs.length),
+      }, childCount: limitedGenres.length),
     );
   }
 
@@ -455,15 +614,22 @@ class _HomePageState extends State<HomePage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-          child: Text(genre, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 12), // Reduced padding
+          child: Text(
+            genre,
+            style: const TextStyle(
+              fontSize: 20, // Reduced font
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
         ),
         SizedBox(
-          height: 160,
+          height: 150, // Reduced height
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: songs.take(10).length,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: songs.take(8).length, // Reduced items
             itemBuilder: (context, index) {
               final song = songs[index];
               return _buildGenreSongCard(song, audioController);
@@ -475,45 +641,73 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildGenreSongCard(Song song, AudioController audioController) {
+    final isCurrentlyPlaying = audioController.currentSong?.id == song.id;
+    final isPlaying = isCurrentlyPlaying && audioController.isPlaying;
+
     return GestureDetector(
-      onTap: () async {
-        await audioController.playSong(song);
-        await _homeController.trackRecentlyPlayed(song.id);
-        if (mounted) {
-          Navigator.of(context).push(MaterialPageRoute(builder: (context) => PlayerPage(song: song)));
-        }
-      },
+      onTap: () => _playSong(song, audioController),
       child: Container(
-        width: 120,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
+        width: 120, // Reduced width
+        margin: const EdgeInsets.symmetric(horizontal: 6), // Reduced margin
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 6, offset: const Offset(0, 3)),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: song.localArtworkPath != null
-                    ? Image.file(File(song.localArtworkPath!), fit: BoxFit.cover)
-                    : Container(
-                        color: Colors.deepPurple.shade100,
-                        child: const Icon(Icons.music_note_rounded, size: 40, color: Colors.deepPurple),
+            Stack(
+              children: [
+                Container(
+                  width: 120, // Reduced width
+                  height: 120, // Reduced height
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12), // Reduced radius
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 8, // Reduced blur
+                        offset: const Offset(0, 4), // Reduced offset
                       ),
-              ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: song.localArtworkPath != null
+                        ? Image.file(
+                            File(song.localArtworkPath!),
+                            fit: BoxFit.cover,
+                            cacheWidth: 240, // Optimized image loading
+                            cacheHeight: 240,
+                          )
+                        : Container(
+                            color: Colors.deepPurple.shade100,
+                            child: const Icon(
+                              Icons.music_note_rounded,
+                              size: 32,
+                              color: Colors.deepPurple,
+                            ), // Reduced icon
+                          ),
+                  ),
+                ),
+                if (isPlaying)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.all(3), // Reduced padding
+                      decoration: BoxDecoration(color: Colors.deepPurple, shape: BoxShape.circle),
+                      child: const Icon(Icons.volume_up_rounded, color: Colors.white, size: 12), // Reduced icon
+                    ),
+                  ),
+              ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 6), // Reduced spacing
             Text(
               song.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 12, // Reduced font
+                color: Colors.black87,
+              ),
             ),
           ],
         ),
@@ -526,112 +720,242 @@ class _HomePageState extends State<HomePage> {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
+    // Limit songs to prevent overflow
+    final limitedSongs = homeController.allSongs.take(20).toList();
+
     return SliverList(
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          if (index == 0) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('All Songs', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                  TextButton.icon(
-                    onPressed: () async {
-                      // Shuffle all
-                      final songs = List<Song>.from(homeController.allSongs)..shuffle();
-                      await audioController.playSong(songs.first);
-                      // Note: In a real app, we'd set the whole queue
-                    },
-                    icon: const Icon(Icons.shuffle_rounded),
-                    label: const Text('Shuffle'),
+      delegate: SliverChildBuilderDelegate((context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 12), // Reduced padding
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'All Songs',
+                  style: TextStyle(
+                    fontSize: 22, // Reduced font
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
                   ),
-                ],
-              ),
-            );
-          }
-
-          final song = homeController.allSongs[index - 1];
-          final isPlaying = audioController.currentSong?.id == song.id;
-
-          return ListTile(
-            leading: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: Colors.grey.withOpacity(0.1)),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: song.localArtworkPath != null
-                    ? Image.file(
-                        File(song.localArtworkPath!),
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(Icons.music_note, color: Colors.grey[400]);
-                        },
-                      )
-                    : Icon(Icons.music_note, color: Colors.grey[400]),
-              ),
+                ),
+                GestureDetector(
+                  onTap: () async {
+                    final songs = List<Song>.from(homeController.allSongs)..shuffle();
+                    await audioController.playSong(songs.first);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Reduced padding
+                    decoration: BoxDecoration(
+                      color: Colors.deepPurple,
+                      borderRadius: BorderRadius.circular(10), // Reduced radius
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.shuffle_rounded, color: Colors.white, size: 16), // Reduced icon
+                        SizedBox(width: 4), // Reduced spacing
+                        Text(
+                          'Shuffle',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12, // Reduced font
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-            title: Text(
-              song.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontWeight: isPlaying ? FontWeight.bold : FontWeight.w500,
-                color: isPlaying ? Colors.deepPurple : null,
-              ),
-            ),
-            subtitle: Text(
-              song.artist,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            ),
-            trailing: isPlaying
-                ? const Icon(Icons.graphic_eq, color: Colors.deepPurple)
-                : IconButton(icon: const Icon(Icons.more_vert_rounded), onPressed: () {}),
-            onTap: () async {
-              await audioController.playSong(song);
-              await _homeController.trackRecentlyPlayed(song.id);
-              if (mounted) {
-                Navigator.of(context).push(MaterialPageRoute(builder: (context) => PlayerPage(song: song)));
-              }
-            },
           );
-        },
-        childCount: homeController.allSongs.length + 1, // +1 for header
-      ),
+        }
+
+        final song = limitedSongs[index - 1];
+        final isCurrentlyPlaying = audioController.currentSong?.id == song.id;
+        final isPlaying = isCurrentlyPlaying && audioController.isPlaying;
+
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2), // Reduced margin
+          decoration: BoxDecoration(
+            color: isCurrentlyPlaying ? Colors.deepPurple.withOpacity(0.05) : Colors.white,
+            borderRadius: BorderRadius.circular(12), // Reduced radius
+            boxShadow: [
+              if (!isCurrentlyPlaying)
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 6, // Reduced blur
+                  offset: const Offset(0, 1), // Reduced offset
+                ),
+            ],
+            border: Border.all(
+              color: isCurrentlyPlaying ? Colors.deepPurple.withOpacity(0.3) : Colors.transparent,
+              width: 1,
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _playSong(song, audioController),
+              child: Padding(
+                padding: const EdgeInsets.all(10), // Reduced padding
+                child: Row(
+                  children: [
+                    // Song Artwork
+                    Stack(
+                      children: [
+                        Container(
+                          width: 44, // Reduced size
+                          height: 44,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8), // Reduced radius
+                            color: Colors.grey.shade100,
+                            image: song.localArtworkPath != null
+                                ? DecorationImage(image: FileImage(File(song.localArtworkPath!)), fit: BoxFit.cover)
+                                : null,
+                          ),
+                          child: song.localArtworkPath == null
+                              ? const Center(
+                                  child: Icon(Icons.music_note_rounded, color: Colors.grey, size: 18),
+                                ) // Reduced icon
+                              : null,
+                        ),
+                        if (isPlaying)
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.4),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.equalizer_rounded, color: Colors.white, size: 16), // Reduced icon
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(width: 10), // Reduced spacing
+                    // Song Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            song.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: isCurrentlyPlaying ? Colors.deepPurple : Colors.black87,
+                              fontWeight: isCurrentlyPlaying ? FontWeight.w700 : FontWeight.w600,
+                              fontSize: 14, // Reduced font
+                            ),
+                          ),
+                          const SizedBox(height: 1), // Reduced spacing
+                          Text(
+                            song.artist,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: isCurrentlyPlaying ? Colors.deepPurple.shade600 : Colors.grey.shade600,
+                              fontSize: 11, // Reduced font
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Playing Indicator
+                    if (isPlaying)
+                      TweenAnimationBuilder(
+                        tween: Tween<double>(begin: 0.8, end: 1.2),
+                        duration: const Duration(milliseconds: 500),
+                        builder: (context, double value, child) {
+                          return Transform.scale(
+                            scale: value,
+                            child: Icon(Icons.volume_up_rounded, color: Colors.deepPurple, size: 16), // Reduced icon
+                          );
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }, childCount: limitedSongs.length + 1),
     );
+  }
+
+  // Helper method to play song and navigate
+  Future<void> _playSong(Song song, AudioController audioController) async {
+    await audioController.playSong(song);
+    await _homeController.trackRecentlyPlayed(song.id);
+    if (mounted) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (context) => PlayerPage(song: song)));
+    }
   }
 
   Widget _buildEmptyState(AudioController audioController) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: const EdgeInsets.all(24.0), // Reduced padding
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.library_music_outlined, size: 80, color: Colors.deepPurple.withValues(alpha: 0.5)),
-            const SizedBox(height: 24),
-            const Text('No Music Found', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
+            Container(
+              width: 120, // Reduced size
+              height: 120,
+              decoration: BoxDecoration(color: Colors.deepPurple.shade50, shape: BoxShape.circle),
+              child: Icon(Icons.library_music_outlined, size: 50, color: Colors.deepPurple.shade300), // Reduced icon
+            ),
+            const SizedBox(height: 20), // Reduced spacing
+            const Text(
+              'No Music Found',
+              style: TextStyle(
+                fontSize: 22, // Reduced font
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8), // Reduced spacing
             const Text(
               'We need permission to access your audio files',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 14, // Reduced font
+              ),
             ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: () async {
+            const SizedBox(height: 20), // Reduced spacing
+            GestureDetector(
+              onTap: () async {
                 await audioController.loadSongs();
                 await _homeController.loadHomeData(audioController);
               },
-              icon: const Icon(Icons.refresh),
-              label: const Text('Grant Permission & Reload'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                backgroundColor: Colors.deepPurple,
-                foregroundColor: Colors.white,
+              child: Container(
+                height: 48, // Reduced height
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [Colors.deepPurple.shade600, Colors.purple.shade600]),
+                  borderRadius: BorderRadius.circular(12), // Reduced radius
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.deepPurple.withOpacity(0.3),
+                      blurRadius: 12, // Reduced blur
+                      offset: const Offset(0, 6), // Reduced offset
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: Text(
+                    'Grant Permission & Reload',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14, // Reduced font
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               ),
             ),
           ],

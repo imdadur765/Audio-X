@@ -130,123 +130,237 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('Artists'),
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        elevation: 0,
-        actions: [
-          if (_isPreloading)
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-            ),
-          IconButton(
-            icon: Icon(_isOnline ? Icons.cloud_done : Icons.cloud_off, color: _isOnline ? Colors.green : Colors.orange),
-            tooltip: _isOnline ? 'Online' : 'Offline',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(_isOnline ? 'Online - Spotify data available' : 'Offline - Showing local data only'),
-                  duration: const Duration(seconds: 2),
+    // Intercept back button if search is active or focused
+    final bool canPop = !(_isSearchFocused || _searchQuery.isNotEmpty);
+
+    return PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        setState(() {
+          if (_isSearchFocused) {
+            _searchFocusNode.unfocus();
+          }
+          if (_searchQuery.isNotEmpty) {
+            _searchController.clear();
+            _searchQuery = '';
+          }
+        });
+      },
+      child: Scaffold(
+        backgroundColor: Colors.grey[50],
+        body: CustomScrollView(
+          slivers: [
+            // Custom App Bar
+            SliverAppBar(
+              expandedHeight: 140,
+              floating: false,
+              pinned: true,
+              backgroundColor: Colors.white,
+              elevation: 0,
+              shadowColor: Colors.black.withOpacity(0.1),
+              flexibleSpace: FlexibleSpaceBar(
+                background: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Colors.deepPurple.shade50, Colors.blue.shade50],
+                    ),
+                  ),
                 ),
-              );
-            },
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: TextField(
-              controller: _searchController,
-              focusNode: _searchFocusNode,
-              decoration: InputDecoration(
-                hintText: 'Search local artists...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          setState(() {
-                            _searchController.clear();
-                            _searchQuery = '';
-                          });
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
+                title: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: Colors.deepPurple, borderRadius: BorderRadius.circular(12)),
+                      child: const Icon(Icons.person_rounded, color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Artists',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
+                    ),
+                    const Spacer(),
+                    if (_isPreloading)
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5)),
+                          ],
+                        ),
+                        child: const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                      ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5)),
+                        ],
+                      ),
+                      child: Icon(
+                        _isOnline ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
+                        color: _isOnline ? Colors.green : Colors.orange,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                  ],
+                ),
               ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
-              onSubmitted: (value) {
-                _addToHistory(value);
-              },
             ),
-          ),
-        ),
-      ),
-      body: Consumer<AudioController>(
-        builder: (context, controller, child) {
-          if (controller.songs.isEmpty) {
-            return _buildEmptyState(context);
-          }
 
-          // Show History if focused and query is empty
-          if (_isSearchFocused && _searchQuery.isEmpty && _searchHistoryBox.isNotEmpty) {
-            return _buildSearchHistory();
-          }
-
-          // Group songs by artist
-          final artistsMap = <String, List<Song>>{};
-          for (final song in controller.songs) {
-            final artistName = song.artist.trim().isEmpty ? 'Unknown Artist' : song.artist;
-            artistsMap.putIfAbsent(artistName, () => []).add(song);
-          }
-
-          final filteredArtists = _filterArtists(artistsMap);
-
-          if (filteredArtists.isEmpty) {
-            return _buildNoResultsState(context);
-          }
-
-          return Column(
-            children: [
-              // Offline notification banner
-              if (!_isOnline) _buildOfflineBanner(context),
-
-              // Artists list
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: _preloadArtistData,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: filteredArtists.length,
-                    itemBuilder: (context, index) {
-                      final entry = filteredArtists[index];
-                      final artistName = entry.key;
-                      final songs = entry.value;
-
-                      return _ArtistCardWithImage(
-                        artistName: artistName,
-                        songs: songs,
-                        cacheService: _cacheService,
-                        isOnline: _isOnline,
-                      );
+            // Search Bar
+            SliverPadding(
+              padding: const EdgeInsets.all(16),
+              sliver: SliverToBoxAdapter(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 8)),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    decoration: InputDecoration(
+                      hintText: 'Search artists...',
+                      hintStyle: TextStyle(color: Colors.grey.shade600),
+                      prefixIcon: Icon(Icons.search_rounded, color: Colors.deepPurple),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(Icons.clear_rounded, color: Colors.grey.shade600),
+                              onPressed: () {
+                                setState(() {
+                                  _searchController.clear();
+                                  _searchQuery = '';
+                                });
+                              },
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                    },
+                    onSubmitted: (value) {
+                      _addToHistory(value);
                     },
                   ),
                 ),
               ),
-            ],
-          );
-        },
+            ),
+
+            // Offline Banner
+            if (!_isOnline)
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                sliver: SliverToBoxAdapter(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.orange.shade100),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(color: Colors.orange.shade100, shape: BoxShape.circle),
+                          child: Icon(Icons.wifi_off_rounded, size: 20, color: Colors.orange.shade800),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Offline Mode',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.orange.shade900,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Connect to internet to get Spotify artist data',
+                                style: TextStyle(color: Colors.orange.shade800, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+            // Content
+            Consumer<AudioController>(
+              builder: (context, controller, child) {
+                if (controller.songs.isEmpty) {
+                  return _buildEmptyState();
+                }
+
+                // Show History if focused and query is empty
+                if (_isSearchFocused && _searchQuery.isEmpty && _searchHistoryBox.isNotEmpty) {
+                  return _buildSearchHistory();
+                }
+
+                // Group songs by artist
+                final artistsMap = <String, List<Song>>{};
+                for (final song in controller.songs) {
+                  final artistName = song.artist.trim().isEmpty ? 'Unknown Artist' : song.artist;
+                  artistsMap.putIfAbsent(artistName, () => []).add(song);
+                }
+
+                final filteredArtists = _filterArtists(artistsMap);
+
+                if (filteredArtists.isEmpty) {
+                  return _buildNoResultsState();
+                }
+
+                return SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final entry = filteredArtists[index];
+                      final artistName = entry.key;
+                      final songs = entry.value;
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _ArtistCardWithImage(
+                          artistName: artistName,
+                          songs: songs,
+                          cacheService: _cacheService,
+                          isOnline: _isOnline,
+                        ),
+                      );
+                    }, childCount: filteredArtists.length),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -254,135 +368,146 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
   Widget _buildSearchHistory() {
     final history = _searchHistoryBox.values.toList().reversed.toList();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Recent Searches',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate((context, index) {
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Recent Searches',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.grey.shade700),
+                  ),
+                  TextButton(
+                    onPressed: _clearHistory,
+                    style: TextButton.styleFrom(foregroundColor: Colors.deepPurple),
+                    child: const Text('Clear All'),
+                  ),
+                ],
               ),
-              TextButton(onPressed: _clearHistory, child: const Text('Clear All')),
+            );
+          }
+
+          final queryIndex = index - 1;
+          if (queryIndex >= history.length) return null;
+
+          final query = history[queryIndex];
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
+            ),
+            child: ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.deepPurple.shade50, shape: BoxShape.circle),
+                child: Icon(Icons.history_rounded, color: Colors.deepPurple, size: 20),
+              ),
+              title: Text(query, style: const TextStyle(fontWeight: FontWeight.w500)),
+              trailing: IconButton(
+                icon: Icon(Icons.close_rounded, size: 18, color: Colors.grey.shade600),
+                onPressed: () => _removeFromHistory(history.length - 1 - queryIndex),
+              ),
+              onTap: () {
+                setState(() {
+                  _searchController.text = query;
+                  _searchQuery = query;
+                  _searchFocusNode.unfocus();
+                });
+                _addToHistory(query);
+              },
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+        }, childCount: history.length + 1),
+      ),
+    );
+  }
+
+  Widget _buildNoResultsState() {
+    return SliverFillRemaining(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(color: Colors.deepPurple.shade50, shape: BoxShape.circle),
+                child: Icon(Icons.search_off_rounded, size: 50, color: Colors.deepPurple.shade300),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'No Artists Found',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
+              ),
+              const SizedBox(height: 8),
+              Text('Try a different search term', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
             ],
           ),
         ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: history.length,
-            itemBuilder: (context, index) {
-              final query = history[index];
-              return ListTile(
-                leading: const Icon(Icons.history),
-                title: Text(query),
-                trailing: IconButton(
-                  icon: const Icon(Icons.close, size: 20),
-                  onPressed: () => _removeFromHistory(history.length - 1 - index),
-                ),
-                onTap: () {
-                  setState(() {
-                    _searchController.text = query;
-                    _searchQuery = query;
-                    _searchFocusNode.unfocus(); // Close keyboard and show results
-                  });
-                  _addToHistory(query); // Move to top
-                },
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOfflineBanner(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange.shade200),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.wifi_off, color: Colors.orange.shade700, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Offline Mode',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade900, fontSize: 13),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Connect to internet to get Spotify artist data',
-                  style: TextStyle(color: Colors.orange.shade800, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
 
-  Widget _buildNoResultsState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off, size: 64, color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
-            const SizedBox(height: 16),
-            Text(
-              'No artists found',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Try a different search term',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.person_outline, size: 80, color: Theme.of(context).colorScheme.primary.withOpacity(0.5)),
-            const SizedBox(height: 24),
-            Text(
-              'No Artists Found',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.bold,
+  Widget _buildEmptyState() {
+    return SliverFillRemaining(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(color: Colors.deepPurple.shade50, shape: BoxShape.circle),
+                child: Icon(Icons.person_outline_rounded, size: 70, color: Colors.deepPurple.shade300),
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Add some music to see your artists',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-          ],
+              const SizedBox(height: 24),
+              Text(
+                'No Artists Found',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Add some music to see your artists',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [Colors.deepPurple.shade400, Colors.purple.shade600]),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      // You can add navigation to music library here
+                    },
+                    child: const Center(
+                      child: Text(
+                        'Browse Music',
+                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -457,72 +582,141 @@ class _ArtistCardWithImageState extends State<_ArtistCardWithImage> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 15, offset: const Offset(0, 5))],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: _buildLeadingImage(context),
-        title: Text(
-          widget.artistName,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Text(
-          '${widget.songs.length} ${widget.songs.length == 1 ? 'song' : 'songs'}',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-        ),
-        trailing: Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) =>
-                  ArtistPage(artistName: widget.artistName, localSongs: widget.songs, cachedSpotifyData: _cachedData),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) =>
+                    ArtistPage(artistName: widget.artistName, localSongs: widget.songs, cachedSpotifyData: _cachedData),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Artist Image
+                _buildLeadingImage(),
+
+                const SizedBox(width: 16),
+
+                // Artist Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.artistName,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black87),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${widget.songs.length} ${widget.songs.length == 1 ? 'song' : 'songs'}',
+                        style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Spotify Verified Badge (if available)
+                if (_cachedData != null && _cachedData!.imageUrl != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.green.shade100),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.verified_rounded, size: 12, color: Colors.green.shade600),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Verified',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.green.shade700),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                const SizedBox(width: 12),
+
+                // Chevron
+                Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+              ],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildLeadingImage(BuildContext context) {
-    if (_cachedData?.imageUrl != null) {
-      return CircleAvatar(
-        radius: 28,
-        backgroundImage: NetworkImage(_cachedData!.imageUrl!),
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        onBackgroundImageError: (_, __) {
-          // Fallback handled by child
-        },
-        child: _isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-              )
-            : null,
-      );
-    }
+  Widget _buildLeadingImage() {
+    return Stack(
+      children: [
+        Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            color: Colors.deepPurple.shade100,
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 4))],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(15),
+            child: _cachedData?.imageUrl != null
+                ? Image.network(
+                    _cachedData!.imageUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return _buildPlaceholderImage();
+                    },
+                  )
+                : _buildPlaceholderImage(),
+          ),
+        ),
 
-    return CircleAvatar(
-      radius: 28,
-      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-      child: _isLoading
-          ? SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimaryContainer),
-            )
-          : Icon(Icons.person_rounded, color: Theme.of(context).colorScheme.onPrimaryContainer, size: 28),
+        // Loading Indicator
+        if (_isLoading)
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(color: Colors.black.withOpacity(0.5), borderRadius: BorderRadius.circular(15)),
+            child: const Center(
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPlaceholderImage() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.deepPurple.shade400, Colors.purple.shade600],
+        ),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: const Center(child: Icon(Icons.person_rounded, color: Colors.white, size: 28)),
     );
   }
 }

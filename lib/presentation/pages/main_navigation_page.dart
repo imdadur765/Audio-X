@@ -18,7 +18,13 @@ class MainNavigationPage extends StatefulWidget {
 class _MainNavigationPageState extends State<MainNavigationPage> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [HomePage(), ArtistsListPage(), AlbumsPage(), PlaylistsPage(), FavoritesPage()];
+  final List<Widget> _pages = const [
+    HomePage(),
+    ArtistsListPage(),
+    AlbumsPage(),
+    PlaylistsPage(),
+    FavoritesPage()
+  ];
 
   @override
   void initState() {
@@ -30,42 +36,99 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _pages),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Mini Player
           const MiniPlayer(),
 
-          // Navigation Bar
-          NavigationBar(
-            selectedIndex: _currentIndex,
-            onDestinationSelected: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-            destinations: const [
-              NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-              NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person),
-                label: 'Artists',
+          // Custom Modern Bottom Navigation Bar
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, -5),
+                ),
+              ],
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
               ),
-              NavigationDestination(icon: Icon(Icons.album_outlined), selectedIcon: Icon(Icons.album), label: 'Albums'),
-              NavigationDestination(
-                icon: Icon(Icons.playlist_play_outlined),
-                selectedIcon: Icon(Icons.playlist_play),
-                label: 'Playlists',
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(0, Icons.home_rounded, Icons.home_outlined, 'Home'),
+                  _buildNavItem(1, Icons.person_rounded, Icons.person_outline_rounded, 'Artists'),
+                  _buildNavItem(2, Icons.album_rounded, Icons.album_outlined, 'Albums'),
+                  _buildNavItem(3, Icons.playlist_play_rounded, Icons.playlist_play_outlined, 'Playlists'),
+                  _buildNavItem(4, Icons.favorite_rounded, Icons.favorite_outline_rounded, 'Favorites'),
+                ],
               ),
-              NavigationDestination(
-                icon: Icon(Icons.favorite_outline),
-                selectedIcon: Icon(Icons.favorite),
-                label: 'Favorites',
-              ),
-            ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData activeIcon, IconData inactiveIcon, String label) {
+    final isActive = _currentIndex == index;
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _currentIndex = index;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.deepPurple.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: isActive ? Colors.deepPurple : Colors.transparent,
+                shape: BoxShape.circle,
+                boxShadow: isActive ? [
+                  BoxShadow(
+                    color: Colors.deepPurple.withOpacity(0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ] : null,
+              ),
+              child: Icon(
+                isActive ? activeIcon : inactiveIcon,
+                color: isActive ? Colors.white : Colors.grey.shade600,
+                size: 20,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                color: isActive ? Colors.deepPurple : Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

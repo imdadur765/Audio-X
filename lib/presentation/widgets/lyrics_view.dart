@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../data/models/lyrics_model.dart';
-import 'dart:async';
 
 class LyricsView extends StatefulWidget {
   final Lyrics lyrics;

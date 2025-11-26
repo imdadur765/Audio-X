@@ -6,6 +6,7 @@ import '../controllers/home_controller.dart';
 import '../../data/models/song_model.dart';
 import 'player_page.dart';
 import 'artist_page.dart';
+import 'playlist_details_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -74,7 +75,8 @@ class _HomePageState extends State<HomePage> {
                 _buildTopArtists(homeController),
                 _buildQuickPlaylists(homeController, audioController),
                 _buildGenreSections(homeController, audioController),
-                const SliverPadding(padding: EdgeInsets.only(bottom: 80)), // Space for mini player
+                _buildAllSongsSection(homeController, audioController),
+                const SliverToBoxAdapter(child: SizedBox(height: 80)), // Space for mini player
               ],
             );
           },
@@ -354,14 +356,34 @@ class _HomePageState extends State<HomePage> {
                   '${homeController.mostPlayed.length} songs',
                   Icons.trending_up_rounded,
                   [Colors.orange.shade400, Colors.deepOrange.shade600],
-                  () => _playPlaylist(homeController.mostPlayed, audioController),
+                  () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => PlaylistDetailsPage(
+                          title: 'Most Played',
+                          songs: homeController.mostPlayed,
+                          gradientColors: [Colors.orange.shade400, Colors.deepOrange.shade600],
+                        ),
+                      ),
+                    );
+                  },
                 ),
                 _buildPlaylistCard(
                   'Recently Added',
                   '${homeController.recentlyAdded.length} songs',
                   Icons.new_releases_rounded,
-                  [Colors.green.shade400, Colors.teal.shade600],
-                  () => _playPlaylist(homeController.recentlyAdded, audioController),
+                  [Colors.blue.shade400, Colors.indigo.shade600],
+                  () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => PlaylistDetailsPage(
+                          title: 'Recently Added',
+                          songs: homeController.recentlyAdded,
+                          gradientColors: [Colors.blue.shade400, Colors.indigo.shade600],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -499,25 +521,87 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _playPlaylist(List<Song> songs, AudioController audioController) async {
-    if (songs.isEmpty) return;
-    await audioController.playSong(songs.first);
-    await _homeController.trackRecentlyPlayed(songs.first.id);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20),
-              const SizedBox(width: 12),
-              Text('Playing ${songs.length} songs'),
-            ],
-          ),
-          duration: const Duration(seconds: 2),
-          backgroundColor: Colors.deepPurple,
-        ),
-      );
+  Widget _buildAllSongsSection(HomeController homeController, AudioController audioController) {
+    if (homeController.allSongs.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('All Songs', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  TextButton.icon(
+                    onPressed: () async {
+                      // Shuffle all
+                      final songs = List<Song>.from(homeController.allSongs)..shuffle();
+                      await audioController.playSong(songs.first);
+                      // Note: In a real app, we'd set the whole queue
+                    },
+                    icon: const Icon(Icons.shuffle_rounded),
+                    label: const Text('Shuffle'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final song = homeController.allSongs[index - 1];
+          final isPlaying = audioController.currentSong?.id == song.id;
+
+          return ListTile(
+            leading: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: Colors.grey.withOpacity(0.1)),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: song.localArtworkPath != null
+                    ? Image.file(
+                        File(song.localArtworkPath!),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(Icons.music_note, color: Colors.grey[400]);
+                        },
+                      )
+                    : Icon(Icons.music_note, color: Colors.grey[400]),
+              ),
+            ),
+            title: Text(
+              song.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontWeight: isPlaying ? FontWeight.bold : FontWeight.w500,
+                color: isPlaying ? Colors.deepPurple : null,
+              ),
+            ),
+            subtitle: Text(
+              song.artist,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+            trailing: isPlaying
+                ? const Icon(Icons.graphic_eq, color: Colors.deepPurple)
+                : IconButton(icon: const Icon(Icons.more_vert_rounded), onPressed: () {}),
+            onTap: () async {
+              await audioController.playSong(song);
+              await _homeController.trackRecentlyPlayed(song.id);
+              if (mounted) {
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) => PlayerPage(song: song)));
+              }
+            },
+          );
+        },
+        childCount: homeController.allSongs.length + 1, // +1 for header
+      ),
+    );
   }
 
   Widget _buildEmptyState(AudioController audioController) {

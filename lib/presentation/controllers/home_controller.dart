@@ -9,6 +9,7 @@ class HomeController extends ChangeNotifier {
   final Map<String, ArtistStats> _topArtists = {};
   List<Song> _mostPlayed = [];
   List<Song> _recentlyAdded = [];
+  List<Song> _allSongs = [];
   Map<String, List<Song>> _genreSongs = {};
   bool _isLoading = false;
 
@@ -16,6 +17,7 @@ class HomeController extends ChangeNotifier {
   Map<String, ArtistStats> get topArtists => _topArtists;
   List<Song> get mostPlayed => _mostPlayed;
   List<Song> get recentlyAdded => _recentlyAdded;
+  List<Song> get allSongs => _allSongs;
   Map<String, List<Song>> get genreSongs => _genreSongs;
   bool get isLoading => _isLoading;
 
@@ -37,8 +39,22 @@ class HomeController extends ChangeNotifier {
       // Calculate top artists by song count
       await _calculateTopArtists(songs);
 
-      // Most played songs (by lastPlayedAt and playCount if we track it)
-      _mostPlayed = _recentlyPlayed.take(10).toList();
+      // All songs (sorted alphabetically)
+      _allSongs = List<Song>.from(songs);
+      _allSongs.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+
+      // Most played songs (by playCount)
+      final settingsBox = Hive.box('settings');
+      final Map<dynamic, dynamic> counts = settingsBox.get('playCounts', defaultValue: {});
+      final Map<String, int> playCounts = Map<String, int>.from(counts);
+
+      _mostPlayed = List<Song>.from(songs);
+      _mostPlayed.sort((a, b) {
+        final countA = playCounts[a.id] ?? 0;
+        final countB = playCounts[b.id] ?? 0;
+        return countB.compareTo(countA); // Descending
+      });
+      _mostPlayed = _mostPlayed.take(20).toList(); // Take top 20
 
       // Recently added (sort by id/timestamp if available, for now just last 10)
       _recentlyAdded = songs.reversed.take(10).toList();

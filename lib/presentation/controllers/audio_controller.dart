@@ -215,9 +215,28 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       }
 
       await settingsBox.put('recentlyPlayedIds', recentIds);
+
+      // Also track play count
+      await _trackPlayCount(songId);
+
       print('🕒 Tracked recently played: $songId');
     } catch (e) {
       print('Error tracking recently played: $e');
+    }
+  }
+
+  Future<void> _trackPlayCount(String songId) async {
+    try {
+      final settingsBox = Hive.box('settings');
+      final Map<dynamic, dynamic> counts = settingsBox.get('playCounts', defaultValue: {});
+      final Map<String, int> playCounts = Map<String, int>.from(counts);
+
+      playCounts[songId] = (playCounts[songId] ?? 0) + 1;
+
+      await settingsBox.put('playCounts', playCounts);
+      print('📈 Updated play count for $songId: ${playCounts[songId]}');
+    } catch (e) {
+      print('Error tracking play count: $e');
     }
   }
 

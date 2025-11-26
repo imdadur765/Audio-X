@@ -1,0 +1,27 @@
+{
+    "services": [
+        {
+            "type": "web",
+            "name": "audio-x-spotify-api",
+            "env": "node",
+            "plan": "free",
+            "buildCommand": "npm install",
+            "startCommand": "npm start",
+            "healthCheckPath": "/",
+            "envVars": [
+                {
+                    "key": "SPOTIFY_CLIENT_ID",
+                    "sync": false
+                },
+                {
+                    "key": "SPOTIFY_CLIENT_SECRET",
+                    "sync": false
+                },
+                {
+                    "key": "PORT",
+                    "value": "3000"
+                }
+            ]
+        }
+    ]
+}

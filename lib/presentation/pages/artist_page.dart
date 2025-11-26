@@ -1,14 +1,20 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_x/data/models/artist_model.dart';
 import 'package:audio_x/data/models/song_model.dart';
+import 'package:audio_x/data/models/cached_spotify_artist.dart';
+import 'package:audio_x/data/models/spotify_artist_model.dart';
 import 'package:audio_x/presentation/controllers/artist_controller.dart';
+import 'package:audio_x/presentation/controllers/audio_controller.dart';
+import 'package:audio_x/presentation/pages/player_page.dart';
 
 class ArtistPage extends StatefulWidget {
   final String artistName;
   final List<Song> localSongs;
+  final CachedSpotifyArtist? cachedSpotifyData;
 
-  const ArtistPage({super.key, required this.artistName, required this.localSongs});
+  const ArtistPage({super.key, required this.artistName, required this.localSongs, this.cachedSpotifyData});
 
   @override
   State<ArtistPage> createState() => _ArtistPageState();
@@ -25,7 +31,28 @@ class _ArtistPageState extends State<ArtistPage> {
   }
 
   Future<void> _loadArtistData() async {
-    await _controller.loadArtist(artistName: widget.artistName, localSongs: widget.localSongs);
+    // If we have cached data, create artist model immediately
+    if (widget.cachedSpotifyData != null) {
+      final spotifyModel = SpotifyArtistModel(
+        id: widget.cachedSpotifyData!.spotifyId ?? '',
+        name: widget.cachedSpotifyData!.artistName,
+        imageUrl: widget.cachedSpotifyData!.imageUrl,
+        images: [],
+        followers: widget.cachedSpotifyData!.followers ?? 0,
+        genres: widget.cachedSpotifyData!.genres,
+        popularity: widget.cachedSpotifyData!.popularity ?? 0,
+      );
+
+      _controller.currentArtist = ArtistModel.withSpotify(
+        name: widget.artistName,
+        localSongs: widget.localSongs,
+        spotifyData: spotifyModel,
+      );
+      setState(() {}); // Trigger rebuild with cached data
+    } else {
+      // Load normally if no cached data
+      await _controller.loadArtist(artistName: widget.artistName, localSongs: widget.localSongs);
+    }
   }
 
   @override
@@ -65,6 +92,52 @@ class _ArtistPageState extends State<ArtistPage> {
     return SliverAppBar(
       expandedHeight: 300,
       pinned: true,
+      actions: [
+        // Manual refresh button for Spotify data
+        if (!artist.hasSpotifyData)
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh Spotify data',
+            onPressed: () async {
+              if (_controller.isLoading) return;
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      ),
+                      SizedBox(width: 12),
+                      Text('Fetching Spotify data...'),
+                    ],
+                  ),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+
+              await _controller.refreshSpotifyData();
+
+              if (mounted && _controller.hasSpotifyData) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Row(
+                      children: [
+                        Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                        SizedBox(width: 12),
+                        Text('Spotify data updated'),
+                      ],
+                    ),
+                    duration: Duration(seconds: 2),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+          ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         title: Text(
           artist.name,
@@ -109,7 +182,7 @@ class _ArtistPageState extends State<ArtistPage> {
           colors: [Colors.deepPurple.shade400, Colors.purple.shade600],
         ),
       ),
-      child: const Icon(Icons.person, size: 120, color: Colors.white54),
+      child: const Icon(Icons.person_rounded, size: 120, color: Colors.white54),
     );
   }
 
@@ -151,7 +224,7 @@ class _ArtistPageState extends State<ArtistPage> {
             if (artist.followers != null)
               Row(
                 children: [
-                  const Icon(Icons.people, size: 20),
+                  const Icon(Icons.people_rounded, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     '${artist.spotifyData!.getFormattedFollowers()} followers',
@@ -166,7 +239,7 @@ class _ArtistPageState extends State<ArtistPage> {
             if (artist.popularity != null) ...[
               Row(
                 children: [
-                  const Icon(Icons.trending_up, size: 20),
+                  const Icon(Icons.trending_up_rounded, size: 20),
                   const SizedBox(width: 8),
                   const Text('Popularity: ', style: TextStyle(fontSize: 16)),
                   Expanded(
@@ -209,7 +282,7 @@ class _ArtistPageState extends State<ArtistPage> {
           children: [
             Column(
               children: [
-                const Icon(Icons.music_note, color: Colors.blue),
+                const Icon(Icons.music_note_rounded, color: Colors.blue),
                 const SizedBox(height: 4),
                 Text('${artist.songCount}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const Text('Songs'),
@@ -217,7 +290,7 @@ class _ArtistPageState extends State<ArtistPage> {
             ),
             Column(
               children: [
-                const Icon(Icons.access_time, color: Colors.blue),
+                const Icon(Icons.schedule_rounded, color: Colors.blue),
                 const SizedBox(height: 4),
                 Text(
                   artist.getFormattedTotalDuration(),
@@ -236,7 +309,7 @@ class _ArtistPageState extends State<ArtistPage> {
     return const Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.info_outline, size: 14, color: Colors.grey),
+        Icon(Icons.info_outline_rounded, size: 14, color: Colors.grey),
         SizedBox(width: 4),
         Text(
           'Powered by Spotify',
@@ -248,14 +321,31 @@ class _ArtistPageState extends State<ArtistPage> {
 
   Widget _buildOfflineIndicator() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(8)),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.offline_bolt, size: 16, color: Colors.orange),
-          SizedBox(width: 8),
-          Text('Offline mode - Spotify data unavailable', style: TextStyle(fontSize: 12, color: Colors.orange)),
+          Row(
+            children: [
+              Icon(Icons.cloud_off_rounded, size: 18, color: Colors.orange.shade700),
+              const SizedBox(width: 8),
+              Text(
+                'Offline Mode',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade900, fontSize: 13),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Connect to internet and refresh to get Spotify artist data',
+            style: TextStyle(color: Colors.orange.shade800, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -270,7 +360,7 @@ class _ArtistPageState extends State<ArtistPage> {
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: () => _playAll(artist.localSongs),
-                icon: const Icon(Icons.play_arrow),
+                icon: const Icon(Icons.play_arrow_rounded),
                 label: const Text('Play All'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -283,7 +373,7 @@ class _ArtistPageState extends State<ArtistPage> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => _shuffleAll(artist.localSongs),
-                icon: const Icon(Icons.shuffle),
+                icon: const Icon(Icons.shuffle_rounded),
                 label: const Text('Shuffle'),
                 style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
               ),
@@ -295,20 +385,95 @@ class _ArtistPageState extends State<ArtistPage> {
   }
 
   Widget _buildSongsList(ArtistModel artist) {
-    return SliverList(
-      delegate: SliverChildBuilderDelegate((context, index) {
-        final song = artist.localSongs[index];
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: Colors.deepPurple.shade100,
-            child: Text('${index + 1}', style: const TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          title: Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Text(song.album, maxLines: 1, overflow: TextOverflow.ellipsis),
-          trailing: Text(_formatDuration(song.duration), style: TextStyle(color: Colors.grey.shade600)),
-          onTap: () => _playSong(artist.localSongs, index),
+    return Consumer<AudioController>(
+      builder: (context, audioController, child) {
+        return SliverList(
+          delegate: SliverChildBuilderDelegate((context, index) {
+            final song = artist.localSongs[index];
+            final isCurrentlyPlaying = audioController.currentSong?.id == song.id;
+            final isPlaying = isCurrentlyPlaying && audioController.isPlaying;
+
+            return ListTile(
+              selected: isCurrentlyPlaying,
+              selectedTileColor: Colors.deepPurple.withOpacity(0.1),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              leading: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: isCurrentlyPlaying ? Colors.deepPurple : Colors.deepPurple.shade100,
+                  image: song.localArtworkPath != null
+                      ? DecorationImage(image: FileImage(File(song.localArtworkPath!)), fit: BoxFit.cover)
+                      : null,
+                ),
+                child: song.localArtworkPath == null
+                    ? Center(
+                        child: isPlaying
+                            ? const Icon(Icons.equalizer_rounded, color: Colors.white, size: 24)
+                            : Text(
+                                '${index + 1}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: isCurrentlyPlaying ? Colors.white : Colors.deepPurple,
+                                ),
+                              ),
+                      )
+                    : isPlaying
+                    ? Container(
+                        decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
+                        child: const Center(child: Icon(Icons.equalizer_rounded, color: Colors.white, size: 24)),
+                      )
+                    : null,
+              ),
+              title: Text(
+                song.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isCurrentlyPlaying ? Colors.deepPurple : null,
+                  fontWeight: isCurrentlyPlaying ? FontWeight.bold : FontWeight.w500,
+                  fontSize: 16,
+                ),
+              ),
+              subtitle: Text(
+                song.album,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: isCurrentlyPlaying ? Colors.deepPurple.shade700 : Colors.grey.shade600),
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isPlaying)
+                    TweenAnimationBuilder(
+                      tween: Tween<double>(begin: 0.8, end: 1.2),
+                      duration: const Duration(milliseconds: 500),
+                      builder: (context, double value, child) {
+                        return Transform.scale(
+                          scale: value,
+                          child: Icon(Icons.volume_up_rounded, color: Colors.deepPurple, size: 20),
+                        );
+                      },
+                      onEnd: () {
+                        // Loop animation
+                      },
+                    ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _formatDuration(song.duration),
+                    style: TextStyle(
+                      color: isCurrentlyPlaying ? Colors.deepPurple : Colors.grey.shade600,
+                      fontWeight: isCurrentlyPlaying ? FontWeight.w600 : null,
+                    ),
+                  ),
+                ],
+              ),
+              onTap: () => _playSong(artist.localSongs, index),
+            );
+          }, childCount: artist.localSongs.length),
         );
-      }, childCount: artist.localSongs.length),
+      },
     );
   }
 
@@ -319,21 +484,59 @@ class _ArtistPageState extends State<ArtistPage> {
     return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 
-  void _playAll(List<Song> songs) {
-    // TODO: Integrate with your audio player
-    // Example: audioPlayerController.playPlaylist(songs, startIndex: 0);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Playing all songs...')));
+  void _playAll(List<Song> songs) async {
+    if (songs.isEmpty) return;
+
+    final audioController = Provider.of<AudioController>(context, listen: false);
+    await audioController.playSong(songs.first);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Text('Playing ${songs.length} songs'),
+          ],
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
-  void _shuffleAll(List<Song> songs) {
-    // TODO: Integrate with your audio player with shuffle
-    // Example: audioPlayerController.playPlaylist(songs, shuffle: true);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Shuffling songs...')));
+  void _shuffleAll(List<Song> songs) async {
+    if (songs.isEmpty) return;
+
+    final audioController = Provider.of<AudioController>(context, listen: false);
+
+    // Enable shuffle if not already
+    if (!audioController.isShuffleEnabled) {
+      await audioController.toggleShuffle();
+    }
+
+    // Play first song (shuffle will handle randomization)
+    await audioController.playSong(songs.first);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.shuffle_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Text('Shuffling ${songs.length} songs'),
+          ],
+        ),
+        duration: const Duration(seconds: 2),
+        backgroundColor: Colors.deepPurple,
+      ),
+    );
   }
 
-  void _playSong(List<Song> songs, int index) {
-    // TODO: Integrate with your audio player
-    // Example: audioPlayerController.playPlaylist(songs, startIndex: index);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Playing: ${songs[index].title}')));
+  void _playSong(List<Song> songs, int index) async {
+    final audioController = Provider.of<AudioController>(context, listen: false);
+    await audioController.playSong(songs[index]);
+
+    // Navigate to player page
+    Navigator.of(context).push(MaterialPageRoute(builder: (context) => PlayerPage(song: songs[index])));
   }
 }

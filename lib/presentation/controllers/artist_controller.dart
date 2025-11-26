@@ -11,6 +11,10 @@ class ArtistController extends ChangeNotifier {
   String? _errorMessage;
 
   ArtistModel? get currentArtist => _currentArtist;
+  set currentArtist(ArtistModel? value) {
+    _currentArtist = value;
+  }
+
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get hasSpotifyData => _currentArtist?.hasSpotifyData ?? false;
@@ -42,9 +46,7 @@ class ArtistController extends ChangeNotifier {
     } catch (e) {
       _errorMessage = e.toString();
       // Keep local artist data even if Spotify fetch fails
-      if (_currentArtist == null) {
-        _currentArtist = ArtistModel.localOnly(name: artistName, localSongs: localSongs);
-      }
+      _currentArtist ??= ArtistModel.localOnly(name: artistName, localSongs: localSongs);
       _currentArtist = _currentArtist!.copyWith(spotifyDataFetched: true, spotifyError: e.toString());
     } finally {
       _isLoading = false;

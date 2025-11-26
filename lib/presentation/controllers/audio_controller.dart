@@ -226,6 +226,16 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> playSong(Song song) async {
+    // If same song is clicked
+    if (_currentSong?.id == song.id) {
+      // If paused, resume
+      if (!_isPlaying) {
+        await resume();
+      }
+      // If already playing, do nothing (just return)
+      return;
+    }
+
     final index = _songs.indexOf(song);
     if (index != -1) {
       final songMaps = _songs

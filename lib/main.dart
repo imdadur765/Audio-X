@@ -3,9 +3,10 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'data/models/song_model.dart';
 import 'data/models/audio_effects_model.dart';
+import 'data/models/cached_spotify_artist.dart';
 import 'presentation/controllers/audio_controller.dart';
 import 'presentation/controllers/audio_effects_controller.dart';
-import 'presentation/pages/home_page.dart';
+import 'presentation/pages/main_navigation_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,11 +16,14 @@ void main() async {
   // Register Hive adapters
   Hive.registerAdapter(SongAdapter());
   Hive.registerAdapter(AudioEffectsAdapter());
+  Hive.registerAdapter(CachedSpotifyArtistAdapter());
 
   // Open Hive boxes
   await Hive.openBox<Song>('songs');
   await Hive.openBox('settings');
   await Hive.openBox<AudioEffects>('audioEffects');
+  await Hive.openBox<CachedSpotifyArtist>('spotifyCache');
+  await Hive.openBox<String>('searchHistory');
 
   runApp(
     MultiProvider(
@@ -47,7 +51,7 @@ class AudioXApp extends StatelessWidget {
     return MaterialApp(
       title: 'Audio X',
       theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple), useMaterial3: true),
-      home: const HomePage(),
+      home: const MainNavigationPage(),
     );
   }
 }

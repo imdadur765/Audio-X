@@ -198,6 +198,29 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _trackRecentlyPlayed(String songId) async {
+    try {
+      final settingsBox = Hive.box('settings');
+      final recentIds = List<String>.from(settingsBox.get('recentlyPlayedIds', defaultValue: <String>[]));
+
+      // Remove if already exists (move to top)
+      recentIds.remove(songId);
+
+      // Add to front
+      recentIds.insert(0, songId);
+
+      // Keep only last 50
+      if (recentIds.length > 50) {
+        recentIds.removeRange(50, recentIds.length);
+      }
+
+      await settingsBox.put('recentlyPlayedIds', recentIds);
+      print('🕒 Tracked recently played: $songId');
+    } catch (e) {
+      print('Error tracking recently played: $e');
+    }
+  }
+
   Future<void> _cacheArtwork() async {
     final directory = await getApplicationDocumentsDirectory();
 
@@ -255,23 +278,51 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       _currentSong = song;
       _duration = Duration(milliseconds: song.duration);
       _startProgressTimer();
+      _trackRecentlyPlayed(song.id);
       notifyListeners();
     }
   }
 
   Future<void> pause() async {
-    await _audioHandler.pause();
-    _isPlaying = false;
-    _stopProgressTimer();
-    await _saveState(); // Save when pausing
-    notifyListeners();
+    try {
+      await _audioHandler.pause();
+      _isPlaying = false;
+      _stopProgressTimer();
+      await _saveState(); // Save when pausing
+      notifyListeners();
+    } catch (e) {
+      print('⚠️ Pause failed: $e');
+      // Even if native pause fails, update UI state
+      _isPlaying = false;
+      _stopProgressTimer();
+      await _saveState();
+      notifyListeners();
+    }
   }
 
   Future<void> resume() async {
-    await _audioHandler.play();
-    _isPlaying = true;
-    _startProgressTimer();
-    notifyListeners();
+    try {
+      await _audioHandler.play();
+      _isPlaying = true;
+      _startProgressTimer();
+      notifyListeners();
+    } catch (e) {
+      print('⚠️ Resume failed, retrying... Error: $e');
+      // Retry after short delay (service might be restarting)
+      await Future.delayed(const Duration(milliseconds: 500));
+      try {
+        await _audioHandler.play();
+        _isPlaying = true;
+        _startProgressTimer();
+        notifyListeners();
+        print('✅ Resume succeeded on retry');
+      } catch (retryError) {
+        print('❌ Failed to resume after retry: $retryError');
+        // Keep UI in sync - don't mark as playing if it failed
+        _isPlaying = false;
+        notifyListeners();
+      }
+    }
   }
 
   Future<void> seek(Duration position) async {

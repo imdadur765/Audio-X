@@ -22,11 +22,44 @@ class MainActivity : FlutterActivity() {
 
     override fun onStart() {
         super.onStart()
+        // Ensure service is started/restarted before connecting
+        ensureServiceStarted()
+        connectWithRetry()
+    }
+
+    private fun ensureServiceStarted() {
+        val intent = android.content.Intent(this, AudioService::class.java)
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+            android.util.Log.d("AudioX", "Service start/restart requested")
+        } catch (e: Exception) {
+            android.util.Log.e("AudioX", "Failed to start service: ${e.message}")
+        }
+    }
+
+    private fun connectWithRetry(attempt: Int = 0) {
         val sessionToken = SessionToken(this, ComponentName(this, AudioService::class.java))
         controllerFuture = MediaController.Builder(this, sessionToken).buildAsync()
         controllerFuture?.addListener(
             {
-                mediaController = controllerFuture?.get()
+                try {
+                    mediaController = controllerFuture?.get()
+                    android.util.Log.d("AudioX", "MediaController connected successfully")
+                } catch (e: Exception) {
+                    android.util.Log.e("AudioX", "MediaController connection failed: ${e.message}")
+                    // Retry with exponential backoff (max 3 attempts)
+                    if (attempt < 2) {
+                        val delay = (attempt + 1) * 500L // 500ms, 1000ms, 1500ms
+                        android.util.Log.d("AudioX", "Retrying connection in ${delay}ms (attempt ${attempt + 1})")
+                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                            connectWithRetry(attempt + 1)
+                        }, delay)
+                    }
+                }
             },
             MoreExecutors.directExecutor()
         )

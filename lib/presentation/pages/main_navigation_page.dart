@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_x/presentation/controllers/audio_controller.dart';
-import 'package:audio_x/presentation/pages/songs_page.dart';
+import 'package:audio_x/presentation/pages/home_page.dart';
 import 'package:audio_x/presentation/pages/artists_list_page.dart';
 import 'package:audio_x/presentation/pages/albums_page.dart';
 import 'package:audio_x/presentation/pages/playlists_page.dart';
@@ -18,7 +18,7 @@ class MainNavigationPage extends StatefulWidget {
 class _MainNavigationPageState extends State<MainNavigationPage> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [SongsPage(), ArtistsListPage(), AlbumsPage(), PlaylistsPage(), FavoritesPage()];
+  final List<Widget> _pages = const [HomePage(), ArtistsListPage(), AlbumsPage(), PlaylistsPage(), FavoritesPage()];
 
   @override
   void initState() {
@@ -46,11 +46,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
               });
             },
             destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.music_note_outlined),
-                selectedIcon: Icon(Icons.music_note),
-                label: 'Songs',
-              ),
+              NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
               NavigationDestination(
                 icon: Icon(Icons.person_outline),
                 selectedIcon: Icon(Icons.person),

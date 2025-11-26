@@ -7,7 +7,12 @@ class AudioHandler {
     try {
       await _channel.invokeMethod('play');
     } on PlatformException catch (e) {
+      if (e.code == 'NO_CONTROLLER') {
+        print("⚠️ MediaController not ready - service might be restarting");
+        throw Exception('Service is restarting, please try again');
+      }
       print("Failed to play: '${e.message}'.");
+      rethrow;
     }
   }
 

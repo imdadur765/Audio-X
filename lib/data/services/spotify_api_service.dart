@@ -5,8 +5,9 @@ import 'package:audio_x/data/models/spotify_artist_model.dart';
 
 class SpotifyApiService {
   // TODO: Update this after Render deployment!
-  static const String _baseUrl = 'https://your-backend.onrender.com';
-  static const Duration _timeout = Duration(seconds: 10);
+  // Use 10.0.2.2 for Android Emulator to access host localhost
+  static const String _baseUrl = 'http://10.0.2.2:3000';
+  static const Duration _timeout = Duration(seconds: 5);
 
   /// Search for artists by name
   Future<List<SpotifyArtistModel>> searchArtist(String name) async {

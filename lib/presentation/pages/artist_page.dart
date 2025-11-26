@@ -27,6 +27,12 @@ class _ArtistPageState extends State<ArtistPage> {
   void initState() {
     super.initState();
     _controller = ArtistController();
+
+    // Pre-set artist with local data for INSTANT UI
+    if (widget.cachedSpotifyData == null) {
+      _controller.currentArtist = ArtistModel.localOnly(name: widget.artistName, localSongs: widget.localSongs);
+    }
+
     _loadArtistData();
   }
 

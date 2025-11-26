@@ -183,7 +183,16 @@ class AudioService : MediaSessionService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
+        // Handle service restart by system (intent will be null)
+        if (intent == null) {
+            android.util.Log.d("AudioX", "🔄 Service restarted by system after being killed")
+            // Service was killed and restarted by system
+            // MediaSession is already initialized in onCreate()
+            // Flutter side will reconnect via MainActivity.connectWithRetry()
+            return START_STICKY
+        }
+
+        when (intent.action) {
             ACTION_PLAY -> {
                 android.util.Log.d("AudioX", "Play button clicked")
                 mediaSession?.player?.play()

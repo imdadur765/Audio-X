@@ -4,9 +4,11 @@ import 'package:provider/provider.dart';
 import '../controllers/audio_controller.dart';
 import '../controllers/home_controller.dart';
 import '../../data/models/song_model.dart';
+import '../../data/services/auth_service.dart';
 import 'player_page.dart';
 import 'artist_page.dart';
 import 'playlist_details_page.dart';
+import 'profile_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,6 +20,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late HomeController _homeController;
   final ScrollController _scrollController = ScrollController();
+  final AuthService _authService = AuthService();
   double _scrollOffset = 0;
 
   @override
@@ -56,11 +59,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    if (hour < 21) return 'Good Evening';
-    return 'Good Night';
+    return _authService.getGreeting(includeUserName: true);
   }
 
   @override
@@ -122,6 +121,43 @@ class _HomePageState extends State<HomePage> {
           child: IconButton(
             icon: Icon(Icons.search_rounded, color: opacity > 0.5 ? Colors.deepPurple : Colors.white),
             onPressed: () {},
+          ),
+        ),
+        GestureDetector(
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProfilePage(
+                  userName: _homeController.userName,
+                  onNameUpdate: (name) async {
+                    await _homeController.updateUserName(name);
+                    setState(() {}); // Refresh UI after name update
+                  },
+                ),
+              ),
+            );
+            // Refresh UI when returning from profile page (in case user signed in/out)
+            setState(() {});
+          },
+          child: Container(
+            margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withOpacity(0.8), width: 2),
+            ),
+            child: _authService.isLoggedIn && _authService.userPhotoUrl != null
+                ? CircleAvatar(
+                    radius: 16,
+                    backgroundImage: NetworkImage(_authService.userPhotoUrl!),
+                    backgroundColor: Colors.grey[200],
+                  )
+                : const CircleAvatar(
+                    radius: 16,
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.person, color: Colors.deepPurple, size: 20),
+                  ),
           ),
         ),
       ],
@@ -553,41 +589,6 @@ class _HomePageState extends State<HomePage> {
               offset: const Offset(0, 6), // Reduced offset
             ),
           ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16), // Reduced padding
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10), // Reduced padding
-                decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-                child: Icon(icon, color: Colors.white, size: 26), // Reduced icon
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16, // Reduced font
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4), // Reduced spacing
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11, // Reduced font
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
         ),
       ),
     );

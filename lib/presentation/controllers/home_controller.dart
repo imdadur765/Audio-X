@@ -7,11 +7,14 @@ import 'audio_controller.dart';
 class HomeController extends ChangeNotifier {
   List<Song> _recentlyPlayed = [];
   final Map<String, ArtistStats> _topArtists = {};
-  List<Song> _mostPlayed = [];
-  List<Song> _recentlyAdded = [];
-  List<Song> _allSongs = [];
+  final List<Song> _mostPlayed = [];
+  final List<Song> _recentlyAdded = [];
+  final List<Song> _allSongs = [];
   Map<String, List<Song>> _genreSongs = {};
   bool _isLoading = false;
+
+  String _userName = 'Guest';
+  String get userName => _userName;
 
   List<Song> get recentlyPlayed => _recentlyPlayed;
   Map<String, ArtistStats> get topArtists => _topArtists;
@@ -33,6 +36,10 @@ class HomeController extends ChangeNotifier {
         return;
       }
 
+      // Load User Profile
+      final settingsBox = await Hive.openBox('settings');
+      _userName = settingsBox.get('userName', defaultValue: 'Guest');
+
       // Load recently played from Hive
       await _loadRecentlyPlayed();
 
@@ -40,24 +47,31 @@ class HomeController extends ChangeNotifier {
       await _calculateTopArtists(songs);
 
       // All songs (sorted alphabetically)
-      _allSongs = List<Song>.from(songs);
+      _allSongs.clear();
+      _allSongs.addAll(songs);
       _allSongs.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
 
       // Most played songs (by playCount)
-      final settingsBox = Hive.box('settings');
       final Map<dynamic, dynamic> counts = settingsBox.get('playCounts', defaultValue: {});
       final Map<String, int> playCounts = Map<String, int>.from(counts);
 
-      _mostPlayed = List<Song>.from(songs);
+      _mostPlayed.clear();
+      _mostPlayed.addAll(songs);
       _mostPlayed.sort((a, b) {
         final countA = playCounts[a.id] ?? 0;
         final countB = playCounts[b.id] ?? 0;
         return countB.compareTo(countA); // Descending
       });
-      _mostPlayed = _mostPlayed.take(20).toList(); // Take top 20
+      // Take top 20, but we need to be careful with list modification if we just used addAll
+      // Better to just re-assign or clear and add.
+      // actually _mostPlayed is a final List, so we can't reassign it. We must clear and add.
+      final topMostPlayed = _mostPlayed.take(20).toList();
+      _mostPlayed.clear();
+      _mostPlayed.addAll(topMostPlayed);
 
       // Recently added (sort by id/timestamp if available, for now just last 10)
-      _recentlyAdded = songs.reversed.take(10).toList();
+      _recentlyAdded.clear();
+      _recentlyAdded.addAll(songs.reversed.take(10));
 
       // Group by genre (extract from album or use artist as fallback)
       _groupByGenres(songs);
@@ -146,6 +160,13 @@ class HomeController extends ChangeNotifier {
 
     // Only keep genres with 3+ songs
     _genreSongs = Map.fromEntries(genreMap.entries.where((entry) => entry.value.length >= 3).take(5));
+  }
+
+  Future<void> updateUserName(String name) async {
+    _userName = name;
+    final settingsBox = await Hive.openBox('settings');
+    await settingsBox.put('userName', name);
+    notifyListeners();
   }
 
   Future<void> trackRecentlyPlayed(String songId) async {

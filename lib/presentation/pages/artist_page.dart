@@ -496,7 +496,7 @@ class _ArtistPageState extends State<ArtistPage> {
           if (artist.followers != null)
             _buildStatRow(
               icon: Icons.people_alt_rounded,
-              value: '${artist.spotifyData!.getFormattedFollowers()}',
+              value: artist.spotifyData!.getFormattedFollowers(),
               label: 'Followers',
               color: Colors.deepPurple,
             ),

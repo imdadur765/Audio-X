@@ -29,6 +29,11 @@ dependencies:
   # Lyrics Feature
   http: ^1.1.0
   file_picker: ^10.3.6
+  
+  # Firebase Authentication
+  firebase_core: ^3.8.1
+  firebase_auth: ^5.3.3
+  google_sign_in: ^6.2.2
 
 dev_dependencies:
   flutter_test:

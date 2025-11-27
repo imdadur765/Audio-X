@@ -77,7 +77,10 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     // Check permissions
     var status = await Permission.storage.status;
     if (!status.isGranted) {
-      status = await Permission.storage.request();
+      // Check if request is already in progress (simple check)
+      if (await Permission.storage.request().isGranted) {
+        status = PermissionStatus.granted;
+      }
     }
 
     // Also check for audio permission on Android 13+
@@ -120,6 +123,41 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _restoreSession() async {
     print('🔄 Starting session restoration...');
+
+    // Check if native player is already playing (service running)
+    final isNativePlaying = await _audioHandler.isPlaying();
+    final currentNativeItem = await _audioHandler.getCurrentMediaItem();
+
+    if (isNativePlaying && currentNativeItem != null) {
+      print('🔊 Native player is ALREADY PLAYING. Syncing state...');
+
+      // Find the song in our list
+      // Note: Native item ID might need matching strategy if IDs are complex
+      // Assuming ID matches
+      final songId = currentNativeItem['id']?.toString();
+      if (songId != null && _songs.isNotEmpty) {
+        try {
+          final song = _songs.firstWhere((s) => s.id == songId);
+          _currentSong = song;
+          _duration = Duration(milliseconds: song.duration);
+          _isPlaying = true;
+
+          // Restore other settings
+          final settingsBox = Hive.box('settings');
+          _isShuffleEnabled = settingsBox.get('shuffleMode') as bool? ?? false;
+          _repeatMode = settingsBox.get('repeatMode') as int? ?? 0;
+
+          _startProgressTimer();
+          notifyListeners();
+          return; // Sync successful
+        } catch (e) {
+          print('⚠️ Could not find playing song in list: $e. Falling back to normal restore.');
+          // Fall through to normal restoration
+        }
+      }
+    }
+
+    // If not playing OR sync failed, proceed with normal restoration
     final settingsBox = Hive.box('settings');
     final lastSongId = settingsBox.get('lastPlayedSongId');
     final lastPosition = settingsBox.get('lastPosition') as int? ?? 0;

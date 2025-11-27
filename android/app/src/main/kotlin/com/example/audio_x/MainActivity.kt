@@ -176,6 +176,24 @@ class MainActivity : FlutterActivity() {
                     android.util.Log.d("AudioX", "Native getPosition: $position ms")
                     result.success(position)
                 }
+                "isPlaying" -> {
+                    val isPlaying = controller.isPlaying
+                    result.success(isPlaying)
+                }
+                "getCurrentMediaItem" -> {
+                    val item = controller.currentMediaItem
+                    if (item != null) {
+                        val map = mapOf(
+                            "id" to (item.mediaId),
+                            "title" to (item.mediaMetadata.title ?: ""),
+                            "artist" to (item.mediaMetadata.artist ?: ""),
+                            "uri" to (item.requestMetadata.mediaUri?.toString() ?: "")
+                        )
+                        result.success(map)
+                    } else {
+                        result.success(null)
+                    }
+                }
                 "setShuffleMode" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: false
                     controller.shuffleModeEnabled = enabled
@@ -238,6 +256,10 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                     android.util.Log.d("AudioX", "Reset equalizer to flat")
+                    result.success(null)
+                }
+                "minimizeApp" -> {
+                    moveTaskToBack(true)
                     result.success(null)
                 }
                 else -> {

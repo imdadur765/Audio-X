@@ -56,7 +56,10 @@ class AudioService : MediaSessionService() {
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createNotificationChannel()
         
-        val player = ExoPlayer.Builder(this).build()
+        val player = ExoPlayer.Builder(this)
+            .setWakeMode(androidx.media3.common.C.WAKE_MODE_LOCAL)
+            .setHandleAudioBecomingNoisy(true)
+            .build()
         
         // Get the audio session ID from the player
         audioSessionId = player.audioSessionId
@@ -65,8 +68,19 @@ class AudioService : MediaSessionService() {
         // Initialize audio effects
         initializeAudioEffects(audioSessionId)
         
+        // Create intent for clicking notification
+        val intent = Intent(this, MainActivity::class.java).apply {
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
         // Build media session with custom callback to prevent auto-stop
         mediaSession = MediaSession.Builder(this, player)
+            .setSessionActivity(pendingIntent)
             .setCallback(object : MediaSession.Callback {
                 override fun onConnect(
                     session: MediaSession,

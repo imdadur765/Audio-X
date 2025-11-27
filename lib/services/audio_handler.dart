@@ -88,11 +88,31 @@ class AudioHandler {
     try {
       final position = await _channel.invokeMethod('getPosition');
       final duration = Duration(milliseconds: position as int);
-      print('🎯 Flutter getPosition: ${duration.inSeconds}s (${position}ms)');
+      // print('🎯 Flutter getPosition: ${duration.inSeconds}s (${position}ms)'); // Reduce log spam
       return duration;
     } on PlatformException catch (e) {
       print("Failed to get position: '${e.message}'.");
       return Duration.zero;
+    }
+  }
+
+  Future<bool> isPlaying() async {
+    try {
+      final isPlaying = await _channel.invokeMethod('isPlaying');
+      return isPlaying as bool;
+    } on PlatformException catch (e) {
+      print("Failed to get isPlaying: '${e.message}'.");
+      return false;
+    }
+  }
+
+  Future<Map<dynamic, dynamic>?> getCurrentMediaItem() async {
+    try {
+      final item = await _channel.invokeMethod('getCurrentMediaItem');
+      return item as Map<dynamic, dynamic>?;
+    } on PlatformException catch (e) {
+      print("Failed to get current media item: '${e.message}'.");
+      return null;
     }
   }
 

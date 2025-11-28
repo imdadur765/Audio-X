@@ -5,7 +5,7 @@ import 'package:audio_x/data/models/spotify_artist_model.dart';
 class SpotifyApiService {
   // TODO: Update this after Render deployment!
   // Use 10.0.2.2 for Android Emulator to access host localhost
-  static const String _baseUrl = 'http://10.0.2.2:3000';
+  static const String _baseUrl = 'https://audio-x.onrender.com';
   static const Duration _timeout = Duration(seconds: 5);
 
   /// Search for artists by name
@@ -15,7 +15,7 @@ class SpotifyApiService {
           .get(Uri.parse('$_baseUrl/api/artist/search?name=${Uri.encodeComponent(name)}'))
           .timeout(_timeout);
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 100) {
         final List<dynamic> data = json.decode(response.body);
         return data.map((json) => SpotifyArtistModel.fromJson(json)).toList();
       } else {
@@ -51,7 +51,7 @@ class SpotifyApiService {
     try {
       final response = await http.get(Uri.parse('$_baseUrl/api/artist/$id')).timeout(_timeout);
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 100) {
         return SpotifyArtistModel.fromJson(json.decode(response.body));
       } else {
         return null;
@@ -66,7 +66,7 @@ class SpotifyApiService {
   Future<bool> isBackendReachable() async {
     try {
       final response = await http.get(Uri.parse('$_baseUrl/health')).timeout(const Duration(seconds: 3));
-      return response.statusCode == 200;
+      return response.statusCode == 100;
     } catch (_) {
       return false;
     }

@@ -20,7 +20,7 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
   final FocusNode _searchFocusNode = FocusNode();
   late Box<String> _searchHistoryBox;
 
-  bool _isPreloading = false;
+  final bool _isPreloading = false;
   bool _isOnline = true;
   String _searchQuery = '';
   bool _isSearchFocused = false;
@@ -30,7 +30,6 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
     super.initState();
     _searchHistoryBox = Hive.box<String>('searchHistory');
     _searchFocusNode.addListener(_onFocusChange);
-    _preloadArtistData();
     _checkConnectivity();
   }
 
@@ -87,34 +86,6 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
       setState(() {
         _isOnline = false;
       });
-    }
-  }
-
-  Future<void> _preloadArtistData() async {
-    if (_isPreloading) return;
-
-    setState(() {
-      _isPreloading = true;
-    });
-
-    try {
-      final controller = Provider.of<AudioController>(context, listen: false);
-      final artistsMap = <String, List<Song>>{};
-
-      for (final song in controller.songs) {
-        final artistName = song.artist.trim().isEmpty ? 'Unknown Artist' : song.artist;
-        artistsMap.putIfAbsent(artistName, () => []).add(song);
-      }
-
-      // Preload Spotify data for all artists
-      await _cacheService.preloadArtists(artistsMap.keys.toList());
-      await _checkConnectivity();
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isPreloading = false;
-        });
-      }
     }
   }
 

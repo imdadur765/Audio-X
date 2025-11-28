@@ -15,7 +15,7 @@ class SpotifyApiService {
           .get(Uri.parse('$_baseUrl/api/artist/search?name=${Uri.encodeComponent(name)}'))
           .timeout(_timeout);
 
-      if (response.statusCode == 100) {
+      if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         return data.map((json) => SpotifyArtistModel.fromJson(json)).toList();
       } else {
@@ -51,7 +51,7 @@ class SpotifyApiService {
     try {
       final response = await http.get(Uri.parse('$_baseUrl/api/artist/$id')).timeout(_timeout);
 
-      if (response.statusCode == 100) {
+      if (response.statusCode == 200) {
         return SpotifyArtistModel.fromJson(json.decode(response.body));
       } else {
         return null;
@@ -66,7 +66,7 @@ class SpotifyApiService {
   Future<bool> isBackendReachable() async {
     try {
       final response = await http.get(Uri.parse('$_baseUrl/health')).timeout(const Duration(seconds: 3));
-      return response.statusCode == 100;
+      return response.statusCode == 200;
     } catch (_) {
       return false;
     }

@@ -446,4 +446,32 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     await _saveState();
     notifyListeners();
   }
+
+  Future<void> playPlaylist(List<Song> songs, {int initialIndex = 0}) async {
+    _songs = List.from(songs);
+
+    if (initialIndex >= 0 && initialIndex < _songs.length) {
+      final song = _songs[initialIndex];
+      final songMaps = _songs
+          .map(
+            (s) => {
+              'id': s.id,
+              'title': s.title,
+              'artist': s.artist,
+              'album': s.album,
+              'uri': s.uri,
+              'artworkUri': s.artworkUri,
+            },
+          )
+          .toList();
+
+      await _audioHandler.setPlaylist(songMaps, initialIndex: initialIndex);
+      _isPlaying = true;
+      _currentSong = song;
+      _duration = Duration(milliseconds: song.duration);
+      _startProgressTimer();
+      _trackRecentlyPlayed(song.id);
+      notifyListeners();
+    }
+  }
 }

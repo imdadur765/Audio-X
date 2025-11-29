@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:audio_x/data/models/spotify_artist_model.dart';
+import 'package:audio_x/data/models/spotify_song_model.dart';
 
 class SpotifyApiService {
   // TODO: Update this after Render deployment!
@@ -114,13 +115,148 @@ class SpotifyApiService {
     }
   }
 
-  /// Check if backend is reachable
-  Future<bool> isBackendReachable() async {
+  /// Health check
+  Future<bool> healthCheck() async {
     try {
       final response = await http.get(Uri.parse('$_baseUrl/health')).timeout(const Duration(seconds: 3));
       return response.statusCode == 200;
     } catch (_) {
       return false;
+    }
+  }
+
+  /// Search songs
+  Future<List<SpotifySongModel>> searchSongs(String query, {int limit = 20}) async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/api/search/songs?q=${Uri.encodeComponent(query)}&limit=$limit'))
+          .timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['success'] == true) {
+          final List<dynamic> tracksData = data['tracks'];
+          return tracksData.map((trackData) => SpotifySongModel.fromJson(trackData)).toList();
+        } else {
+          throw Exception('Backend error: ${data['error']}');
+        }
+      } else {
+        throw Exception('HTTP Error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error searching songs: $e');
+      return [];
+    }
+  }
+
+  /// Get artist's top tracks
+  Future<List<SpotifySongModel>> getArtistTopTracks(String artistId) async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/api/artist/$artistId/top-tracks?market=IN'))
+          .timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['success'] == true) {
+          final List<dynamic> tracksData = data['tracks'];
+          return tracksData.map((trackData) => SpotifySongModel.fromJson(trackData)).toList();
+        } else {
+          throw Exception('Backend error: ${data['error']}');
+        }
+      } else {
+        throw Exception('HTTP Error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error getting top tracks: $e');
+      return [];
+    }
+  }
+
+  /// Get track details
+  Future<SpotifySongModel?> getTrack(String trackId) async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/api/track/$trackId')).timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['success'] == true) {
+          return SpotifySongModel.fromJson(data['track']);
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error getting track: $e');
+      return null;
+    }
+  }
+
+  /// Get recommendations
+  Future<List<SpotifySongModel>> getRecommendations({String? seedTracks, String? seedArtists, int limit = 10}) async {
+    try {
+      final params = <String, String>{'limit': limit.toString()};
+      if (seedTracks != null) params['seed_tracks'] = seedTracks;
+      if (seedArtists != null) params['seed_artists'] = seedArtists;
+
+      final uri = Uri.parse('$_baseUrl/api/recommendations').replace(queryParameters: params);
+      final response = await http.get(uri).timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['success'] == true) {
+          final List<dynamic> tracksData = data['tracks'];
+          return tracksData.map((trackData) => SpotifySongModel.fromJson(trackData)).toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error getting recommendations: $e');
+      return [];
+    }
+  }
+
+  /// Enhance local songs with Spotify metadata
+  Future<List<Map<String, dynamic>>> enhanceLocalSongsMetadata(List<Map<String, dynamic>> localSongs) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/api/songs/enhance'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({'songs': localSongs}),
+          )
+          .timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['success'] == true) {
+          return List<Map<String, dynamic>>.from(data['enhancedSongs']);
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error enhancing metadata: $e');
+      return [];
+    }
+  }
+
+  /// Get artists data from local artist names
+  Future<List<Map<String, dynamic>>> getArtistsDataFromLocal(List<String> artistNames) async {
+    try {
+      final namesParam = artistNames.join(',');
+      final response = await http
+          .get(Uri.parse('$_baseUrl/api/artists/from-local?artistNames=${Uri.encodeComponent(namesParam)}'))
+          .timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['success'] == true) {
+          return List<Map<String, dynamic>>.from(data['artists']);
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error getting artists from local: $e');
+      return [];
     }
   }
 }

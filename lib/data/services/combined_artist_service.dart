@@ -1,103 +1,206 @@
-import 'dart:async';
+// ignore_for_file: prefer_const_constructors
+
 import 'package:flutter/foundation.dart';
-import 'package:audio_x/data/models/cached_spotify_artist.dart';
-import 'package:audio_x/data/models/artist_model.dart';
-import 'package:audio_x/data/models/song_model.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:audio_x/data/models/artist_model.dart' as artist_model;
+import 'package:audio_x/data/models/local_song_model.dart' as local_song_model;
 import 'package:audio_x/data/services/spotify_api_service.dart';
-import 'package:audio_x/data/models/spotify_artist_model.dart';
+import 'package:audio_x/data/services/local_songs_service.dart';
 
-/// Simplified in-memory cache service for artists
-/// Uses batch API calls and HashMap cache (no Hive = no disk I/O = no ANR)
 class CombinedArtistService {
-  final SpotifyApiService _apiService = SpotifyApiService();
+  final LocalSongsService _localSongsService = LocalSongsService();
+  final SpotifyApiService _spotifyService = SpotifyApiService();
+  final Connectivity _connectivity = Connectivity();
 
-  // In-memory cache with 24-hour expiry
-  final Map<String, CachedSpotifyArtist> _artistCache = {};
+  // Enhanced cache with timestamps
+  final Map<String, artist_model.Artist> _artistCache = {};
   final Map<String, DateTime> _cacheTimestamps = {};
   static const Duration _cacheDuration = Duration(hours: 24);
 
+  bool _isOnline = true;
   bool _isInitialized = false;
 
-  /// Initialize service
+  // Initialize with preloading
   void initialize() {
     if (_isInitialized) return;
     _isInitialized = true;
-    if (kDebugMode) {
-      print('✅ CombinedArtistService initialized');
+    _checkConnectivity();
+    _connectivity.onConnectivityChanged.listen(_updateConnectionStatus);
+
+    // Preload local songs in background
+    Future.microtask(() => _localSongsService.preloadData());
+  }
+
+  Future<void> _checkConnectivity() async {
+    try {
+      final result = await _connectivity.checkConnectivity();
+      _isOnline = result != ConnectivityResult.none;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Connectivity check failed: $e');
+      }
     }
   }
 
-  /// Get Spotify data for multiple artists in ONE batch call
-  Future<Map<String, ArtistModel>> getArtistsWithSpotifyData({
-    required Map<String, List<Song>> artistsWithSongs,
-  }) async {
+  void _updateConnectionStatus(ConnectivityResult result) {
+    _isOnline = result != ConnectivityResult.none;
+  }
+
+  Future<List<artist_model.Artist>> getCombinedArtists() async {
     try {
       final stopwatch = Stopwatch()..start();
-      final artistNames = artistsWithSongs.keys.toList();
 
-      if (artistNames.isEmpty) return {};
+      // Step 1: Get artists with song counts (FAST - uses cache)
+      final artistCounts = await _localSongsService.getArtistsWithSongCounts();
+      final artistNames = artistCounts.keys.toList();
 
-      // Step 1: Get valid cached entries
-      final cachedArtists = _getValidCachedArtists(artistNames);
+      if (artistNames.isEmpty) return [];
 
-      // Step 2: Artists that need fresh data
-      final artistsNeedingData = artistNames.where((name) => !cachedArtists.containsKey(name)).toList();
+      // Step 2: Get all local songs in one batch (FAST - uses cache)
+      final allLocalSongs = await _localSongsService.getAllSongs();
 
-      // Step 3: Fetch in ONE batch call
-      Map<String, CachedSpotifyArtist> spotifyBatchData = {};
-      if (artistsNeedingData.isNotEmpty) {
-        spotifyBatchData = await _fetchSpotifyBatchData(artistsNeedingData);
-      }
+      // Step 3: Group songs by artist (VERY FAST - in memory)
+      final songsByArtist = _groupSongsByArtist(allLocalSongs, artistNames);
 
-      // Step 4: Build final artist models
-      final Map<String, ArtistModel> result = {};
-      for (final artistName in artistNames) {
-        final localSongs = artistsWithSongs[artistName] ?? [];
+      // Step 4: Parallel processing for Spotify data
+      final combinedArtists = await _processArtistsInParallel(artistNames, songsByArtist, artistCounts);
 
-        // Use cache or fetch result
-        final cachedData = cachedArtists[artistName] ?? spotifyBatchData[artistName];
-
-        if (cachedData != null) {
-          // Convert CachedSpotifyArtist to SpotifyArtistModel
-          final spotifyModel = SpotifyArtistModel(
-            id: cachedData.spotifyId ?? '',
-            name: cachedData.artistName,
-            imageUrl: cachedData.imageUrl,
-            images: [],
-            followers: cachedData.followers ?? 0,
-            genres: cachedData.genres,
-            popularity: cachedData.popularity ?? 0,
-          );
-
-          result[artistName] = ArtistModel.withSpotify(
-            name: artistName,
-            localSongs: localSongs,
-            spotifyData: spotifyModel,
-          );
-        } else {
-          // Fallback: local only
-          result[artistName] = ArtistModel.localOnly(name: artistName, localSongs: localSongs);
-        }
-      }
+      // Sort by number of local songs (descending)
+      combinedArtists.sort((a, b) => b.localSongsCount.compareTo(a.localSongsCount));
 
       stopwatch.stop();
       if (kDebugMode) {
-        print('⏱️ Artists with Spotify data loaded in ${stopwatch.elapsedMilliseconds}ms');
+        print('⏱️ Combined artists loaded in ${stopwatch.elapsedMilliseconds}ms');
       }
 
-      return result;
+      return combinedArtists;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error getting artists with Spotify data: $e');
+        print('❌ Combined service error: $e');
       }
-      return {};
+      return _getDemoArtists();
     }
   }
 
-  /// Get valid cached artists (24-hour expiry)
-  Map<String, CachedSpotifyArtist> _getValidCachedArtists(List<String> artistNames) {
+  // FAST: Group songs by artist in memory
+  Map<String, List<local_song_model.LocalSong>> _groupSongsByArtist(
+    List<local_song_model.LocalSong> allSongs,
+    List<String> artistNames,
+  ) {
+    final Map<String, List<local_song_model.LocalSong>> result = {};
+
+    // Initialize with empty lists
+    for (final artist in artistNames) {
+      result[artist] = [];
+    }
+
+    // Group songs by artist
+    for (final song in allSongs) {
+      if (result.containsKey(song.artist)) {
+        result[song.artist]!.add(song);
+      }
+    }
+
+    return result;
+  }
+
+  // FAST: Process artists in parallel
+  Future<List<artist_model.Artist>> _processArtistsInParallel(
+    List<String> artistNames,
+    Map<String, List<local_song_model.LocalSong>> songsByArtist,
+    Map<String, int> artistCounts,
+  ) async {
+    final List<artist_model.Artist> results = [];
+
+    // Divide artists into batches for parallel processing
+    const batchSize = 8; // Reduced for better performance
+    final batches = _createBatches(artistNames, batchSize);
+
+    // Process batches in parallel
+    final batchFutures = batches.map((batch) => _processArtistBatch(batch, songsByArtist, artistCounts)).toList();
+
+    final batchResults = await Future.wait(batchFutures);
+
+    // Combine all results
+    for (final batch in batchResults) {
+      results.addAll(batch);
+    }
+
+    return results;
+  }
+
+  List<List<String>> _createBatches(List<String> items, int batchSize) {
+    final batches = <List<String>>[];
+    for (var i = 0; i < items.length; i += batchSize) {
+      final end = (i + batchSize < items.length) ? i + batchSize : items.length;
+      batches.add(items.sublist(i, end));
+    }
+    return batches;
+  }
+
+  Future<List<artist_model.Artist>> _processArtistBatch(
+    List<String> artistBatch,
+    Map<String, List<local_song_model.LocalSong>> songsByArtist,
+    Map<String, int> artistCounts,
+  ) async {
+    final List<artist_model.Artist> batchResults = [];
+
+    // Get valid cache entries first (VERY FAST)
+    final cachedArtists = _getValidCachedArtists(artistBatch);
+
+    // Artists that need Spotify data
+    final artistsNeedingData = artistBatch.where((artist) => !cachedArtists.containsKey(artist)).toList();
+
+    // Fetch Spotify data in one batch if online
+    Map<String, dynamic> spotifyBatchData = {};
+    if (_isOnline && artistsNeedingData.isNotEmpty) {
+      spotifyBatchData = await _fetchSpotifyBatchData(artistsNeedingData);
+    }
+
+    // Process each artist in the batch
+    for (final artistName in artistBatch) {
+      try {
+        final localSongs = songsByArtist[artistName] ?? [];
+
+        artist_model.Artist artist;
+
+        // Check cache first
+        if (cachedArtists.containsKey(artistName)) {
+          artist = artist_model.Artist.fromCombinedData(
+            spotifyArtist: cachedArtists[artistName]!,
+            localSongs: localSongs,
+          );
+        }
+        // Check new Spotify data
+        else if (spotifyBatchData.containsKey(artistName)) {
+          final spotifyArtist = artist_model.Artist.fromSpotifyJson(spotifyBatchData[artistName]!);
+          _cacheArtist(artistName, spotifyArtist);
+          artist = artist_model.Artist.fromCombinedData(spotifyArtist: spotifyArtist, localSongs: localSongs);
+        }
+        // Fallback to local data
+        else {
+          artist = artist_model.Artist.fromLocalData(name: artistName, localSongs: localSongs);
+        }
+
+        batchResults.add(artist);
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Error processing $artistName: $e');
+        }
+        // Fast fallback
+        final localSongs = songsByArtist[artistName] ?? [];
+
+        batchResults.add(artist_model.Artist.fromLocalData(name: artistName, localSongs: localSongs));
+      }
+    }
+
+    return batchResults;
+  }
+
+  // FAST: Get valid cached artists
+  Map<String, artist_model.Artist> _getValidCachedArtists(List<String> artistNames) {
     final now = DateTime.now();
-    final validCache = <String, CachedSpotifyArtist>{};
+    final validCache = <String, artist_model.Artist>{};
 
     for (final artistName in artistNames) {
       if (_artistCache.containsKey(artistName) && _cacheTimestamps.containsKey(artistName)) {
@@ -108,87 +211,113 @@ class CombinedArtistService {
       }
     }
 
-    if (kDebugMode && validCache.isNotEmpty) {
-      print('💾 Cache hit: ${validCache.length} artists');
-    }
-
     return validCache;
   }
 
-  /// Cache artist with timestamp
-  void _cacheArtist(String artistName, CachedSpotifyArtist artist) {
+  // FAST: Cache artist with timestamp
+  void _cacheArtist(String artistName, artist_model.Artist artist) {
     _artistCache[artistName] = artist;
     _cacheTimestamps[artistName] = DateTime.now();
   }
 
-  /// Fetch Spotify data in ONE batch call (GAME CHANGER!)
-  Future<Map<String, CachedSpotifyArtist>> _fetchSpotifyBatchData(List<String> artistNames) async {
+  // OPTIMIZED: Fetch Spotify data in optimized batch
+  Future<Map<String, dynamic>> _fetchSpotifyBatchData(List<String> artistNames) async {
     try {
-      if (kDebugMode) {
-        print('🚀 Batch API call for ${artistNames.length} artists');
-      }
-
-      final batchResults = await _apiService.getBatchArtistsData(artistNames);
-      final resultMap = <String, CachedSpotifyArtist>{};
+      final batchResults = await _spotifyService.getBatchArtistsData(artistNames);
+      final resultMap = <String, dynamic>{};
 
       for (final data in batchResults) {
         final artistName = data['localName'] as String?;
         final spotifyData = data['spotifyArtist'];
-
         if (artistName != null && spotifyData != null) {
-          // Convert to CachedSpotifyArtist
-          final cachedArtist = CachedSpotifyArtist.fromSpotifyData(
-            artistName: artistName,
-            spotifyId: (spotifyData['id'] as String?) ?? '',
-            imageUrl: (spotifyData['imageUrl'] as String?) ?? '',
-            followers: (spotifyData['followers'] as int?) ?? 0,
-            genres: (spotifyData['genres'] as List?)?.cast<String>() ?? [],
-            popularity: (spotifyData['popularity'] as int?) ?? 0,
-          );
-
-          // Cache it
-          _cacheArtist(artistName, cachedArtist);
-          resultMap[artistName] = cachedArtist;
+          resultMap[artistName] = spotifyData;
         }
-      }
-
-      if (kDebugMode) {
-        print('✅ Batch fetch complete: ${resultMap.length} artists fetched');
       }
 
       return resultMap;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Batch fetch failed: $e');
+        print('❌ Spotify batch fetch failed: $e');
       }
       return {};
     }
   }
 
-  /// Clear all cache
-  void clearCache() {
-    _artistCache.clear();
-    _cacheTimestamps.clear();
-    if (kDebugMode) {
-      print('🗑️ Cache cleared');
+  // FAST: Optimized search
+  Future<List<artist_model.Artist>> searchCombinedArtists(String query) async {
+    if (query.isEmpty) return [];
+
+    try {
+      // Use cached data first for instant results
+      final cachedResults = _searchInCache(query);
+      if (cachedResults.isNotEmpty) {
+        return cachedResults;
+      }
+
+      // If no cache, do fast search
+      final allArtists = await getCombinedArtists();
+      final searchResults = allArtists
+          .where((artist) => artist.name.toLowerCase().contains(query.toLowerCase()))
+          .toList();
+
+      return searchResults;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Search error: $e');
+      }
+      return _searchInCache(query);
     }
   }
 
-  /// Get cache stats
-  Map<String, dynamic> getCacheStats() {
+  // VERY FAST: Search in cache only
+  List<artist_model.Artist> _searchInCache(String query) {
+    final results = <artist_model.Artist>[];
     final now = DateTime.now();
-    int validCount = 0;
-    int expiredCount = 0;
+    final queryLower = query.toLowerCase();
 
-    for (final entry in _cacheTimestamps.entries) {
-      final age = now.difference(entry.value);
-      if (age <= _cacheDuration) {
-        validCount++;
-      } else {
-        expiredCount++;
+    for (final entry in _artistCache.entries) {
+      final cacheAge = _cacheTimestamps[entry.key] != null
+          ? now.difference(_cacheTimestamps[entry.key]!)
+          : Duration(days: 365);
+
+      if (cacheAge <= _cacheDuration && entry.key.toLowerCase().contains(queryLower)) {
+        results.add(entry.value);
       }
     }
 
-    return {'total': _artistCache.length, 'valid': validCount, 'expired': expiredCount};
+    return results;
+  }
+
+  bool get isOnline => _isOnline;
+
+  void clearCache() {
+    _artistCache.clear();
+    _cacheTimestamps.clear();
+    _localSongsService.clearCache();
+  }
+
+  Future<void> refreshSpotifyData() async {
+    if (_isOnline) {
+      clearCache();
+    }
+  }
+
+  List<artist_model.Artist> _getDemoArtists() {
+    return [
+      artist_model.Artist.fromLocalData(
+        name: 'Arijit Singh',
+        localSongs: [
+          local_song_model.LocalSong(
+            id: '1',
+            title: 'Tum Hi Ho',
+            album: 'Aashiqui 2',
+            artist: 'Arijit Singh',
+            path: '',
+            duration: 262000,
+            size: 5242880,
+          ),
+        ],
+      ),
+    ];
   }
 }

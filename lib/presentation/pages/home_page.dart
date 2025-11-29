@@ -6,7 +6,9 @@ import '../controllers/home_controller.dart';
 import '../../data/models/song_model.dart';
 import '../../data/services/auth_service.dart';
 import 'player_page.dart';
-import 'artist_page.dart';
+import 'package:audio_x/presentation/pages/artists_screen.dart';
+import 'package:audio_x/data/models/artist_model.dart';
+import 'package:audio_x/data/models/local_song_model.dart';
 import 'playlist_details_page.dart';
 import 'profile_page.dart';
 
@@ -106,16 +108,16 @@ class _HomePageState extends State<HomePage> {
       pinned: true,
       backgroundColor: Colors.white,
       elevation: opacity * 4,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       actions: [
         Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(opacity),
+            color: Colors.white.withValues(alpha: opacity),
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               if (opacity > 0.5)
-                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5)),
+                BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 5)),
             ],
           ),
           child: IconButton(
@@ -145,7 +147,7 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withOpacity(0.8), width: 2),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 2),
             ),
             child: _authService.isLoggedIn && _authService.userPhotoUrl != null
                 ? CircleAvatar(
@@ -290,7 +292,11 @@ class _HomePageState extends State<HomePage> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 6)),
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
                       ],
                     ),
                     child: ClipRRect(
@@ -330,7 +336,7 @@ class _HomePageState extends State<HomePage> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.deepPurple.withOpacity(0.5),
+                            color: Colors.deepPurple.withValues(alpha: 0.5),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -414,10 +420,35 @@ class _HomePageState extends State<HomePage> {
   Widget _buildArtistCard(ArtistStats artist) {
     return GestureDetector(
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) =>
-                ArtistPage(artistName: artist.name, localSongs: artist.songs, cachedSpotifyData: artist.cachedData),
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => ArtistDetailsSheet(
+            artist: Artist(
+              id: artist.cachedData?.spotifyId ?? '',
+              name: artist.name,
+              imageUrl: artist.imageUrl,
+              songsCount: artist.songCount,
+              localSongsCount: artist.songs.length,
+              followers: artist.cachedData?.followers != null ? '${artist.cachedData!.followers}' : 'Local Artist',
+              popularSongs: [],
+              localSongs: artist.songs
+                  .map(
+                    (s) => LocalSong(
+                      id: s.id,
+                      title: s.title,
+                      artist: s.artist,
+                      album: s.album,
+                      path: s.uri.toString(),
+                      duration: s.duration,
+                      size: 0, // Default size as it's not available in Song model
+                    ),
+                  )
+                  .toList(),
+              popularity: artist.cachedData?.popularity ?? 0,
+              genres: artist.cachedData?.genres ?? [],
+            ),
           ),
         );
       },
@@ -431,7 +462,7 @@ class _HomePageState extends State<HomePage> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.deepPurple.withOpacity(0.3),
+              color: Colors.deepPurple.withValues(alpha: 0.3),
               blurRadius: 12, // Reduced blur
               offset: const Offset(0, 6), // Reduced offset
             ),
@@ -458,7 +489,7 @@ class _HomePageState extends State<HomePage> {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
                 ),
               ),
             ),
@@ -584,7 +615,7 @@ class _HomePageState extends State<HomePage> {
           gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: gradientColors),
           boxShadow: [
             BoxShadow(
-              color: gradientColors.first.withOpacity(0.4),
+              color: gradientColors.first.withValues(alpha: 0.4),
               blurRadius: 12, // Reduced blur
               offset: const Offset(0, 6), // Reduced offset
             ),
@@ -662,7 +693,7 @@ class _HomePageState extends State<HomePage> {
                     borderRadius: BorderRadius.circular(12), // Reduced radius
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
+                        color: Colors.black.withValues(alpha: 0.15),
                         blurRadius: 8, // Reduced blur
                         offset: const Offset(0, 4), // Reduced offset
                       ),
@@ -779,18 +810,18 @@ class _HomePageState extends State<HomePage> {
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2), // Reduced margin
           decoration: BoxDecoration(
-            color: isCurrentlyPlaying ? Colors.deepPurple.withOpacity(0.05) : Colors.white,
+            color: isCurrentlyPlaying ? Colors.deepPurple.withValues(alpha: 0.05) : Colors.white,
             borderRadius: BorderRadius.circular(12), // Reduced radius
             boxShadow: [
               if (!isCurrentlyPlaying)
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
+                  color: Colors.black.withValues(alpha: 0.03),
                   blurRadius: 6, // Reduced blur
                   offset: const Offset(0, 1), // Reduced offset
                 ),
             ],
             border: Border.all(
-              color: isCurrentlyPlaying ? Colors.deepPurple.withOpacity(0.3) : Colors.transparent,
+              color: isCurrentlyPlaying ? Colors.deepPurple.withValues(alpha: 0.3) : Colors.transparent,
               width: 1,
             ),
           ),
@@ -827,7 +858,7 @@ class _HomePageState extends State<HomePage> {
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.4),
+                              color: Colors.black.withValues(alpha: 0.4),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Center(
@@ -941,7 +972,7 @@ class _HomePageState extends State<HomePage> {
                   borderRadius: BorderRadius.circular(12), // Reduced radius
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.deepPurple.withOpacity(0.3),
+                      color: Colors.deepPurple.withValues(alpha: 0.3),
                       blurRadius: 12, // Reduced blur
                       offset: const Offset(0, 6), // Reduced offset
                     ),

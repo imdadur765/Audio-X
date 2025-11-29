@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audio_x/presentation/controllers/audio_controller.dart';
 import 'package:audio_x/presentation/pages/home_page.dart';
-import 'package:audio_x/presentation/pages/artists_list_page.dart';
+import 'package:audio_x/presentation/pages/artists_screen.dart';
 import 'package:audio_x/presentation/pages/albums_page.dart';
 import 'package:audio_x/presentation/pages/playlists_page.dart';
 import 'package:audio_x/presentation/pages/favorites_page.dart';
@@ -21,7 +21,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with WidgetsBin
   int _currentIndex = 0;
   SharedPreferences? _prefs;
 
-  final List<Widget> _pages = const [HomePage(), ArtistsListPage(), AlbumsPage(), PlaylistsPage(), FavoritesPage()];
+  final List<Widget> _pages = const [HomePage(), ArtistsScreen(), AlbumsPage(), PlaylistsPage(), FavoritesPage()];
 
   @override
   void initState() {

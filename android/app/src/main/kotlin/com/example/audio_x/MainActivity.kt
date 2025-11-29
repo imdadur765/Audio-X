@@ -39,6 +39,12 @@ class MainActivity : FlutterActivity() {
         super.onStop()
     }
 
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        // Move app to background instead of closing it
+        moveTaskToBack(true)
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->

@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
 import 'home_page.dart';
-import 'artists_list_page.dart';
-import 'songs_page.dart';
 import 'albums_page.dart';
 
 class NavigationPage extends StatefulWidget {
@@ -40,9 +37,11 @@ class _NavigationPageState extends State<NavigationPage> {
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
 
-        // If on home tab (0), minimize app
+        // If on home tab (0), minimize app to background
         if (_currentIndex == 0) {
-          SystemNavigator.pop();
+          // Move task to background instead of closing
+          // This requires platform channel or just let it exit normally
+          Navigator.of(context).pop();
         } else {
           // Otherwise, go back to home tab first
           setState(() {
@@ -52,10 +51,7 @@ class _NavigationPageState extends State<NavigationPage> {
         }
       },
       child: Scaffold(
-        body: IndexedStack(
-          index: _currentIndex,
-          children: const [HomePage(), ArtistsListPage(), SongsPage(), AlbumsPage()],
-        ),
+        body: IndexedStack(index: _currentIndex, children: const [HomePage(), AlbumsPage()]),
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
             boxShadow: [
@@ -74,16 +70,6 @@ class _NavigationPageState extends State<NavigationPage> {
             elevation: 0,
             items: const [
               BottomNavigationBarItem(icon: Icon(Icons.home_rounded), activeIcon: Icon(Icons.home), label: 'Home'),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline_rounded),
-                activeIcon: Icon(Icons.person_rounded),
-                label: 'Artists',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.music_note_outlined),
-                activeIcon: Icon(Icons.music_note_rounded),
-                label: 'Songs',
-              ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.album_outlined),
                 activeIcon: Icon(Icons.album_rounded),

@@ -23,20 +23,20 @@ const MAX_REQUESTS = 100;
 const rateLimit = (req, res, next) => {
   const ip = req.ip;
   const now = Date.now();
-  
+
   if (!rateLimitMap.has(ip)) {
     rateLimitMap.set(ip, []);
   }
-  
+
   const requests = rateLimitMap.get(ip).filter(time => now - time < RATE_LIMIT_WINDOW);
-  
+
   if (requests.length >= MAX_REQUESTS) {
-    return res.status(429).json({ 
+    return res.status(429).json({
       error: 'Too many requests, please try again later',
-      retryAfter: RATE_LIMIT_WINDOW / 1000 
+      retryAfter: RATE_LIMIT_WINDOW / 1000
     });
   }
-  
+
   requests.push(now);
   rateLimitMap.set(ip, requests);
   next();
@@ -74,7 +74,7 @@ const getSpotifyAccessToken = async () => {
     spotifyAccessToken = response.data.access_token;
     // Set expiry 1 minute before actual expiry for safety
     tokenExpiresAt = Date.now() + (response.data.expires_in - 60) * 1000;
-    
+
     return spotifyAccessToken;
   } catch (error) {
     console.error('Error getting Spotify access token:', error.response?.data || error.message);
@@ -84,8 +84,8 @@ const getSpotifyAccessToken = async () => {
 
 // Health check endpoint
 app.get('/', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     message: 'Spotify Artist API Backend',
     version: '1.0.0'
   });
@@ -132,21 +132,21 @@ app.get('/api/artist/search', rateLimit, async (req, res) => {
     }));
 
     const result = { artists };
-    
+
     // Cache the result
     cache.set(cacheKey, result);
 
     res.json(result);
   } catch (error) {
     console.error('Error searching artist:', error.response?.data || error.message);
-    
+
     if (error.response?.status === 401) {
       return res.status(401).json({ error: 'Spotify authentication failed' });
     }
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       error: 'Failed to search artist',
-      message: error.message 
+      message: error.message
     });
   }
 });
@@ -192,18 +192,116 @@ app.get('/api/artist/:id', rateLimit, async (req, res) => {
     res.json(artist);
   } catch (error) {
     console.error('Error getting artist details:', error.response?.data || error.message);
-    
+
     if (error.response?.status === 404) {
       return res.status(404).json({ error: 'Artist not found' });
     }
-    
+
     if (error.response?.status === 401) {
       return res.status(401).json({ error: 'Spotify authentication failed' });
     }
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       error: 'Failed to get artist details',
-      message: error.message 
+      message: error.message
+    });
+  }
+});
+
+// Batch get artists - NEW ENDPOINT
+app.post('/api/artists/batch', rateLimit, async (req, res) => {
+  try {
+    const { artistNames } = req.body;
+
+    if (!artistNames || !Array.isArray(artistNames) || artistNames.length === 0) {
+      return res.status(400).json({ error: 'Artist names array is required' });
+    }
+
+    console.log(`📦 Batch request for ${artistNames.length} artists`);
+
+    const token = await getSpotifyAccessToken();
+
+    // Process all artists in parallel
+    const results = await Promise.all(
+      artistNames.map(async (artistName) => {
+        try {
+          // Check cache first
+          const cacheKey = `search:${artistName.toLowerCase()}`;
+          const cachedData = cache.get(cacheKey);
+
+          if (cachedData && cachedData.artists && cachedData.artists.length > 0) {
+            return {
+              localName: artistName,
+              spotifyArtist: cachedData.artists[0] // Best match
+            };
+          }
+
+          // Search Spotify
+          const response = await axios.get('https://api.spotify.com/v1/search', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            params: {
+              q: artistName,
+              type: 'artist',
+              limit: 1 // Only need best match
+            }
+          });
+
+          const artists = response.data.artists.items;
+
+          if (artists.length === 0) {
+            return {
+              localName: artistName,
+              spotifyArtist: null
+            };
+          }
+
+          const artist = {
+            id: artists[0].id,
+            name: artists[0].name,
+            imageUrl: artists[0].images[0]?.url || null,
+            images: artists[0].images,
+            followers: artists[0].followers.total,
+            genres: artists[0].genres,
+            popularity: artists[0].popularity,
+            externalUrl: artists[0].external_urls.spotify
+          };
+
+          // Cache the result
+          cache.set(cacheKey, { artists: [artist] });
+
+          return {
+            localName: artistName,
+            spotifyArtist: artist
+          };
+
+        } catch (error) {
+          console.error(`Error fetching ${artistName}:`, error.message);
+          return {
+            localName: artistName,
+            spotifyArtist: null
+          };
+        }
+      })
+    );
+
+    res.json({
+      success: true,
+      artists: results,
+      total: results.length
+    });
+
+  } catch (error) {
+    console.error('Batch request error:', error.response?.data || error.message);
+
+    if (error.response?.status === 401) {
+      return res.status(401).json({ error: 'Spotify authentication failed' });
+    }
+
+    res.status(500).json({
+      error: 'Failed to process batch request',
+      message: error.message
     });
   }
 });
@@ -220,6 +318,7 @@ app.listen(PORT, () => {
   console.log(`📡 Endpoints:`);
   console.log(`   GET  /api/artist/search?name=<artist_name>`);
   console.log(`   GET  /api/artist/:id`);
+  console.log(`   POST /api/artists/batch (body: {artistNames: [...]}) - NEW!`);
 });
 
 module.exports = app;

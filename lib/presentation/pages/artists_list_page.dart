@@ -522,10 +522,11 @@ class _ArtistCardWithImageState extends State<_ArtistCardWithImage> {
       });
     }
 
-    // Then fetch/update in background if needed and online
-    if (widget.isOnline && (cached == null || cached.isExpired)) {
-      _fetchFreshData();
-    }
+    // DISABLED: Auto-fetch causes ANR during scroll
+    // Only load from cache, no new API calls during list rendering
+    // if (widget.isOnline && (cached == null || cached.isExpired)) {
+    //   _fetchFreshData();
+    // }
   }
 
   Future<void> _fetchFreshData() async {

@@ -5,7 +5,7 @@ import 'data/models/song_model.dart';
 import 'data/models/audio_effects_model.dart';
 import 'presentation/controllers/audio_controller.dart';
 import 'presentation/controllers/audio_effects_controller.dart';
-import 'presentation/pages/home_page.dart';
+import 'presentation/pages/navigation_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,7 +47,7 @@ class AudioXApp extends StatelessWidget {
     return MaterialApp(
       title: 'Audio X',
       theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple), useMaterial3: true),
-      home: const HomePage(),
+      home: const NavigationPage(),
     );
   }
 }

@@ -8,7 +8,7 @@ part of 'artist_model.dart';
 
 class ArtistAdapter extends TypeAdapter<Artist> {
   @override
-  final int typeId = 2;
+  final int typeId = 3;
 
   @override
   Artist read(BinaryReader reader) {

@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/artist_model.dart';
@@ -14,14 +13,7 @@ class ArtistPage extends StatefulWidget {
 
 class _ArtistPageState extends State<ArtistPage> {
   final ArtistService _artistService = ArtistService();
-
-  // In a real app, you'd pass the artist name via constructor or route arguments.
-  // For this demo, we'll fetch a default artist or list all artists from the library.
-  // Since the user asked for an "Artist Page" (singular context usually implies details),
-  // but the tab is "Artists" (plural), we should probably list artists first.
-  // However, the requirement was about "fetching metadata".
-  // Let's make this page list artists from the library, and when tapped, show details.
-  // But for now, to demonstrate the feature, let's just show a list of artists found in the songs.
+  final Map<String, Future<Artist?>> _artistFutures = {};
 
   @override
   Widget build(BuildContext context) {
@@ -36,26 +28,46 @@ class _ArtistPageState extends State<ArtistPage> {
               itemCount: artists.length,
               itemBuilder: (context, index) {
                 final artistName = artists[index];
+
+                _artistFutures.putIfAbsent(artistName, () => _artistService.getArtistInfo(artistName));
+
                 return FutureBuilder<Artist?>(
-                  future: _artistService.getArtistInfo(artistName),
+                  future: _artistFutures[artistName],
                   builder: (context, snapshot) {
                     final artist = snapshot.data;
                     final image = artist?.imageUrl;
+                    final isLoading = snapshot.connectionState == ConnectionState.waiting;
 
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.grey[200],
-                        backgroundImage: image != null && image.isNotEmpty ? CachedNetworkImageProvider(image) : null,
-                        child: image == null ? const Icon(Icons.person) : null,
+                    if (artist != null) {
+                      print(
+                        '🎭 UI: Artist "$artistName" - Image: ${image ?? "NULL"} (${image?.isEmpty == true ? "EMPTY" : "HAS DATA"})',
+                      );
+                    }
+
+                    final hasImage = image != null && image.isNotEmpty;
+
+                    return RepaintBoundary(
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.grey[200],
+                          foregroundImage: hasImage ? NetworkImage(image) : null,
+                          onForegroundImageError: hasImage
+                              ? (exception, stackTrace) {
+                                  print('❌ Image load error for $artistName: $exception');
+                                }
+                              : null,
+                          child: isLoading
+                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                              : (!hasImage ? const Icon(Icons.person) : null),
+                        ),
+                        title: Text(artistName),
+                        subtitle: artist?.tags.isNotEmpty == true
+                            ? Text(artist!.tags.take(3).join(", "), maxLines: 1, overflow: TextOverflow.ellipsis)
+                            : Text(isLoading ? "Loading..." : "Unknown Genre"),
+                        onTap: () {
+                          _showArtistDetails(context, artistName, artist);
+                        },
                       ),
-                      title: Text(artistName),
-                      subtitle: artist?.tags.isNotEmpty == true
-                          ? Text(artist!.tags.take(3).join(", "), maxLines: 1, overflow: TextOverflow.ellipsis)
-                          : const Text("Unknown Genre"),
-                      onTap: () {
-                        // Navigate to details (could be a bottom sheet or new page)
-                        _showArtistDetails(context, artistName, artist);
-                      },
                     );
                   },
                 );
@@ -73,23 +85,34 @@ class _ArtistPageState extends State<ArtistPage> {
         initialChildSize: 0.9,
         minChildSize: 0.5,
         maxChildSize: 0.95,
-        builder: (_, controller) => Container(
+        builder: (_, scrollController) => Container(
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: ListView(
-            controller: controller,
+            controller: scrollController,
             padding: EdgeInsets.zero,
             children: [
-              if (artist?.imageUrl != null)
-                CachedNetworkImage(
-                  imageUrl: artist!.imageUrl!,
-                  height: 300,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(height: 300, color: Colors.grey[300]),
-                  errorWidget: (context, url, error) =>
-                      Container(height: 300, color: Colors.grey[300], child: const Icon(Icons.error)),
+              if (artist?.imageUrl != null && artist!.imageUrl!.isNotEmpty)
+                RepaintBoundary(
+                  child: Image.network(
+                    artist.imageUrl!,
+                    height: 300,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        height: 300,
+                        color: Colors.grey[300],
+                        child: const Center(child: CircularProgressIndicator()),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      print('❌ Detail image error for $name: $error');
+                      return Container(height: 300, color: Colors.grey[300], child: const Icon(Icons.error, size: 60));
+                    },
+                  ),
                 ),
               Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -115,5 +138,11 @@ class _ArtistPageState extends State<ArtistPage> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _artistFutures.clear();
+    super.dispose();
   }
 }

@@ -2,7 +2,7 @@ import 'package:hive/hive.dart';
 
 part 'artist_model.g.dart';
 
-@HiveType(typeId: 2) // Ensure typeId is unique. Song is likely 0 or 1.
+@HiveType(typeId: 3) // Ensure typeId is unique. Song is 0, AudioEffects is 2.
 class Artist extends HiveObject {
   @HiveField(0)
   final String name;

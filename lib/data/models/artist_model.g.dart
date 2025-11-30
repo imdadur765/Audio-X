@@ -22,13 +22,15 @@ class ArtistAdapter extends TypeAdapter<Artist> {
       imageUrl: fields[2] as String?,
       tags: (fields[3] as List).cast<String>(),
       lastUpdated: fields[4] as DateTime,
+      followers: fields[5] as int,
+      popularity: fields[6] as int,
     );
   }
 
   @override
   void write(BinaryWriter writer, Artist obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -38,7 +40,11 @@ class ArtistAdapter extends TypeAdapter<Artist> {
       ..writeByte(3)
       ..write(obj.tags)
       ..writeByte(4)
-      ..write(obj.lastUpdated);
+      ..write(obj.lastUpdated)
+      ..writeByte(5)
+      ..write(obj.followers)
+      ..writeByte(6)
+      ..write(obj.popularity);
   }
 
   @override

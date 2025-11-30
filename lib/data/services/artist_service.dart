@@ -4,12 +4,8 @@ import 'package:http/http.dart' as http;
 import '../models/artist_model.dart';
 
 class ArtistService {
-  // Use the deployed backend URL
   static const String _baseUrl = 'https://audio-x.onrender.com/api/artist';
   static const String _boxName = 'artists';
-
-  // Last.fm's default placeholder image hash (the star icon)
-  static const String _placeholderHash = '2a96cbd8b46e442fc41c2b86b821562f';
 
   Future<Box<Artist>> _getBox() async {
     if (!Hive.isBoxOpen(_boxName)) {
@@ -18,99 +14,89 @@ class ArtistService {
     return Hive.box<Artist>(_boxName);
   }
 
-  Future<Artist?> getArtistInfo(String artistName) async {
+  // Clean artist name for better search
+  String _cleanArtistName(String name) {
+    String cleaned = name;
+
+    // Remove emojis
+    cleaned = cleaned.replaceAll(RegExp(r'[🎧🎶🎵💿🔥✨⚡🌟💫🎤🎹🎸🎼🎙️]'), '');
+
+    // Extract first artist if multiple
+    if (cleaned.contains(',')) {
+      cleaned = cleaned.split(',').first.trim();
+    } else if (cleaned.contains('&')) {
+      cleaned = cleaned.split('&').first.trim();
+    } else if (cleaned.contains(' ft.') || cleaned.contains(' feat.')) {
+      cleaned = cleaned.split(RegExp(r'\s+(ft\.|feat\.)', caseSensitive: false)).first.trim();
+    }
+
+    // Remove common suffixes
+    cleaned = cleaned.replaceAll(
+      RegExp(r'\s+(Official|Music|Records|Entertainment|Studio|Server)$', caseSensitive: false),
+      '',
+    );
+
+    // Clean whitespace
+    cleaned = cleaned.trim().replaceAll(RegExp(r'\s+'), ' ');
+
+    return cleaned;
+  }
+
+  Future<Artist?> getArtistInfo(String artistName, {bool fetchBio = false}) async {
     final box = await _getBox();
     final normalizedName = artistName.toLowerCase().trim();
 
-    // Extract first artist if multiple artists (separated by comma)
-    String searchName = artistName;
-    if (artistName.contains(',')) {
-      searchName = artistName.split(',').first.trim();
-      print('🎯 Multi-artist detected: "$artistName" → Searching for: "$searchName"');
+    // Clean name for search
+    String searchName = _cleanArtistName(artistName);
+    if (searchName != artistName) {
+      print('🧹 Cleaned: "$artistName" → "$searchName"');
     }
 
-    // 1. Check Cache - but force refresh for now to test backend
+    // 1. Check Cache
     if (box.containsKey(normalizedName)) {
       final cachedArtist = box.get(normalizedName);
-      // Reduced cache time to 1 day for testing
-      if (cachedArtist != null && DateTime.now().difference(cachedArtist.lastUpdated).inDays < 1) {
-        print('📦 Using cached data for: $artistName');
-        return cachedArtist;
-      } else {
-        print('🔄 Cache expired for: $artistName, fetching fresh data');
+      if (cachedArtist != null && DateTime.now().difference(cachedArtist.lastUpdated).inDays < 7) {
+        // If bio needed but not cached, fetch it
+        if (fetchBio && (cachedArtist.biography == null || cachedArtist.biography!.isEmpty)) {
+          print('📖 Cache exists but bio needed, fetching...');
+          // Continue to fetch
+        } else {
+          print('📦 Using cache: $artistName');
+          return cachedArtist;
+        }
       }
     }
 
-    // 2. Fetch from Backend Proxy
+    // 2. Fetch from Backend
     try {
-      print('🔍 Fetching artist: $searchName from $_baseUrl/$searchName');
+      print('🔍 Fetching: $searchName${fetchBio ? " (with bio)" : ""}');
       final response = await http.get(Uri.parse('$_baseUrl/$searchName'));
-      print('📡 Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print('📦 Response data keys: ${data.keys}');
         if (data['artist'] != null) {
           final artistData = data['artist'];
-          print('🎨 Artist data found for: ${artistData['name']}');
 
-          // Extract Image (skip Last.fm placeholder)
-          String? imageUrl;
-          final List<dynamic> images = artistData['image'] ?? [];
-          print('🖼️ Found ${images.length} images');
-
-          // Try extralarge first
-          for (var img in images) {
-            final url = img['#text']?.toString() ?? '';
-            if (img['size'] == 'extralarge' && url.isNotEmpty && !url.contains(_placeholderHash)) {
-              imageUrl = url;
-              print('✅ Selected extralarge image: $imageUrl');
-              break;
-            }
+          String? imageUrl = artistData['image'];
+          if (imageUrl != null && imageUrl.isNotEmpty) {
+            print('✅ Spotify image');
           }
 
-          // If no extralarge, try large
-          if (imageUrl == null) {
-            for (var img in images) {
-              final url = img['#text']?.toString() ?? '';
-              if (img['size'] == 'large' && url.isNotEmpty && !url.contains(_placeholderHash)) {
-                imageUrl = url;
-                print('✅ Selected large image: $imageUrl');
-                break;
-              }
-            }
-          }
-
-          // If still no image, try any non-placeholder image
-          if (imageUrl == null) {
-            for (var img in images) {
-              final url = img['#text']?.toString() ?? '';
-              if (url.isNotEmpty && !url.contains(_placeholderHash)) {
-                imageUrl = url;
-                print('✅ Selected fallback image (${img['size']}): $imageUrl');
-                break;
-              }
-            }
-          }
-
-          if (imageUrl == null || imageUrl.contains(_placeholderHash)) {
-            print('❌ No real image found (only placeholder available)');
-            imageUrl = null; // Set to null so UI shows person icon
-          }
-
-          // Extract Tags
           List<String> tags = [];
-          if (artistData['tags'] != null && artistData['tags']['tag'] != null) {
-            final tagList = artistData['tags']['tag'];
-            if (tagList is List) {
-              tags = tagList.map<String>((t) => t['name'].toString()).toList();
-            }
+          if (artistData['tags'] != null && artistData['tags'] is List) {
+            tags = (artistData['tags'] as List).map<String>((t) => t.toString()).toList();
           }
 
-          // Extract Bio
-          String? bio;
-          if (artistData['bio'] != null) {
-            bio = artistData['bio']['summary']; // 'content' has HTML, 'summary' is safer
+          String? bio = artistData['biography'];
+          if (bio != null && bio.isNotEmpty) {
+            print('📖 Got biography');
+          }
+
+          // Parse stats
+          int followers = artistData['followers'] ?? 0;
+          int popularity = artistData['popularity'] ?? 0;
+          if (followers > 0) {
+            print('👥 Followers: ${_formatNumber(followers)}');
           }
 
           final artist = Artist(
@@ -119,34 +105,35 @@ class ArtistService {
             imageUrl: imageUrl,
             tags: tags,
             lastUpdated: DateTime.now(),
+            followers: followers,
+            popularity: popularity,
           );
 
-          // 3. Save to Cache
           await box.put(normalizedName, artist);
-          print('💾 Saved fresh data for: $artistName');
+          print('💾 Saved: $artistName');
           return artist;
-        } else {
-          print('⚠️ No artist key in response for: $artistName');
         }
-      } else {
-        print('⚠️ Bad response status: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Error fetching artist info: $e');
+      print('❌ Error: $e');
     }
 
-    // 4. Fallback: Return cached version even if stale, or null
-    final fallback = box.get(normalizedName);
-    if (fallback != null) {
-      print('📦 Returning stale cache as fallback for: $artistName');
-    }
-    return fallback;
+    // 3. Fallback
+    return box.get(normalizedName);
   }
 
-  // Helper method to clear cache (for testing)
   Future<void> clearCache() async {
     final box = await _getBox();
     await box.clear();
-    print('🗑️ Artist cache cleared');
+    print('🗑️ Cache cleared');
+  }
+
+  String _formatNumber(int number) {
+    if (number >= 1000000) {
+      return '${(number / 1000000).toStringAsFixed(1)}M';
+    } else if (number >= 1000) {
+      return '${(number / 1000).toStringAsFixed(1)}K';
+    }
+    return number.toString();
   }
 }

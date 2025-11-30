@@ -19,5 +19,19 @@ class Artist extends HiveObject {
   @HiveField(4)
   final DateTime lastUpdated;
 
-  Artist({required this.name, this.biography, this.imageUrl, this.tags = const [], required this.lastUpdated});
+  @HiveField(5)
+  final int followers;
+
+  @HiveField(6)
+  final int popularity;
+
+  Artist({
+    required this.name,
+    this.biography,
+    this.imageUrl,
+    this.tags = const [],
+    required this.lastUpdated,
+    this.followers = 0,
+    this.popularity = 0,
+  });
 }

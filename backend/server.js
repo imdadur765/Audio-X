@@ -25,7 +25,6 @@ let tokenExpiry = 0;
 
 // Get Spotify Access Token
 async function getSpotifyToken() {
-  // Return cached token if still valid
   if (spotifyToken && Date.now() < tokenExpiry) {
     return spotifyToken;
   }
@@ -43,7 +42,7 @@ async function getSpotifyToken() {
     );
 
     spotifyToken = response.data.access_token;
-    tokenExpiry = Date.now() + (response.data.expires_in * 1000) - 60000; // Expire 1 min early
+    tokenExpiry = Date.now() + (response.data.expires_in * 1000) - 60000;
     return spotifyToken;
   } catch (error) {
     console.error('Error getting Spotify token:', error.message);
@@ -56,7 +55,7 @@ app.get('/', (req, res) => {
   res.send('Audio X Backend is running');
 });
 
-// NEW: Get Artist Info (Spotify Image + Last.fm Bio)
+// Get Artist Info with Stats
 app.get('/api/artist/:name', async (req, res) => {
   try {
     const artistName = req.params.name;
@@ -65,10 +64,12 @@ app.get('/api/artist/:name', async (req, res) => {
       image: null,
       biography: null,
       tags: [],
-      spotifyId: null
+      spotifyId: null,
+      followers: 0,
+      popularity: 0
     };
 
-    // 1. Get Image from Spotify
+    // 1. Get data from Spotify
     try {
       const token = await getSpotifyToken();
       const spotifyResponse = await axios.get(`${SPOTIFY_API_URL}/search`, {
@@ -85,24 +86,27 @@ app.get('/api/artist/:name', async (req, res) => {
       if (spotifyResponse.data.artists.items.length > 0) {
         const artist = spotifyResponse.data.artists.items[0];
         result.spotifyId = artist.id;
-        result.name = artist.name; // Use Spotify's corrected name
+        result.name = artist.name;
 
-        // Get largest image
+        // Image
         if (artist.images && artist.images.length > 0) {
-          result.image = artist.images[0].url; // First image is usually largest
+          result.image = artist.images[0].url;
         }
 
-        // Get genres as tags
+        // Genres/Tags
         if (artist.genres && artist.genres.length > 0) {
           result.tags = artist.genres;
         }
+
+        // Stats
+        result.followers = artist.followers?.total || 0;
+        result.popularity = artist.popularity || 0;
       }
     } catch (spotifyError) {
       console.error('Spotify error:', spotifyError.message);
-      // Continue to Last.fm even if Spotify fails
     }
 
-    // 2. Get Biography from Last.fm (optional, only if needed)
+    // 2. Get Biography from Last.fm
     if (LASTFM_API_KEY) {
       try {
         const lastfmResponse = await axios.get(LASTFM_BASE_URL, {
@@ -117,12 +121,10 @@ app.get('/api/artist/:name', async (req, res) => {
         if (lastfmResponse.data.artist) {
           const lastfmArtist = lastfmResponse.data.artist;
 
-          // Get biography
           if (lastfmArtist.bio && lastfmArtist.bio.summary) {
             result.biography = lastfmArtist.bio.summary;
           }
 
-          // Add Last.fm tags if no Spotify genres
           if (result.tags.length === 0 && lastfmArtist.tags && lastfmArtist.tags.tag) {
             const tagList = lastfmArtist.tags.tag;
             if (Array.isArray(tagList)) {
@@ -132,7 +134,6 @@ app.get('/api/artist/:name', async (req, res) => {
         }
       } catch (lastfmError) {
         console.error('Last.fm error:', lastfmError.message);
-        // Continue even if Last.fm fails
       }
     }
 

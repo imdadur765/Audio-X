@@ -39,12 +39,6 @@ class MainActivity : FlutterActivity() {
         super.onStop()
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        // Move app to background instead of closing it
-        moveTaskToBack(true)
-    }
-
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
@@ -211,6 +205,10 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                     android.util.Log.d("AudioX", "Reset equalizer to flat")
+                    result.success(null)
+                }
+                "minimizeApp" -> {
+                    moveTaskToBack(true)
                     result.success(null)
                 }
                 else -> {

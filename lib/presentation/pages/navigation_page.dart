@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
 import 'home_page.dart';
 import 'albums_page.dart';
@@ -34,14 +35,13 @@ class _NavigationPageState extends State<NavigationPage> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
+      onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 
         // If on home tab (0), minimize app to background
         if (_currentIndex == 0) {
-          // Move task to background instead of closing
-          // This requires platform channel or just let it exit normally
-          Navigator.of(context).pop();
+          // Exit app (minimizes on Android, closes on iOS)
+          await SystemChannels.platform.invokeMethod('SystemNavigator.pop');
         } else {
           // Otherwise, go back to home tab first
           setState(() {

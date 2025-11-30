@@ -38,6 +38,9 @@ dependencies:
   # State Management
   provider: ^6.0.5
 
+  # Navigation
+  go_router: ^14.0.0
+
   # Local Database
   hive: ^2.2.3
   hive_flutter: ^1.1.0

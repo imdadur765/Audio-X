@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'data/models/song_model.dart';
 import 'data/models/audio_effects_model.dart';
+import 'data/models/artist_model.dart'; // Import Artist Model
 import 'presentation/controllers/audio_controller.dart';
 import 'presentation/controllers/audio_effects_controller.dart';
 import 'routes/app_router.dart';
@@ -15,11 +16,13 @@ void main() async {
   // Register Hive adapters
   Hive.registerAdapter(SongAdapter());
   Hive.registerAdapter(AudioEffectsAdapter());
+  Hive.registerAdapter(ArtistAdapter()); // Register Artist Adapter
 
   // Open Hive boxes
   await Hive.openBox<Song>('songs');
   await Hive.openBox('settings');
   await Hive.openBox<AudioEffects>('audioEffects');
+  await Hive.openBox<Artist>('artists'); // Open Artist Box
 
   runApp(
     MultiProvider(

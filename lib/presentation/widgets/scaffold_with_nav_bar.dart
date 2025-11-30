@@ -12,6 +12,8 @@ class ScaffoldWithNavBar extends StatelessWidget {
     final String location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/home')) return 0;
     if (location.startsWith('/albums')) return 1;
+    if (location.startsWith('/artists')) return 2;
+    if (location.startsWith('/playlists')) return 3;
     return 0;
   }
 
@@ -22,6 +24,12 @@ class ScaffoldWithNavBar extends StatelessWidget {
         break;
       case 1:
         context.go('/albums');
+        break;
+      case 2:
+        context.go('/artists');
+        break;
+      case 3:
+        context.go('/playlists');
         break;
     }
   }
@@ -89,6 +97,22 @@ class ScaffoldWithNavBar extends StatelessWidget {
                       activeIcon: Icons.album_rounded,
                       inactiveIcon: Icons.album_outlined,
                       label: 'Albums',
+                    ),
+                    _buildNavItem(
+                      context,
+                      index: 2,
+                      selectedIndex: selectedIndex,
+                      activeIcon: Icons.mic_external_on,
+                      inactiveIcon: Icons.mic_none_outlined,
+                      label: 'Artists',
+                    ),
+                    _buildNavItem(
+                      context,
+                      index: 3,
+                      selectedIndex: selectedIndex,
+                      activeIcon: Icons.playlist_play_rounded,
+                      inactiveIcon: Icons.playlist_play_outlined,
+                      label: 'Playlists',
                     ),
                   ],
                 ),

@@ -207,15 +207,19 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
           // Extract albumId from artworkUri (content://.../albumart/123)
           final uriParts = song.artworkUri!.split('/');
           final albumId = uriParts.last;
+          final path = '${directory.path}/album_$albumId.jpg';
+          final file = File(path);
 
-          final bytes = await _audioHandler.getAlbumArt(albumId);
-          if (bytes != null) {
-            final path = '${directory.path}/album_$albumId.jpg';
-            final file = File(path);
-            await file.writeAsBytes(bytes);
-
+          if (await file.exists()) {
             song.localArtworkPath = path;
-            song.save(); // Update Hive
+            song.save();
+          } else {
+            final bytes = await _audioHandler.getAlbumArt(albumId);
+            if (bytes != null) {
+              await file.writeAsBytes(bytes);
+              song.localArtworkPath = path;
+              song.save(); // Update Hive
+            }
           }
         } catch (e) {
           print("Error caching artwork for ${song.title}: $e");

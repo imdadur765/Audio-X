@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_x/data/models/song_model.dart';
 import 'package:audio_x/presentation/controllers/audio_controller.dart';
+import 'package:go_router/go_router.dart';
 
 class AlbumsPage extends StatefulWidget {
   const AlbumsPage({super.key});
@@ -123,7 +124,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
                       trailing: Icon(Icons.play_circle_outline_rounded, color: Colors.blue.shade700),
                       onTap: () {
                         Provider.of<AudioController>(context, listen: false).playSong(song);
-                        Navigator.pop(context);
+                        context.pushNamed('player', extra: song);
                       },
                     );
                   },

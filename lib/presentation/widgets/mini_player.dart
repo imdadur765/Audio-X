@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../controllers/audio_controller.dart';
-import '../pages/player_page.dart';
+import 'package:go_router/go_router.dart';
 
 class MiniPlayer extends StatelessWidget {
   const MiniPlayer({super.key});
@@ -28,7 +28,7 @@ class MiniPlayer extends StatelessWidget {
 
         return GestureDetector(
           onTap: () {
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => PlayerPage(song: song)));
+            context.pushNamed('player', extra: song);
           },
           child: Container(
             height: 70,

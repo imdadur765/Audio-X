@@ -168,7 +168,7 @@ class _PlayerPageState extends State<PlayerPage> {
       ),
       body: Consumer<AudioController>(
         builder: (context, controller, child) {
-          final currentSong = controller.songs.firstWhere((s) => s.id == widget.song.id, orElse: () => widget.song);
+          final currentSong = controller.currentSong ?? widget.song;
 
           return Column(
             children: [

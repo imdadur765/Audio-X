@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:audio_x/data/models/song_model.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../controllers/audio_controller.dart';
-import 'player_page.dart';
-import '../widgets/mini_player.dart';
+
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -17,7 +17,12 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => Provider.of<AudioController>(context, listen: false).loadSongs());
+    Future.microtask(() {
+      final controller = Provider.of<AudioController>(context, listen: false);
+      if (controller.songs.isEmpty) {
+        controller.loadSongs();
+      }
+    });
   }
 
   @override
@@ -67,7 +72,6 @@ class _HomePageState extends State<HomePage> {
           );
         },
       ),
-      bottomNavigationBar: const MiniPlayer(),
     );
   }
 
@@ -117,13 +121,13 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.play_arrow, color: Theme.of(context).colorScheme.primary),
             onPressed: () {
               controller.playSong(song);
-              Navigator.of(context).push(MaterialPageRoute(builder: (context) => PlayerPage(song: song)));
+              context.pushNamed('player', extra: song);
             },
           ),
         ),
         onTap: () {
           controller.playSong(song);
-          Navigator.of(context).push(MaterialPageRoute(builder: (context) => PlayerPage(song: song)));
+          context.pushNamed('player', extra: song);
         },
       ),
     );

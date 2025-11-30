@@ -23,14 +23,37 @@ class _ArtistPageState extends State<ArtistPage> {
     final artists = controller.songs.map((s) => s.artist).toSet().toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Artists')),
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text(
+          'Artists',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.black,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       body: artists.isEmpty
-          ? const Center(child: Text("No artists found"))
-          : ListView.builder(
+          ? const Center(
+              child: Text(
+                "No artists found",
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
+          : GridView.builder(
+              padding: const EdgeInsets.all(16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 0.8,
+              ),
               itemCount: artists.length,
               itemBuilder: (context, index) {
                 final artistName = artists[index];
-
                 _artistFutures.putIfAbsent(artistName, () => _artistService.getArtistInfo(artistName));
 
                 return FutureBuilder<Artist?>(
@@ -39,42 +62,104 @@ class _ArtistPageState extends State<ArtistPage> {
                     final artist = snapshot.data;
                     final image = artist?.imageUrl;
                     final isLoading = snapshot.connectionState == ConnectionState.waiting;
-
-                    if (artist != null) {
-                      print(
-                        '🎭 UI: Artist "$artistName" - Image: ${image ?? "NULL"} (${image?.isEmpty == true ? "EMPTY" : "HAS DATA"})',
-                      );
-                    }
-
                     final hasImage = image != null && image.isNotEmpty;
 
-                    return RepaintBoundary(
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.grey[200],
-                          foregroundImage: hasImage ? NetworkImage(image) : null,
-                          onForegroundImageError: hasImage
-                              ? (exception, stackTrace) {
-                                  print('❌ Image load error for $artistName: $exception');
-                                }
-                              : null,
-                          child: isLoading
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                              : (!hasImage ? const Icon(Icons.person) : null),
-                        ),
-                        title: Text(artistName),
-                        subtitle: artist?.tags.isNotEmpty == true
-                            ? Text(artist!.tags.take(3).join(", "), maxLines: 1, overflow: TextOverflow.ellipsis)
-                            : Text(isLoading ? "Loading..." : "Unknown Genre"),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  ArtistDetailsPage(artistName: artistName, heroTag: 'artist_list_$artistName'),
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ArtistDetailsPage(
+                              artistName: artistName,
+                              heroTag: 'artist_grid_$artistName',
                             ),
-                          );
-                        },
+                          ),
+                        );
+                      },
+                      child: RepaintBoundary(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey[900],
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Artist Image
+                              Expanded(
+                                child: Container(
+                                  width: double.infinity,
+                                  margin: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    color: Colors.grey[800],
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: hasImage
+                                        ? Image.network(
+                                            image,
+                                            fit: BoxFit.cover,
+                                            loadingBuilder: (context, child, loadingProgress) {
+                                              if (loadingProgress == null) return child;
+                                              return Center(
+                                                child: CircularProgressIndicator(
+                                                  value: loadingProgress.expectedTotalBytes != null
+                                                      ? loadingProgress.cumulativeBytesLoaded /
+                                                          loadingProgress.expectedTotalBytes!
+                                                      : null,
+                                                ),
+                                              );
+                                            },
+                                            errorBuilder: (context, error, stackTrace) {
+                                              return _buildPlaceholderIcon();
+                                            },
+                                          )
+                                        : _buildPlaceholderIcon(),
+                                  ),
+                                ),
+                              ),
+                              // Artist Info
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      artistName,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      artist?.tags.isNotEmpty == true
+                                          ? artist!.tags.take(2).join(", ")
+                                          : isLoading ? "Loading..." : "Artist",
+                                      style: TextStyle(
+                                        color: Colors.grey[400],
+                                        fontSize: 12,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     );
                   },
@@ -84,66 +169,12 @@ class _ArtistPageState extends State<ArtistPage> {
     );
   }
 
-  void _showArtistDetails(BuildContext context, String name, Artist? artist) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (_, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: ListView(
-            controller: scrollController,
-            padding: EdgeInsets.zero,
-            children: [
-              if (artist?.imageUrl != null && artist!.imageUrl!.isNotEmpty)
-                RepaintBoundary(
-                  child: Image.network(
-                    artist.imageUrl!,
-                    height: 300,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        height: 300,
-                        color: Colors.grey[300],
-                        child: const Center(child: CircularProgressIndicator()),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      print('❌ Detail image error for $name: $error');
-                      return Container(height: 300, color: Colors.grey[300], child: const Icon(Icons.error, size: 60));
-                    },
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    if (artist?.tags.isNotEmpty == true)
-                      Wrap(spacing: 8, children: artist!.tags.map((tag) => Chip(label: Text(tag))).toList()),
-                    const SizedBox(height: 16),
-                    const Text("Biography", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    Text(artist?.biography ?? "No biography available.", style: Theme.of(context).textTheme.bodyMedium),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+  Widget _buildPlaceholderIcon() {
+    return Center(
+      child: Icon(
+        Icons.person,
+        size: 50,
+        color: Colors.grey[600],
       ),
     );
   }

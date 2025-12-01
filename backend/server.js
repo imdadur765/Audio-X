@@ -141,10 +141,39 @@ app.get('/api/artist/:name', async (req, res) => {
           if (lastfmArtist.similar && lastfmArtist.similar.artist) {
             const similarList = lastfmArtist.similar.artist;
             if (Array.isArray(similarList)) {
-              result.similarArtists = similarList.slice(0, 5).map(a => ({
+              let similarArtists = similarList.slice(0, 5).map(a => ({
                 name: a.name,
                 image: a.image && a.image.length > 0 ? a.image[a.image.length - 1]['#text'] : null
               }));
+
+              // Enrich with Spotify Images
+              try {
+                // Ensure we have a valid token (reuse the one from earlier if possible, or get new)
+                const token = await getSpotifyToken();
+
+                const imagePromises = similarArtists.map(async (artist) => {
+                  try {
+                    const searchRes = await axios.get(`${SPOTIFY_API_URL}/search`, {
+                      params: { q: artist.name, type: 'artist', limit: 1 },
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (searchRes.data.artists.items.length > 0) {
+                      const spotArtist = searchRes.data.artists.items[0];
+                      if (spotArtist.images && spotArtist.images.length > 0) {
+                        return { ...artist, image: spotArtist.images[0].url };
+                      }
+                    }
+                  } catch (e) {
+                    // Ignore error, keep Last.fm image
+                  }
+                  return artist;
+                });
+
+                result.similarArtists = await Promise.all(imagePromises);
+              } catch (e) {
+                console.error("Error enriching similar artists:", e.message);
+                result.similarArtists = similarArtists;
+              }
             }
           }
         }

@@ -49,7 +49,10 @@ class _HomePageState extends State<HomePage> {
   Future<void> _loadData() async {
     if (!mounted) return;
     _audioController = Provider.of<AudioController>(context, listen: false);
-    await _audioController!.loadSongs();
+    // Only load songs if the list is empty to prevent resetting playback on tab switch
+    if (_audioController!.songs.isEmpty) {
+      await _audioController!.loadSongs();
+    }
     if (!mounted) return;
     await _homeController.loadHomeData(_audioController!);
 

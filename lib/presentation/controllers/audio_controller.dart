@@ -73,7 +73,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     _progressTimer?.cancel();
   }
 
-  Future<void> loadSongs() async {
+  Future<void> loadSongs({bool restoreSession = true}) async {
     // Check permissions
     var status = await Permission.storage.status;
     if (!status.isGranted) {
@@ -110,8 +110,10 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       _songs = box.values.toList();
       notifyListeners();
 
-      // Restore session
-      await _restoreSession();
+      // Restore session only if requested
+      if (restoreSession) {
+        await _restoreSession();
+      }
 
       // Cache artwork in background
       _cacheArtwork();

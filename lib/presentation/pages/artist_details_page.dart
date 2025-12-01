@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/artist_model.dart';
 import '../../data/models/song_model.dart';
 import '../../data/services/artist_service.dart';
@@ -877,35 +878,50 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
         itemCount: artists.length,
         itemBuilder: (context, index) {
           final artist = artists[index];
-          return Container(
-            width: 100,
-            margin: const EdgeInsets.only(right: 12),
-            child: Column(
-              children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.grey.shade200,
-                    image: artist['image']!.isNotEmpty
-                        ? DecorationImage(image: NetworkImage(artist['image']!), fit: BoxFit.cover)
-                        : null,
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 4)),
-                    ],
+          return GestureDetector(
+            onTap: () async {
+              // Open Spotify search for the artist
+              final query = Uri.encodeComponent(artist['name']!);
+              final url = 'https://open.spotify.com/search/$query';
+              final uri = Uri.parse(url);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            child: Container(
+              width: 100,
+              margin: const EdgeInsets.only(right: 12),
+              child: Column(
+                children: [
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.grey.shade200,
+                      image: artist['image']!.isNotEmpty
+                          ? DecorationImage(image: NetworkImage(artist['image']!), fit: BoxFit.cover)
+                          : null,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: artist['image']!.isEmpty ? const Icon(Icons.person, color: Colors.grey) : null,
                   ),
-                  child: artist['image']!.isEmpty ? const Icon(Icons.person, color: Colors.grey) : null,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  artist['name']!,
-                  maxLines: 2,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    artist['name']!,
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -922,43 +938,54 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
         itemCount: albums.length,
         itemBuilder: (context, index) {
           final album = albums[index];
-          return Container(
-            width: 120,
-            margin: const EdgeInsets.only(right: 12, bottom: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.grey.shade200,
-                    image: album['image']!.isNotEmpty
-                        ? DecorationImage(image: NetworkImage(album['image']!), fit: BoxFit.cover)
-                        : null,
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 4)),
-                    ],
+          return GestureDetector(
+            onTap: () async {
+              // Open Spotify search for the album
+              final query = Uri.encodeComponent(album['name']!);
+              final url = 'https://open.spotify.com/search/$query';
+              final uri = Uri.parse(url);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            child: Container(
+              width: 120,
+              margin: const EdgeInsets.only(right: 12, bottom: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.grey.shade200,
+                      image: album['image']!.isNotEmpty
+                          ? DecorationImage(image: NetworkImage(album['image']!), fit: BoxFit.cover)
+                          : null,
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 4)),
+                      ],
+                    ),
+                    child: album['image']!.isEmpty ? const Icon(Icons.album, color: Colors.grey, size: 40) : null,
                   ),
-                  child: album['image']!.isEmpty ? const Icon(Icons.album, color: Colors.grey, size: 40) : null,
-                ),
-                const SizedBox(height: 8),
-                Flexible(
-                  child: Text(
-                    album['name']!,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                      height: 1.2,
+                  const SizedBox(height: 8),
+                  Flexible(
+                    child: Text(
+                      album['name']!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                        height: 1.2,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },
@@ -1064,39 +1091,65 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildPartnerLogo('Spotify', Icons.music_note, Colors.green.shade600),
-              _buildPartnerLogo('iTunes', Icons.apple, Colors.black87),
-              _buildPartnerLogo('Last.fm', Icons.radio, Colors.red.shade600),
+              _buildPartnerLogo('Spotify', Icons.music_note, Colors.green.shade600, 'https://spotify.com'),
+              _buildPartnerLogo('iTunes', Icons.apple, Colors.black87, 'https://apple.com/itunes'),
+              _buildPartnerLogo('Last.fm', Icons.radio, Colors.red.shade600, 'https://last.fm'),
             ],
           ),
           const SizedBox(height: 12),
           Text('Artist info, stats, and artwork', style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+          const SizedBox(height: 8),
+          Text(
+            'Data provided by partners. Content is property of respective owners.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 9, color: Colors.grey.shade400, height: 1.3),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildPartnerLogo(String name, IconData icon, Color color) {
-    return Column(
-      children: [
-        Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 2)),
-            ],
+  Widget _buildPartnerLogo(String name, IconData icon, Color color, String url) {
+    // Map names to asset paths
+    final Map<String, String> logoAssets = {
+      'Spotify': 'assets/images/spotify_logo.png',
+      'iTunes': 'assets/images/itunes_logo.png',
+      'Last.fm': 'assets/images/lastfm_logo.png',
+    };
+
+    return GestureDetector(
+      onTap: () async {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      },
+      child: Column(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 2)),
+              ],
+            ),
+            child: ClipOval(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Image.asset(logoAssets[name]!, fit: BoxFit.contain),
+              ),
+            ),
           ),
-          child: Icon(icon, color: color, size: 24),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          name,
-          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
-        ),
-      ],
+          const SizedBox(height: 6),
+          Text(
+            name,
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+          ),
+        ],
+      ),
     );
   }
 }

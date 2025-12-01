@@ -55,6 +55,7 @@ dependencies:
   file_picker: ^10.3.6  # Working version from I-Music project
   cached_network_image: ^3.4.1
   shimmer: ^3.0.0
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:
@@ -72,10 +73,11 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  # Partner logos and images
+  assets:
+    - assets/images/spotify_logo.png
+    - assets/images/itunes_logo.png
+    - assets/images/lastfm_logo.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

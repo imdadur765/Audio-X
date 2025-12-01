@@ -25,6 +25,12 @@ class Artist extends HiveObject {
   @HiveField(6)
   final int popularity;
 
+  @HiveField(7)
+  final List<Map<String, String>> similarArtists;
+
+  @HiveField(8)
+  final List<Map<String, String>> topAlbums;
+
   Artist({
     required this.name,
     this.biography,
@@ -33,5 +39,7 @@ class Artist extends HiveObject {
     required this.lastUpdated,
     this.followers = 0,
     this.popularity = 0,
+    this.similarArtists = const [],
+    this.topAlbums = const [],
   });
 }

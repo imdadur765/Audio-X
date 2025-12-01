@@ -66,7 +66,9 @@ app.get('/api/artist/:name', async (req, res) => {
       tags: [],
       spotifyId: null,
       followers: 0,
-      popularity: 0
+      popularity: 0,
+      similarArtists: [],
+      topAlbums: []
     };
 
     // 1. Get data from Spotify
@@ -106,10 +108,11 @@ app.get('/api/artist/:name', async (req, res) => {
       console.error('Spotify error:', spotifyError.message);
     }
 
-    // 2. Get Biography from Last.fm
+    // 2. Get Biography, Similar Artists, and Top Albums from Last.fm
     if (LASTFM_API_KEY) {
       try {
-        const lastfmResponse = await axios.get(LASTFM_BASE_URL, {
+        // Fetch Artist Info (Bio, Tags, Similar)
+        const lastfmInfoResponse = await axios.get(LASTFM_BASE_URL, {
           params: {
             method: 'artist.getinfo',
             artist: artistName,
@@ -118,20 +121,55 @@ app.get('/api/artist/:name', async (req, res) => {
           }
         });
 
-        if (lastfmResponse.data.artist) {
-          const lastfmArtist = lastfmResponse.data.artist;
+        if (lastfmInfoResponse.data.artist) {
+          const lastfmArtist = lastfmInfoResponse.data.artist;
 
+          // Bio
           if (lastfmArtist.bio && lastfmArtist.bio.summary) {
             result.biography = lastfmArtist.bio.summary;
           }
 
+          // Tags (Fallback or Enrichment)
           if (result.tags.length === 0 && lastfmArtist.tags && lastfmArtist.tags.tag) {
             const tagList = lastfmArtist.tags.tag;
             if (Array.isArray(tagList)) {
               result.tags = tagList.slice(0, 5).map(t => t.name);
             }
           }
+
+          // Similar Artists
+          if (lastfmArtist.similar && lastfmArtist.similar.artist) {
+            const similarList = lastfmArtist.similar.artist;
+            if (Array.isArray(similarList)) {
+              result.similarArtists = similarList.slice(0, 5).map(a => ({
+                name: a.name,
+                image: a.image && a.image.length > 0 ? a.image[a.image.length - 1]['#text'] : null
+              }));
+            }
+          }
         }
+
+        // Fetch Top Albums
+        const lastfmAlbumsResponse = await axios.get(LASTFM_BASE_URL, {
+          params: {
+            method: 'artist.gettopalbums',
+            artist: artistName,
+            api_key: LASTFM_API_KEY,
+            format: 'json',
+            limit: 5
+          }
+        });
+
+        if (lastfmAlbumsResponse.data.topalbums && lastfmAlbumsResponse.data.topalbums.album) {
+          const albumList = lastfmAlbumsResponse.data.topalbums.album;
+          if (Array.isArray(albumList)) {
+            result.topAlbums = albumList.map(a => ({
+              name: a.name,
+              image: a.image && a.image.length > 0 ? a.image[a.image.length - 1]['#text'] : null
+            }));
+          }
+        }
+
       } catch (lastfmError) {
         console.error('Last.fm error:', lastfmError.message);
       }

@@ -92,6 +92,20 @@ class ArtistService {
           int followers = artistData['followers'] ?? 0;
           int popularity = artistData['popularity'] ?? 0;
 
+          List<Map<String, String>> similarArtists = [];
+          if (artistData['similarArtists'] != null) {
+            similarArtists = (artistData['similarArtists'] as List).map<Map<String, String>>((item) {
+              return {'name': item['name']?.toString() ?? '', 'image': item['image']?.toString() ?? ''};
+            }).toList();
+          }
+
+          List<Map<String, String>> topAlbums = [];
+          if (artistData['topAlbums'] != null) {
+            topAlbums = (artistData['topAlbums'] as List).map<Map<String, String>>((item) {
+              return {'name': item['name']?.toString() ?? '', 'image': item['image']?.toString() ?? ''};
+            }).toList();
+          }
+
           final artist = Artist(
             name: artistData['name'] ?? artistName,
             biography: bio,
@@ -100,6 +114,8 @@ class ArtistService {
             lastUpdated: DateTime.now(),
             followers: followers,
             popularity: popularity,
+            similarArtists: similarArtists,
+            topAlbums: topAlbums,
           );
 
           await box.put(normalizedName, artist);

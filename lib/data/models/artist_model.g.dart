@@ -24,13 +24,19 @@ class ArtistAdapter extends TypeAdapter<Artist> {
       lastUpdated: fields[4] as DateTime,
       followers: fields[5] as int,
       popularity: fields[6] as int,
+      similarArtists: (fields[7] as List)
+          .map((dynamic e) => (e as Map).cast<String, String>())
+          .toList(),
+      topAlbums: (fields[8] as List)
+          .map((dynamic e) => (e as Map).cast<String, String>())
+          .toList(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Artist obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -44,7 +50,11 @@ class ArtistAdapter extends TypeAdapter<Artist> {
       ..writeByte(5)
       ..write(obj.followers)
       ..writeByte(6)
-      ..write(obj.popularity);
+      ..write(obj.popularity)
+      ..writeByte(7)
+      ..write(obj.similarArtists)
+      ..writeByte(8)
+      ..write(obj.topAlbums);
   }
 
   @override

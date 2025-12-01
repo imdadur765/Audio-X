@@ -7,6 +7,7 @@ import '../presentation/pages/equalizer_page.dart';
 import '../presentation/widgets/scaffold_with_nav_bar.dart';
 import '../presentation/pages/artists_list_page.dart';
 import '../presentation/pages/playlist_page.dart';
+import '../presentation/pages/artist_details_page.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/home',
@@ -45,6 +46,15 @@ final GoRouter appRouter = GoRouter(
       path: '/player',
       name: 'player',
       builder: (context, state) => PlayerPage(song: state.extra as Song),
+    ),
+    GoRoute(
+      path: '/artist/:name',
+      name: 'artist_details',
+      builder: (context, state) {
+        final artistName = state.pathParameters['name']!;
+        final heroTag = state.extra as String?;
+        return ArtistDetailsPage(artistName: artistName, heroTag: heroTag);
+      },
     ),
     GoRoute(path: '/equalizer', name: 'equalizer', builder: (context, state) => const EqualizerPage()),
   ],

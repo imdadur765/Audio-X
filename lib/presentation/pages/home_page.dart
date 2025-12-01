@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../controllers/audio_controller.dart';
 import '../controllers/home_controller.dart';
 import '../../data/models/song_model.dart';
 import '../../data/services/auth_service.dart';
-import 'player_page.dart';
-import 'artist_details_page.dart';
 import 'playlist_details_page.dart';
 import 'profile_page.dart';
 import '../widgets/hybrid_song_artwork.dart';
@@ -19,6 +18,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late HomeController _homeController;
+  AudioController? _audioController;
   final ScrollController _scrollController = ScrollController();
   final AuthService _authService = AuthService();
   double _scrollOffset = 0;
@@ -48,14 +48,14 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadData() async {
     if (!mounted) return;
-    final audioController = Provider.of<AudioController>(context, listen: false);
-    await audioController.loadSongs();
+    _audioController = Provider.of<AudioController>(context, listen: false);
+    await _audioController!.loadSongs();
     if (!mounted) return;
-    await _homeController.loadHomeData(audioController);
+    await _homeController.loadHomeData(_audioController!);
 
     // Listen for playback changes to refresh recently played
     // Note: This listener is added only once during initialization
-    audioController.addListener(_onPlaybackChanged);
+    _audioController!.addListener(_onPlaybackChanged);
   }
 
   void _onPlaybackChanged() {
@@ -70,8 +70,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    final audioController = Provider.of<AudioController>(context, listen: false);
-    audioController.removeListener(_onPlaybackChanged);
+    _audioController?.removeListener(_onPlaybackChanged);
     _homeController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -394,7 +393,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildArtistCard(ArtistStats artist) {
     return GestureDetector(
       onTap: () {
-        Navigator.of(context).push(MaterialPageRoute(builder: (context) => ArtistDetailsPage(artistName: artist.name)));
+        context.pushNamed('artist_details', pathParameters: {'name': artist.name});
       },
       child: Container(
         decoration: BoxDecoration(
@@ -710,7 +709,7 @@ class _HomePageState extends State<HomePage> {
     await audioController.playSong(song);
     await _homeController.trackRecentlyPlayed(song.id);
     if (mounted) {
-      Navigator.of(context).push(MaterialPageRoute(builder: (context) => PlayerPage(song: song)));
+      context.pushNamed('player', extra: song);
     }
   }
 

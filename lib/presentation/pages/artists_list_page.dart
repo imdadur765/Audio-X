@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../data/models/artist_model.dart';
 import '../../data/services/artist_service.dart';
 import '../controllers/audio_controller.dart';
-import 'artist_details_page.dart';
 
 class ArtistsListPage extends StatefulWidget {
   const ArtistsListPage({super.key});
@@ -60,12 +60,10 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                             ? Text(artist!.tags.take(3).join(", "), maxLines: 1, overflow: TextOverflow.ellipsis)
                             : Text(isLoading ? "Loading..." : "Unknown Genre"),
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  ArtistDetailsPage(artistName: artistName, heroTag: 'artist_list_$artistName'),
-                            ),
+                          context.pushNamed(
+                            'artist_details',
+                            pathParameters: {'name': artistName},
+                            extra: 'artist_list_$artistName',
                           );
                         },
                       ),

@@ -310,6 +310,12 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
 
             const SizedBox(height: 16),
 
+            // Biography Section
+            if (artist.biography != null && artist.biography!.isNotEmpty) ...[
+              _buildBiographySection(artist.biography!),
+              const SizedBox(height: 16),
+            ],
+
             // Similar Artists Section
             if (artist.similarArtists.isNotEmpty) ...[
               _buildSectionTitle('Fans Also Like'),
@@ -328,6 +334,11 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
 
             // Local Stats Card
             _buildLocalStatsCard(songs),
+
+            const SizedBox(height: 16),
+
+            // Partner Credits
+            _buildPartnerCredits(),
           ],
         ),
       ),
@@ -648,33 +659,22 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                     padding: const EdgeInsets.all(12),
                     child: Row(
                       children: [
-                        // Song Number/Artwork
+                        // Song Artwork (Using cached iTunes artwork)
                         Stack(
                           children: [
-                            Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                color: isCurrentlyPlaying ? Colors.deepPurple.shade100 : Colors.grey.shade100,
-                                image: song.artworkUri != null
-                                    ? DecorationImage(image: FileImage(File(song.artworkUri!)), fit: BoxFit.cover)
-                                    : null,
-                              ),
-                              child: song.artworkUri == null
-                                  ? Center(
-                                      child: isCurrentlyPlaying && isPlaying
-                                          ? const SizedBox()
-                                          : Text(
-                                              '${index + 1}',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w700,
-                                                color: isCurrentlyPlaying ? Colors.deepPurple : Colors.grey.shade600,
-                                                fontSize: 14,
-                                              ),
-                                            ),
+                            // Use HybridSongArtwork to show cached iTunes artwork
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: song.localArtworkPath != null
+                                  ? Image.file(
+                                      File(song.localArtworkPath!),
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) =>
+                                          _buildFallbackArt(index, isCurrentlyPlaying, isPlaying),
                                     )
-                                  : null,
+                                  : _buildFallbackArt(index, isCurrentlyPlaying, isPlaying),
                             ),
                             if (isCurrentlyPlaying && isPlaying)
                               Container(
@@ -915,16 +915,18 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
 
   Widget _buildTopAlbumsList(List<Map<String, String>> albums) {
     return SizedBox(
-      height: 160,
+      height: 170,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.only(left: 4),
         itemCount: albums.length,
         itemBuilder: (context, index) {
           final album = albums[index];
           return Container(
             width: 120,
-            margin: const EdgeInsets.only(right: 12),
+            margin: const EdgeInsets.only(right: 12, bottom: 8),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
@@ -940,20 +942,161 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                       BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 4)),
                     ],
                   ),
-                  child: album['image']!.isEmpty ? const Icon(Icons.album, color: Colors.grey) : null,
+                  child: album['image']!.isEmpty ? const Icon(Icons.album, color: Colors.grey, size: 40) : null,
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  album['name']!,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                Flexible(
+                  child: Text(
+                    album['name']!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                      height: 1.2,
+                    ),
+                  ),
                 ),
               ],
             ),
           );
         },
       ),
+    );
+  }
+
+  Widget _buildFallbackArt(int index, bool isCurrentlyPlaying, bool isPlaying) {
+    return Container(
+      width: 50,
+      height: 50,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isCurrentlyPlaying
+              ? [Colors.deepPurple.shade100, Colors.deepPurple.shade200]
+              : [Colors.grey.shade100, Colors.grey.shade200],
+        ),
+      ),
+      child: Center(
+        child: isCurrentlyPlaying && isPlaying
+            ? const SizedBox()
+            : Text(
+                '${index + 1}',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: isCurrentlyPlaying ? Colors.deepPurple : Colors.grey.shade600,
+                  fontSize: 14,
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildBiographySection(String biography) {
+    // Remove HTML tags and Last.fm footer
+    String cleanBio = biography
+        .replaceAll(RegExp(r'<[^>]*>'), '') // Remove HTML tags
+        .replaceAll(RegExp(r'Read more on Last\.fm.*', caseSensitive: false), '')
+        .trim();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, 10)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.deepPurple.shade50, borderRadius: BorderRadius.circular(12)),
+                child: Icon(Icons.info_outline_rounded, color: Colors.deepPurple, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'About',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            cleanBio,
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade700, height: 1.6),
+            maxLines: 6,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPartnerCredits() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.grey.shade50, Colors.grey.shade100],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Powered By',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildPartnerLogo('Spotify', Icons.music_note, Colors.green.shade600),
+              _buildPartnerLogo('iTunes', Icons.apple, Colors.black87),
+              _buildPartnerLogo('Last.fm', Icons.radio, Colors.red.shade600),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text('Artist info, stats, and artwork', style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPartnerLogo(String name, IconData icon, Color color) {
+    return Column(
+      children: [
+        Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Icon(icon, color: color, size: 24),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          name,
+          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+        ),
+      ],
     );
   }
 }

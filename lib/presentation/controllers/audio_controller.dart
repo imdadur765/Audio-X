@@ -6,6 +6,8 @@ import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../data/models/song_model.dart';
 import '../../services/audio_handler.dart';
+import '../../data/services/itunes_service.dart';
+import 'package:http/http.dart' as http;
 
 class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   final AudioHandler _audioHandler = AudioHandler();
@@ -201,34 +203,93 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> _cacheArtwork() async {
+    // Run in background to prevent ANR
     final directory = await getApplicationDocumentsDirectory();
+    final iTunesService = ITunesService();
 
-    for (var song in _songs) {
-      if (song.localArtworkPath == null && song.artworkUri != null) {
-        try {
-          // Extract albumId from artworkUri (content://.../albumart/123)
-          final uriParts = song.artworkUri!.split('/');
-          final albumId = uriParts.last;
-          final path = '${directory.path}/album_$albumId.jpg';
-          final file = File(path);
+    // Process in batches to prevent overwhelming the system
+    const batchSize = 10;
 
-          if (await file.exists()) {
-            song.localArtworkPath = path;
-            song.save();
-          } else {
-            final bytes = await _audioHandler.getAlbumArt(albumId);
-            if (bytes != null) {
-              await file.writeAsBytes(bytes);
-              song.localArtworkPath = path;
-              song.save(); // Update Hive
-            }
+    for (int i = 0; i < _songs.length; i += batchSize) {
+      final batch = _songs.skip(i).take(batchSize).toList();
+
+      // Process batch songs in parallel
+      await Future.wait(
+        batch.map((song) => _processSongArtwork(song, directory, iTunesService)),
+        eagerError: false, // Continue even if some fail
+      ).timeout(
+        Duration(seconds: 30), // Batch timeout
+        onTimeout: () {
+          print('⚠️ Batch timeout, moving to next');
+          return [];
+        },
+      );
+
+      // Small delay between batches to prevent ANR
+      await Future.delayed(Duration(milliseconds: 100));
+
+      // Notify listeners after each batch for progressive updates
+      notifyListeners();
+    }
+  }
+
+  Future<void> _processSongArtwork(Song song, Directory directory, ITunesService iTunesService) async {
+    try {
+      // 1. Check/Fetch iTunes Artwork (Priority)
+      final safeName = '${song.artist}_${song.album}'.replaceAll(RegExp(r'[^\w\s]+'), '').trim();
+      final itunesPath = '${directory.path}/itunes_$safeName.jpg';
+      final itunesFile = File(itunesPath);
+
+      // A. Check if already cached from iTunes
+      if (await itunesFile.exists()) {
+        if (song.localArtworkPath != itunesPath) {
+          song.localArtworkPath = itunesPath;
+          await song.save();
+        }
+        return; // We have the best version, skip
+      }
+
+      // B. Try to fetch from iTunes (if online)
+      try {
+        final query = '${song.artist} ${song.album}';
+        final artworkUrl = await iTunesService.fetchArtwork(query, retries: 1);
+
+        if (artworkUrl != null) {
+          final response = await http.get(Uri.parse(artworkUrl)).timeout(Duration(seconds: 10));
+          if (response.statusCode == 200) {
+            await itunesFile.writeAsBytes(response.bodyBytes);
+            song.localArtworkPath = itunesPath;
+            await song.save();
+            print('✅ iTunes: ${song.title}');
+            return; // Success, skip fallback
           }
-        } catch (e) {
-          print("Error caching artwork for ${song.title}: $e");
+        }
+      } catch (e) {
+        // Network error or iTunes failure, proceed to fallback silently
+      }
+
+      // 2. Fallback: Local MediaStore Artwork
+      if (song.localArtworkPath == null && song.artworkUri != null) {
+        final uriParts = song.artworkUri!.split('/');
+        final albumId = uriParts.last;
+        final path = '${directory.path}/album_$albumId.jpg';
+        final file = File(path);
+
+        if (await file.exists()) {
+          song.localArtworkPath = path;
+          await song.save();
+        } else {
+          final bytes = await _audioHandler.getAlbumArt(albumId);
+          if (bytes != null) {
+            await file.writeAsBytes(bytes);
+            song.localArtworkPath = path;
+            await song.save();
+          }
         }
       }
+    } catch (e) {
+      // Silently continue on error to not spam logs
     }
-    notifyListeners();
   }
 
   Future<void> playSong(Song song) async {

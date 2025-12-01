@@ -113,8 +113,8 @@ class _LyricsViewState extends State<LyricsView> {
             color: isCurrentLine
                 ? Theme.of(context).colorScheme.primary
                 : isPastLine
-                ? Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)
-                : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
+                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             fontWeight: isCurrentLine ? FontWeight.bold : FontWeight.normal,
             fontSize: isCurrentLine ? 20 : 16,
           ),
@@ -129,7 +129,11 @@ class _LyricsViewState extends State<LyricsView> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.lyrics_outlined, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
+          Icon(
+            Icons.lyrics_outlined,
+            size: 64,
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+          ),
           const SizedBox(height: 16),
           Text(
             'No Lyrics Available',
@@ -141,9 +145,9 @@ class _LyricsViewState extends State<LyricsView> {
           Text(
             'Try uploading your own .lrc file\nor search online',
             textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7)),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            ),
           ),
         ],
       ),

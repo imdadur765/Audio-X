@@ -5,7 +5,7 @@ import '../presentation/pages/albums_page.dart';
 import '../presentation/pages/player_page.dart';
 import '../presentation/pages/equalizer_page.dart';
 import '../presentation/widgets/scaffold_with_nav_bar.dart';
-import '../presentation/pages/artist_page.dart';
+import '../presentation/pages/artists_list_page.dart';
 import '../presentation/pages/playlist_page.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -30,7 +30,7 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '/artists',
           name: 'artists',
-          pageBuilder: (context, state) => const NoTransitionPage(child: ArtistPage()),
+          pageBuilder: (context, state) => const NoTransitionPage(child: ArtistsListPage()),
         ),
         GoRoute(
           path: '/playlists',

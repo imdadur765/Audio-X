@@ -852,11 +852,16 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
 
   void _playSong(List<Song> songs, int index) async {
     final audioController = Provider.of<AudioController>(context, listen: false);
-    await audioController.playSong(songs[index]);
+    final selectedSong = songs[index];
+
+    // Check if the selected song is already the current one
+    if (audioController.currentSong?.id != selectedSong.id) {
+      await audioController.playSong(selectedSong);
+    }
 
     // Navigate to player page
     if (mounted) {
-      Navigator.of(context).push(MaterialPageRoute(builder: (context) => PlayerPage(song: songs[index])));
+      Navigator.of(context).push(MaterialPageRoute(builder: (context) => PlayerPage(song: selectedSong)));
     }
   }
 
@@ -965,7 +970,11 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                           ? DecorationImage(image: NetworkImage(album['image']!), fit: BoxFit.cover)
                           : null,
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 4)),
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
                       ],
                     ),
                     child: album['image']!.isEmpty ? const Icon(Icons.album, color: Colors.grey, size: 40) : null,

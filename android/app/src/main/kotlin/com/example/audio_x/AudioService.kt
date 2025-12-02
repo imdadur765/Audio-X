@@ -40,6 +40,7 @@ class AudioService : MediaSessionService() {
         const val ACTION_PAUSE = "com.example.audio_x.PAUSE"
         const val ACTION_NEXT = "com.example.audio_x.NEXT"
         const val ACTION_PREVIOUS = "com.example.audio_x.PREVIOUS"
+        const val ACTION_SHUFFLE = "com.example.audio_x.SHUFFLE"
         const val ACTION_STOP = "com.example.audio_x.STOP"
         
         // Static references to audio effects
@@ -208,6 +209,13 @@ class AudioService : MediaSessionService() {
                     }
                 }
             }
+            ACTION_SHUFFLE -> {
+                android.util.Log.d("AudioX", "Shuffle button clicked")
+                mediaSession?.player?.let { player ->
+                    player.shuffleModeEnabled = !player.shuffleModeEnabled
+                    android.util.Log.d("AudioX", "Shuffle mode: ${player.shuffleModeEnabled}")
+                }
+            }
             ACTION_STOP -> {
                 android.util.Log.d("AudioX", "Close button clicked")
                 mediaSession?.player?.stop()
@@ -256,7 +264,7 @@ class AudioService : MediaSessionService() {
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setStyle(
                     androidx.media.app.NotificationCompat.MediaStyle()
-                        .setShowActionsInCompactView(0, 1, 2, 3)
+                        .setShowActionsInCompactView(0, 1, 2, 3, 4)
                         .setMediaSession(mediaSession.sessionCompatToken)
                 )
                 
@@ -273,8 +281,10 @@ class AudioService : MediaSessionService() {
                 }
             }
 
-            // Add actions
-            notification.addAction(R.drawable.ic_skip_previous, "Previous", createPendingIntent(ACTION_PREVIOUS))
+
+            // Add actions - Order: Shuffle, Previous, Play/Pause, Next, Close
+            notification.addAction(R.drawable.ic_shuffle, "Shuffle", createPendingIntent(ACTION_SHUFFLE))
+                .addAction(R.drawable.ic_skip_previous, "Previous", createPendingIntent(ACTION_PREVIOUS))
                 .addAction(
                     if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play,
                     if (isPlaying) "Pause" else "Play",
@@ -282,6 +292,7 @@ class AudioService : MediaSessionService() {
                 )
                 .addAction(R.drawable.ic_skip_next, "Next", createPendingIntent(ACTION_NEXT))
                 .addAction(R.drawable.ic_close, "Close", createPendingIntent(ACTION_STOP))
+
             
             return MediaNotification(NOTIFICATION_ID, notification.build())
         }

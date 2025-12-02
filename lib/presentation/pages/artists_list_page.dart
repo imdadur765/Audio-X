@@ -1,10 +1,16 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../data/models/artist_model.dart';
 import '../../data/services/artist_service.dart';
 import '../controllers/audio_controller.dart';
+
+enum SortOrder { aToZ, zToA }
+
+enum ViewMode { grid, list }
 
 class ArtistsListPage extends StatefulWidget {
   const ArtistsListPage({super.key});
@@ -17,84 +23,361 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
   final ArtistService _artistService = ArtistService();
   final Map<String, Future<Artist?>> _artistFutures = {};
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+
+  SortOrder _sortOrder = SortOrder.aToZ;
+  ViewMode _viewMode = ViewMode.grid;
+  ConnectivityResult _connectivityResult = ConnectivityResult.none;
+  late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
+  double _scrollOffset = 0;
+  double _lastScrollOffset = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _initConnectivity();
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen(_updateConnectionStatus);
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    // Throttle scroll updates - only update if difference > 10 pixels
+    final currentOffset = _scrollController.offset;
+    if ((currentOffset - _lastScrollOffset).abs() > 10) {
+      setState(() {
+        _scrollOffset = currentOffset;
+        _lastScrollOffset = currentOffset;
+      });
+    }
+  }
+
+  Future<void> _initConnectivity() async {
+    try {
+      final results = await Connectivity().checkConnectivity();
+      if (results.isNotEmpty) {
+        _updateConnectionStatus(results);
+      }
+    } catch (e) {
+      setState(() {
+        _connectivityResult = ConnectivityResult.none;
+      });
+    }
+  }
+
+  void _updateConnectionStatus(List<ConnectivityResult> results) {
+    if (results.isNotEmpty) {
+      setState(() {
+        _connectivityResult = results.first;
+      });
+    }
+  }
+
+  bool get _isOnline => _connectivityResult != ConnectivityResult.none;
 
   @override
   void dispose() {
     _artistFutures.clear();
     _scrollController.dispose();
+    _searchController.dispose();
+    _connectivitySubscription.cancel();
     super.dispose();
+  }
+
+  List<String> _getSortedAndFilteredArtists(List<String> artists) {
+    var filtered = artists;
+
+    // Filter by search query
+    if (_searchController.text.isNotEmpty) {
+      filtered = artists
+          .where((artist) => artist.toLowerCase().contains(_searchController.text.toLowerCase()))
+          .toList();
+    }
+
+    // Sort
+    if (_sortOrder == SortOrder.aToZ) {
+      filtered.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    } else {
+      filtered.sort((a, b) => b.toLowerCase().compareTo(a.toLowerCase()));
+    }
+
+    return filtered;
   }
 
   @override
   Widget build(BuildContext context) {
     final controller = Provider.of<AudioController>(context);
-    final artists = controller.songs.map((s) => s.artist).toSet().toList();
-    artists.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final allArtists = controller.songs.map((s) => s.artist).toSet().toList();
+    final artists = _getSortedAndFilteredArtists(allArtists);
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: CustomScrollView(
         controller: _scrollController,
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         slivers: [
-          _buildAppBar(),
+          _buildHeader(),
           if (artists.isEmpty)
-            const SliverFillRemaining(child: Center(child: Text("No artists found")))
-          else
-            SliverPadding(
-              padding: const EdgeInsets.all(16),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.85,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                ),
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final artistName = artists[index];
-                  _artistFutures.putIfAbsent(artistName, () => _artistService.getArtistInfo(artistName));
-                  return _buildArtistCard(artistName);
-                }, childCount: artists.length),
+            SliverFillRemaining(
+              child: Center(
+                child: Text(_searchController.text.isNotEmpty ? "No artists found" : "No artists available"),
               ),
-            ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)), // Bottom padding
+            )
+          else if (_viewMode == ViewMode.grid)
+            _buildGridView(artists)
+          else
+            _buildListView(artists),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
     );
   }
 
-  Widget _buildAppBar() {
+  Widget _buildHeader() {
+    final opacity = (_scrollOffset / 100).clamp(0.0, 1.0);
+
     return SliverAppBar(
-      expandedHeight: 120,
-      pinned: true,
+      expandedHeight: 220,
       floating: false,
+      pinned: true,
       backgroundColor: Colors.white,
-      surfaceTintColor: Colors.white,
-      elevation: 0,
+      elevation: opacity * 4,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      actions: [
+        // View toggle buttons - in app bar
+        Container(
+          margin: const EdgeInsets.only(right: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: opacity),
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: opacity > 0.5
+                ? [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 2))]
+                : [],
+          ),
+          child: Row(
+            children: [
+              _buildViewButton(
+                icon: Icons.grid_view_rounded,
+                isSelected: _viewMode == ViewMode.grid,
+                onTap: () => setState(() => _viewMode = ViewMode.grid),
+                isCompact: opacity > 0.5,
+              ),
+              _buildViewButton(
+                icon: Icons.view_list_rounded,
+                isSelected: _viewMode == ViewMode.list,
+                onTap: () => setState(() => _viewMode = ViewMode.list),
+                isCompact: opacity > 0.5,
+              ),
+            ],
+          ),
+        ),
+        // Sort button
+        PopupMenuButton<SortOrder>(
+          icon: Icon(
+            _sortOrder == SortOrder.aToZ ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+            color: opacity > 0.5 ? Colors.deepPurple : Colors.white,
+          ),
+          onSelected: (order) {
+            setState(() {
+              _sortOrder = order;
+            });
+          },
+          offset: const Offset(0, 40),
+          itemBuilder: (context) => [
+            const PopupMenuItem(value: SortOrder.aToZ, child: Text('A to Z')),
+            const PopupMenuItem(value: SortOrder.zToA, child: Text('Z to A')),
+          ],
+        ),
+        const SizedBox(width: 8),
+      ],
       flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
-        title: const Text(
-          'Artists',
-          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 24),
+        title: AnimatedOpacity(
+          opacity: opacity,
+          duration: const Duration(milliseconds: 200),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Artists',
+                style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              const SizedBox(width: 8),
+              _buildConnectivityBadge(compact: true),
+            ],
+          ),
         ),
         background: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.deepPurple.withValues(alpha: 0.05), Colors.white],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.deepPurple.shade700, Colors.deepPurple.shade500, Colors.pink.shade400],
+            ),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        'Artists',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      _buildConnectivityBadge(compact: false),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('Your music collection', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                  const SizedBox(height: 16),
+                  // Search bar in gradient
+                  Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      style: const TextStyle(fontSize: 15, color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Search artists...',
+                        hintStyle: const TextStyle(color: Colors.white60),
+                        prefixIcon: const Icon(Icons.search_rounded, color: Colors.white70, size: 20),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                                onPressed: () {
+                                  setState(() {
+                                    _searchController.clear();
+                                  });
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      ),
+                      onChanged: (value) {
+                        setState(() {});
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.search_rounded, color: Colors.black87),
-          onPressed: () {
-            // TODO: Implement search
-          },
+    );
+  }
+
+  Widget _buildConnectivityBadge({required bool compact}) {
+    if (compact) {
+      return Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(color: _isOnline ? Colors.green : Colors.red, shape: BoxShape.circle),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: _isOnline ? Colors.greenAccent : Colors.redAccent, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            _isOnline ? 'Online' : 'Offline',
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildViewButton({
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required bool isCompact,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isCompact ? Colors.deepPurple.shade50 : Colors.white.withValues(alpha: 0.3))
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
         ),
-        const SizedBox(width: 8),
-      ],
+        child: Icon(
+          icon,
+          size: 20,
+          color: isCompact
+              ? (isSelected ? Colors.deepPurple : Colors.grey[600])
+              : (isSelected ? Colors.white : Colors.white60),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGridView(List<String> artists) {
+    return SliverPadding(
+      padding: const EdgeInsets.all(16),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.85,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final artistName = artists[index];
+            _artistFutures.putIfAbsent(artistName, () => _artistService.getArtistInfo(artistName));
+            return RepaintBoundary(key: ValueKey('artist_$artistName'), child: _buildArtistCard(artistName));
+          },
+          childCount: artists.length,
+          addAutomaticKeepAlives: true,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildListView(List<String> artists) {
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final artistName = artists[index];
+            _artistFutures.putIfAbsent(artistName, () => _artistService.getArtistInfo(artistName));
+            return RepaintBoundary(key: ValueKey('artist_list_$artistName'), child: _buildArtistListTile(artistName));
+          },
+          childCount: artists.length,
+          addAutomaticKeepAlives: true,
+        ),
+      ),
     );
   }
 
@@ -127,7 +410,6 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Background Image
                   if (imageUrl != null && imageUrl.isNotEmpty)
                     Hero(
                       tag: 'artist_list_$artistName',
@@ -140,7 +422,6 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                   else
                     _buildPlaceholderBackground(),
 
-                  // Gradient Overlay
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -156,7 +437,6 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                     ),
                   ),
 
-                  // Content
                   Padding(
                     padding: const EdgeInsets.all(12),
                     child: Column(
@@ -199,6 +479,82 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
     );
   }
 
+  Widget _buildArtistListTile(String artistName) {
+    return FutureBuilder<Artist?>(
+      future: _artistFutures[artistName],
+      builder: (context, snapshot) {
+        final isLoading = snapshot.connectionState == ConnectionState.waiting;
+        final artist = snapshot.data;
+        final imageUrl = artist?.imageUrl;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2)),
+            ],
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            leading: Hero(
+              tag: 'artist_list_$artistName',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: imageUrl != null && imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        width: 56,
+                        height: 56,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _buildPlaceholderAvatar(),
+                      )
+                    : _buildPlaceholderAvatar(),
+              ),
+            ),
+            title: Text(artistName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+            subtitle: artist?.tags.isNotEmpty == true
+                ? Text(
+                    artist!.tags.take(2).join(", "),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                  )
+                : Text(
+                    isLoading ? "Loading..." : "Unknown Genre",
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                  ),
+            trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+            onTap: () {
+              context.pushNamed(
+                'artist_details',
+                pathParameters: {'name': artistName},
+                extra: 'artist_list_$artistName',
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPlaceholderAvatar() {
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.deepPurple.shade200, Colors.pink.shade300],
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Icon(Icons.person_rounded, color: Colors.white54, size: 28),
+    );
+  }
+
   Widget _buildShimmerCard() {
     return Shimmer.fromColors(
       baseColor: Colors.grey[300]!,
@@ -215,7 +571,7 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Colors.deepPurple.shade200, Colors.deepPurple.shade400],
+          colors: [Colors.deepPurple.shade300, Colors.pink.shade400],
         ),
       ),
       child: const Center(child: Icon(Icons.person_rounded, color: Colors.white54, size: 40)),

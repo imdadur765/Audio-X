@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:audio_x/data/models/song_model.dart';
 import 'package:go_router/go_router.dart';
 import '../presentation/pages/home_page.dart';
@@ -8,6 +9,7 @@ import '../presentation/widgets/scaffold_with_nav_bar.dart';
 import '../presentation/pages/artists_list_page.dart';
 import '../presentation/pages/playlist_page.dart';
 import '../presentation/pages/artist_details_page.dart';
+import '../presentation/pages/search_page.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/home',
@@ -50,12 +52,29 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/artist/:name',
       name: 'artist_details',
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final artistName = state.pathParameters['name']!;
         final heroTag = state.extra as String?;
-        return ArtistDetailsPage(artistName: artistName, heroTag: heroTag);
+        return CustomTransitionPage(
+          key: state.pageKey,
+          child: ArtistDetailsPage(artistName: artistName, heroTag: heroTag),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(0.0, 0.1);
+            const end = Offset.zero;
+            const curve = Curves.easeOutCubic;
+
+            var slideTween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+            var fadeTween = Tween(begin: 0.0, end: 1.0);
+
+            return SlideTransition(
+              position: animation.drive(slideTween),
+              child: FadeTransition(opacity: animation.drive(fadeTween), child: child),
+            );
+          },
+        );
       },
     ),
     GoRoute(path: '/equalizer', name: 'equalizer', builder: (context, state) => const EqualizerPage()),
+    GoRoute(path: '/search', name: 'search', builder: (context, state) => const SearchPage()),
   ],
 );

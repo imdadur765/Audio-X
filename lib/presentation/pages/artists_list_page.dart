@@ -156,13 +156,13 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
           child: Row(
             children: [
               _buildViewButton(
-                icon: Icons.grid_view_rounded,
+                imagePath: 'assets/images/girdview.png',
                 isSelected: _viewMode == ViewMode.grid,
                 onTap: () => setState(() => _viewMode = ViewMode.grid),
                 isCompact: opacity > 0.5,
               ),
               _buildViewButton(
-                icon: Icons.view_list_rounded,
+                imagePath: 'assets/images/listview.png',
                 isSelected: _viewMode == ViewMode.list,
                 onTap: () => setState(() => _viewMode = ViewMode.list),
                 isCompact: opacity > 0.5,
@@ -172,8 +172,10 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
         ),
         // Sort button
         PopupMenuButton<SortOrder>(
-          icon: Icon(
-            _sortOrder == SortOrder.aToZ ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+          icon: Image.asset(
+            'assets/images/sort.png',
+            width: 24,
+            height: 24,
             color: opacity > 0.5 ? Colors.deepPurple : Colors.white,
           ),
           onSelected: (order) {
@@ -315,7 +317,7 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
   }
 
   Widget _buildViewButton({
-    required IconData icon,
+    required String imagePath,
     required bool isSelected,
     required VoidCallback onTap,
     required bool isCompact,
@@ -330,9 +332,10 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(
-          icon,
-          size: 20,
+        child: Image.asset(
+          imagePath,
+          width: 20,
+          height: 20,
           color: isCompact
               ? (isSelected ? Colors.deepPurple : Colors.grey[600])
               : (isSelected ? Colors.white : Colors.white60),

@@ -712,7 +712,7 @@ class _HomePageState extends State<HomePage> {
     await audioController.playSong(song);
     await _homeController.trackRecentlyPlayed(song.id);
     if (mounted) {
-      context.pushNamed('player', extra: song);
+      context.pushNamed('player', extra: {'song': song, 'heroTag': 'song_${song.id}'});
     }
   }
 

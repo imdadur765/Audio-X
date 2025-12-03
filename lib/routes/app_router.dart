@@ -47,7 +47,40 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/player',
       name: 'player',
-      builder: (context, state) => PlayerPage(song: state.extra as Song),
+      pageBuilder: (context, state) {
+        Song song;
+        String? heroTag;
+
+        if (state.extra is Map<String, dynamic>) {
+          final extras = state.extra as Map<String, dynamic>;
+          song = extras['song'] as Song;
+          heroTag = extras['heroTag'] as String?;
+        } else if (state.extra is Song) {
+          song = state.extra as Song;
+          heroTag = null;
+        } else {
+          // Fallback for safety
+          return const NoTransitionPage(child: SizedBox());
+        }
+
+        return CustomTransitionPage(
+          key: state.pageKey,
+          child: PlayerPage(song: song, heroTag: heroTag),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(0.0, 1.0);
+            const end = Offset.zero;
+            const curve = Curves.easeOutCubic;
+
+            var slideTween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+            var fadeTween = Tween(begin: 0.0, end: 1.0);
+
+            return SlideTransition(
+              position: animation.drive(slideTween),
+              child: FadeTransition(opacity: animation.drive(fadeTween), child: child),
+            );
+          },
+        );
+      },
     ),
     GoRoute(
       path: '/artist/:name',

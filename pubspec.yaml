@@ -79,6 +79,33 @@ flutter:
     - assets/images/spotify_logo.png
     - assets/images/itunes_logo.png
     - assets/images/lastfm_logo.png
+    # Player control icons
+    - assets/images/play.png
+    - assets/images/pause.png
+    - assets/images/skip_next.png
+    - assets/images/skip_previous.png
+    - assets/images/shuffle.png
+    - assets/images/repeat.png
+    # Navigation icons
+    - assets/images/home_open.png
+    - assets/images/home_close.png
+    - assets/images/artist_open.png
+    - assets/images/artist_close.png
+    - assets/images/album_list_open.png
+    - assets/images/album_list_close.png
+    - assets/images/playlist_open.png
+    - assets/images/playlist_close.png
+    # Detail page icons
+    - assets/images/back.png
+    - assets/images/followers.png
+    - assets/images/song.png
+    - assets/images/duration.png
+    - assets/images/info.png
+    - assets/images/popularity.png
+    # Artists List icons
+    - assets/images/girdview.png
+    - assets/images/listview.png
+    - assets/images/sort.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

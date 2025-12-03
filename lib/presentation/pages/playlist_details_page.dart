@@ -12,7 +12,14 @@ class PlaylistDetailsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(title), backgroundColor: gradientColors.first),
+      appBar: AppBar(
+        title: Text(title),
+        backgroundColor: gradientColors.first,
+        leading: IconButton(
+          icon: Image.asset('assets/images/back.png', width: 24, height: 24),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(

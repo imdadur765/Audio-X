@@ -11,6 +11,10 @@ class EqualizerPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Equalizer & Effects'),
+        leading: IconButton(
+          icon: Image.asset('assets/images/back.png', width: 24, height: 24),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

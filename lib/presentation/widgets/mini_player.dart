@@ -13,76 +13,151 @@ class MiniPlayer extends StatelessWidget {
       builder: (context, controller, child) {
         if (controller.songs.isEmpty) return const SizedBox.shrink();
 
-        // Find current song (mock logic: just take the one being played or first)
-        // In real app, controller should expose currentSong
-        // For now, let's assume the first one if playing, or find by ID if we had it
-        // We need to update controller to expose currentSong.
-        // For this step, I'll update controller first.
-
-        // Wait, I can't update controller in this file write.
-        // I will assume controller has `currentSong` getter.
-        // I will add it in next step.
-
         final song = controller.currentSong;
         if (song == null) return const SizedBox.shrink();
 
         return GestureDetector(
           onTap: () {
-            context.pushNamed('player', extra: song);
+            context.pushNamed('player', extra: {'song': song, 'heroTag': 'mini_player_${song.id}'});
           },
           child: Container(
-            height: 70,
-            color: Theme.of(context).cardColor,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                // Artwork
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: song.localArtworkPath != null
-                      ? Image.file(File(song.localArtworkPath!), width: 50, height: 50, fit: BoxFit.cover)
-                      : Container(width: 50, height: 50, color: Colors.grey[300], child: const Icon(Icons.music_note)),
-                ),
-                const SizedBox(width: 12),
-
-                // Info
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        song.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+            height: 68,
+            margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Colors.white, Colors.deepPurple.shade50],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(color: Colors.deepPurple.withOpacity(0.15), blurRadius: 20, offset: const Offset(0, 8)),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Row(
+                children: [
+                  // Album Art
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Colors.deepPurple.shade300, Colors.purple.shade400],
                       ),
-                      Text(
-                        song.artist,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    child: song.localArtworkPath != null
+                        ? Image.file(File(song.localArtworkPath!), fit: BoxFit.cover)
+                        : Center(child: Icon(Icons.music_note_rounded, color: Colors.white.withOpacity(0.8), size: 28)),
+                  ),
+                  const SizedBox(width: 10),
+
+                  // Song Info
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          song.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          song.artist,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Controls
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildControlButton(
+                        imagePath: 'assets/images/skip_previous.png',
+                        size: 18,
+                        onTap: () => controller.previous(),
+                      ),
+                      const SizedBox(width: 6),
+                      _buildPlayPauseButton(
+                        isPlaying: controller.isPlaying,
+                        onTap: () {
+                          if (controller.isPlaying) {
+                            controller.pause();
+                          } else {
+                            controller.resume();
+                          }
+                        },
+                      ),
+                      const SizedBox(width: 6),
+                      _buildControlButton(
+                        imagePath: 'assets/images/skip_next.png',
+                        size: 18,
+                        onTap: () => controller.next(),
                       ),
                     ],
                   ),
-                ),
-
-                // Controls
-                IconButton(
-                  icon: Icon(controller.isPlaying ? Icons.pause : Icons.play_arrow),
-                  onPressed: () {
-                    if (controller.isPlaying) {
-                      controller.pause();
-                    } else {
-                      controller.resume();
-                    }
-                  },
-                ),
-              ],
+                  const SizedBox(width: 10),
+                ],
+              ),
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildControlButton({required String imagePath, required double size, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [BoxShadow(color: Colors.deepPurple.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))],
+        ),
+        child: Center(
+          child: Image.asset(imagePath, width: size, height: size, color: Colors.deepPurple),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlayPauseButton({required bool isPlaying, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.deepPurple.shade600, Colors.purple.shade600],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [BoxShadow(color: Colors.deepPurple.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Center(
+          child: Image.asset(
+            isPlaying ? 'assets/images/pause.png' : 'assets/images/play.png',
+            width: 20,
+            height: 20,
+            color: Colors.white,
+          ),
+        ),
+      ),
     );
   }
 }

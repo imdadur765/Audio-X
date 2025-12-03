@@ -90,7 +90,10 @@ class _SearchPageState extends State<SearchPage> {
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
         titleSpacing: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => context.pop()),
+        leading: IconButton(
+          icon: Image.asset('assets/images/back.png', width: 24, height: 24),
+          onPressed: () => context.pop(),
+        ),
         title: TextField(
           controller: _searchController,
           focusNode: _focusNode,

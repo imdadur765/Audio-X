@@ -149,7 +149,12 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
           ],
         ),
         child: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: opacity > 0.5 ? Colors.black87 : Colors.white),
+          icon: Image.asset(
+            'assets/images/back.png',
+            width: 24,
+            height: 24,
+            color: opacity > 0.5 ? Colors.black87 : Colors.white,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -349,16 +354,21 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
   Widget _buildSpotifyStatsCard(Artist artist) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Colors.deepPurple.shade50, Colors.purple.shade50],
+          colors: [Color(0xFF191414), Color(0xFF121212)],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF1DB954).withValues(alpha: 0.3), width: 1.5),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, 10)),
+          BoxShadow(
+            color: const Color(0xFF1DB954).withValues(alpha: 0.15),
+            blurRadius: 25,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
@@ -367,55 +377,59 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.deepPurple.shade100, borderRadius: BorderRadius.circular(12)),
-                child: Icon(Icons.auto_awesome_rounded, size: 20, color: Colors.deepPurple.shade800),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1DB954).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Image.asset('assets/images/spotify_logo.png', width: 24, height: 24),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 16),
               const Text(
                 'Spotify Stats',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black87),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.5),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
 
           // Followers
           if (artist.followers > 0)
             _buildStatRow(
-              icon: Icons.people_alt_rounded,
+              imagePath: 'assets/images/followers.png',
               value: _formatNumber(artist.followers),
               label: 'Followers',
-              color: Colors.deepPurple,
+              color: const Color(0xFF1DB954),
+              textColor: Colors.white,
             ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
 
           // Popularity
-          if (artist.popularity > 0) ...[_buildPopularityBar(artist.popularity), const SizedBox(height: 12)],
+          if (artist.popularity > 0) ...[_buildPopularityBar(artist.popularity), const SizedBox(height: 20)],
 
           // Genres
           if (artist.tags.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Text(
               'Genres',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade400),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: artist.tags.map((genre) {
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Colors.white.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.deepPurple.shade100),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                   ),
                   child: Text(
                     genre,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.deepPurple.shade800),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey.shade200),
                   ),
                 );
               }).toList(),
@@ -426,19 +440,25 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
     );
   }
 
-  Widget _buildStatRow({required IconData icon, required String value, required String label, required Color color}) {
+  Widget _buildStatRow({
+    required String imagePath,
+    required String value,
+    required String label,
+    required Color color,
+    Color? textColor,
+  }) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: color),
-        const SizedBox(width: 12),
+        Image.asset(imagePath, width: 24, height: 24, color: color),
+        const SizedBox(width: 16),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               value,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: color),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textColor ?? color),
             ),
-            Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+            Text(label, style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
           ],
         ),
       ],
@@ -451,33 +471,40 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
       children: [
         Row(
           children: [
-            Icon(Icons.trending_up_rounded, size: 20, color: Colors.orange.shade600),
-            const SizedBox(width: 12),
+            Image.asset('assets/images/popularity.png', width: 24, height: 24, color: const Color(0xFF1DB954)),
+            const SizedBox(width: 16),
             Text(
               'Popularity',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade400),
             ),
             const Spacer(),
             Text(
               '$popularity%',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.orange.shade700),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1DB954)),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Container(
-          height: 8,
+          height: 6,
           width: double.infinity,
-          decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(4)),
+          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(3)),
           child: Stack(
             children: [
               FractionallySizedBox(
                 widthFactor: (popularity / 100).clamp(0.0, 1.0),
                 child: Container(
-                  height: 8,
+                  height: 6,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [Colors.orange.shade400, Colors.orange.shade600]),
-                    borderRadius: BorderRadius.circular(4),
+                    color: const Color(0xFF1DB954),
+                    borderRadius: BorderRadius.circular(3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF1DB954).withValues(alpha: 0.5),
+                        blurRadius: 6,
+                        offset: const Offset(0, 0),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -506,14 +533,14 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildLocalStatItem(
-            icon: Icons.music_note_rounded,
+            imagePath: 'assets/images/song.png',
             value: '${songs.length}',
             label: 'Songs',
             color: Colors.blue.shade600,
           ),
           Container(width: 1, height: 40, color: Colors.grey.shade200),
           _buildLocalStatItem(
-            icon: Icons.schedule_rounded,
+            imagePath: 'assets/images/duration.png',
             value: _formatTotalDuration(totalDuration),
             label: 'Total Duration',
             color: Colors.green.shade600,
@@ -524,7 +551,7 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
   }
 
   Widget _buildLocalStatItem({
-    required IconData icon,
+    required String imagePath,
     required String value,
     required String label,
     required Color color,
@@ -534,7 +561,7 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
-          child: Icon(icon, size: 20, color: color),
+          child: Image.asset(imagePath, width: 20, height: 20, color: color),
         ),
         const SizedBox(height: 8),
         Text(
@@ -577,10 +604,10 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                     onTap: () => _playAll(songs),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.play_arrow_rounded, color: Colors.white, size: 24),
-                        SizedBox(width: 8),
-                        Text(
+                      children: [
+                        Image.asset('assets/images/play.png', width: 24, height: 24, color: Colors.white),
+                        const SizedBox(width: 8),
+                        const Text(
                           'Play All',
                           style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
                         ),
@@ -609,10 +636,10 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                     onTap: () => _shuffleAll(songs),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.shuffle_rounded, color: Colors.deepPurple, size: 20),
-                        SizedBox(height: 2),
-                        Text(
+                      children: [
+                        Image.asset('assets/images/shuffle.png', width: 20, height: 20, color: Colors.deepPurple),
+                        const SizedBox(height: 2),
+                        const Text(
                           'Shuffle',
                           style: TextStyle(color: Colors.deepPurple, fontSize: 12, fontWeight: FontWeight.w700),
                         ),
@@ -1056,7 +1083,7 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(color: Colors.deepPurple.shade50, borderRadius: BorderRadius.circular(12)),
-                child: Icon(Icons.info_outline_rounded, color: Colors.deepPurple, size: 20),
+                child: Image.asset('assets/images/info.png', width: 20, height: 20, color: Colors.deepPurple),
               ),
               const SizedBox(width: 12),
               const Text(

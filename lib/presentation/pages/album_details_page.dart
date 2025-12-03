@@ -240,12 +240,23 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 8),
-          Text(
-            _artistName,
-            style: TextStyle(color: Colors.deepPurple.shade700, fontSize: 18, fontWeight: FontWeight.w600),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          GestureDetector(
+            onTap: () {
+              context.pushNamed('artist_details', pathParameters: {'name': _artistName});
+            },
+            child: Text(
+              _artistName,
+              style: TextStyle(
+                color: Colors.deepPurple.shade700,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+                decorationColor: Colors.deepPurple.shade200,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           const SizedBox(height: 12),
           Row(

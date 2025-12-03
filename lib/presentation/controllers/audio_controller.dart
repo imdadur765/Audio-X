@@ -340,31 +340,39 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> next() async {
     await _audioHandler.next();
-    // Optimistic update
-    if (_currentSong != null) {
-      final index = _songs.indexOf(_currentSong!);
-      if (index < _songs.length - 1) {
-        _currentSong = _songs[index + 1];
-        _duration = Duration(milliseconds: _currentSong!.duration);
-      } else if (_repeatMode == 2) {
-        _currentSong = _songs.first;
-        _duration = Duration(milliseconds: _currentSong!.duration);
-      }
+
+    // Wait for the audio handler to process the skip
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    // Get the actual current media item index from the player
+    final currentIndex = await _audioHandler.getCurrentMediaItemIndex();
+
+    if (currentIndex >= 0 && currentIndex < _songs.length) {
+      _currentSong = _songs[currentIndex];
+      _duration = Duration(milliseconds: _currentSong!.duration);
+      _position = Duration.zero;
     }
-    await _saveState(); // Save after track change
+
+    await _saveState();
     notifyListeners();
   }
 
   Future<void> previous() async {
     await _audioHandler.previous();
-    if (_currentSong != null) {
-      final index = _songs.indexOf(_currentSong!);
-      if (index > 0) {
-        _currentSong = _songs[index - 1];
-        _duration = Duration(milliseconds: _currentSong!.duration);
-      }
+
+    // Wait for the audio handler to process the skip
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    // Get the actual current media item index from the player
+    final currentIndex = await _audioHandler.getCurrentMediaItemIndex();
+
+    if (currentIndex >= 0 && currentIndex < _songs.length) {
+      _currentSong = _songs[currentIndex];
+      _duration = Duration(milliseconds: _currentSong!.duration);
+      _position = Duration.zero;
     }
-    await _saveState(); // Save after track change
+
+    await _saveState();
     notifyListeners();
   }
 

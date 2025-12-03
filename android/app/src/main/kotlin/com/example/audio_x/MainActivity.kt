@@ -143,6 +143,11 @@ class MainActivity : FlutterActivity() {
                     android.util.Log.d("AudioX", "Native getPosition: $position ms")
                     result.success(position)
                 }
+                "getCurrentMediaItemIndex" -> {
+                    val index = controller.currentMediaItemIndex
+                    android.util.Log.d("AudioX", "Current media item index: $index")
+                    result.success(index)
+                }
                 "setShuffleMode" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: false
                     controller.shuffleModeEnabled = enabled

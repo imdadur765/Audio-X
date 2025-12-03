@@ -91,6 +91,16 @@ class AudioHandler {
     }
   }
 
+  Future<int> getCurrentMediaItemIndex() async {
+    try {
+      final index = await _channel.invokeMethod('getCurrentMediaItemIndex');
+      return index as int;
+    } on PlatformException catch (e) {
+      print("Failed to get current media item index: '${e.message}'.");
+      return -1;
+    }
+  }
+
   Future<void> setShuffleMode(bool enabled) async {
     try {
       await _channel.invokeMethod('setShuffleMode', {'enabled': enabled});

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:palette_generator/palette_generator.dart';
 import '../../data/models/song_model.dart';
 import '../../data/models/lyrics_model.dart';
 import '../../services/lyrics_service.dart';
@@ -26,18 +27,40 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
   bool _isLoadingLyrics = false;
   late AnimationController _animationController;
 
+  Color? _accentColor;
+  String? _lastSongId;
+
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
     _animationController.forward();
     _loadLyrics();
+    _updatePalette(widget.song.localArtworkPath);
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _updatePalette(String? artworkPath) async {
+    if (artworkPath == null) {
+      setState(() => _accentColor = Colors.deepPurple);
+      return;
+    }
+    try {
+      final palette = await PaletteGenerator.fromImageProvider(FileImage(File(artworkPath)), maximumColorCount: 20);
+      if (mounted) {
+        setState(() {
+          _accentColor = palette.dominantColor?.color ?? palette.vibrantColor?.color ?? Colors.deepPurple;
+        });
+      }
+    } catch (e) {
+      // Fallback
+      if (mounted) setState(() => _accentColor = Colors.deepPurple);
+    }
   }
 
   Future<void> _loadLyrics() async {
@@ -79,7 +102,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
       _loadLyrics();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✅ Lyrics file loaded!'),
+          content: Text('Lyrics file loaded!'),
           backgroundColor: Colors.deepPurple,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -113,7 +136,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✅ Found ${lyrics.lines.length} lyrics lines!'),
+          content: Text('Found ${lyrics.lines.length} lyrics lines!'),
           backgroundColor: Colors.deepPurple,
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
@@ -127,7 +150,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Lyrics not found'),
+            content: Text('Lyrics not found'),
             backgroundColor: Colors.deepPurple,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -143,87 +166,80 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
       builder: (context, controller, child) {
         final currentSong = controller.currentSong ?? widget.song;
 
+        if (_lastSongId != currentSong.id) {
+          _lastSongId = currentSong.id;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _updatePalette(currentSong.localArtworkPath);
+          });
+        }
+
+        final accentColor = _accentColor ?? Colors.deepPurple;
+
         return Scaffold(
           backgroundColor: Colors.white,
-          body: GestureDetector(
-            onVerticalDragUpdate: (details) {
-              if (details.primaryDelta! > 10) {
-                Navigator.of(context).pop();
-              }
-            },
-            child: Stack(
-              children: [
-                // Gradient Background matching HomePage theme
-                Positioned.fill(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Colors.deepPurple.shade50, Colors.white, Colors.purple.shade50],
+          body: Dismissible(
+            key: const Key('player_dismiss'),
+            direction: DismissDirection.down,
+            onDismissed: (_) => Navigator.of(context).pop(),
+            child: RepaintBoundary(
+              child: Stack(
+                children: [
+                  // Gradient Background
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [accentColor.withOpacity(0.1), Colors.white, accentColor.withOpacity(0.05)],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                // Subtle Blur Effect with gradient
-                Positioned.fill(
-                  child: currentSong.localArtworkPath != null
-                      ? Image.file(File(currentSong.localArtworkPath!), fit: BoxFit.cover)
-                      : Container(),
-                ),
-                Positioned.fill(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                    child: Container(color: Colors.white.withOpacity(0.3)),
+                  // Subtle Blur Effect
+                  Positioned.fill(
+                    child: currentSong.localArtworkPath != null
+                        ? Image.file(File(currentSong.localArtworkPath!), fit: BoxFit.cover)
+                        : Container(),
                   ),
-                ),
-                // Gradient Overlay
-                Positioned.fill(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.white.withOpacity(0.6),
-                          Colors.deepPurple.shade50.withOpacity(0.4),
-                          Colors.deepPurple.shade100.withOpacity(0.7),
-                        ],
-                      ),
+                  Positioned.fill(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                      child: Container(color: Colors.white.withOpacity(0.5)),
                     ),
                   ),
-                ),
 
-                // Content
-                SafeArea(
-                  child: Column(
-                    children: [
-                      _buildAppBar(context),
-                      Expanded(
-                        child: _showLyrics && _lyrics != null
-                            ? Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [Colors.white.withOpacity(0.9), Colors.deepPurple.shade50.withOpacity(0.9)],
+                  // Content
+                  SafeArea(
+                    child: Column(
+                      children: [
+                        _buildAppBar(context, accentColor),
+                        Expanded(
+                          child: _showLyrics && _lyrics != null
+                              ? Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [Colors.white.withOpacity(0.9), accentColor.withOpacity(0.1)],
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
                                   ),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                margin: EdgeInsets.all(16),
-                                child: LyricsView(
-                                  lyrics: _lyrics!,
-                                  currentPosition: controller.position,
-                                  onSeek: (position) => controller.seek(position),
-                                ),
-                              )
-                            : _buildAlbumArtSection(currentSong, controller),
-                      ),
-                      RepaintBoundary(child: _buildPlayerControls(controller)),
-                    ],
+                                  margin: EdgeInsets.all(16),
+                                  child: LyricsView(
+                                    lyrics: _lyrics!,
+                                    currentPosition: controller.position,
+                                    onSeek: (position) => controller.seek(position),
+                                  ),
+                                )
+                              : _buildAlbumArtSection(currentSong, controller, accentColor),
+                        ),
+                        RepaintBoundary(child: _buildPlayerControls(controller, accentColor)),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -231,7 +247,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildAppBar(BuildContext context) {
+  Widget _buildAppBar(BuildContext context, Color accentColor) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -242,26 +258,15 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
             child: Container(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(color: Colors.deepPurple.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
-                ],
-              ),
-              child: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.deepPurple, size: 24),
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), borderRadius: BorderRadius.circular(12)),
+              child: Center(child: Image.asset('assets/images/down.png', width: 20, height: 20, color: Colors.black87)),
             ),
           ),
           Column(
             children: [
-              const Text(
+              Text(
                 'NOW PLAYING',
-                style: TextStyle(
-                  color: Colors.deepPurple,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.2,
-                ),
+                style: TextStyle(color: accentColor, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2),
               ),
               const SizedBox(height: 4),
               Text(
@@ -274,34 +279,39 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
             mainAxisSize: MainAxisSize.min,
             children: [
               if (_lyrics != null && !_isLoadingLyrics)
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(color: Colors.deepPurple.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
-                    ],
-                  ),
-                  child: IconButton(
-                    icon: Icon(_showLyrics ? Icons.album_rounded : Icons.lyrics_rounded, color: Colors.deepPurple),
-                    onPressed: () {
-                      setState(() {
-                        _showLyrics = !_showLyrics;
-                      });
-                    },
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _showLyrics = !_showLyrics;
+                    });
+                  },
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Image.asset(
+                        _showLyrics ? 'assets/images/album.png' : 'assets/images/lyrics.png',
+                        width: 20,
+                        height: 20,
+                        color: Colors.black87,
+                      ),
+                    ),
                   ),
                 ),
-              SizedBox(width: 8),
               Container(
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Colors.white.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(color: Colors.deepPurple.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
-                  ],
                 ),
                 child: PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert_rounded, color: Colors.deepPurple),
+                  icon: Image.asset('assets/images/more.png', width: 20, height: 20, color: Colors.black87),
                   onSelected: (value) async {
                     switch (value) {
                       case 'upload':
@@ -322,7 +332,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                       value: 'upload',
                       child: Row(
                         children: [
-                          Icon(Icons.upload_file_rounded, color: Colors.deepPurple),
+                          Image.asset('assets/images/upload_lrc.png', width: 20, height: 20, color: Colors.black87),
                           SizedBox(width: 12),
                           Text('Upload .lrc file', style: TextStyle(color: Colors.black87)),
                         ],
@@ -332,7 +342,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                       value: 'search',
                       child: Row(
                         children: [
-                          Icon(Icons.search_rounded, color: Colors.deepPurple),
+                          Image.asset('assets/images/search.png', width: 20, height: 20, color: Colors.black87),
                           SizedBox(width: 12),
                           Text('Search lyrics', style: TextStyle(color: Colors.black87)),
                         ],
@@ -342,7 +352,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                       value: 'equalizer',
                       child: Row(
                         children: [
-                          Icon(Icons.equalizer_rounded, color: Colors.deepPurple),
+                          Image.asset('assets/images/equalizer.png', width: 20, height: 20, color: Colors.black87),
                           SizedBox(width: 12),
                           Text('Equalizer', style: TextStyle(color: Colors.black87)),
                         ],
@@ -358,13 +368,12 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildAlbumArtSection(Song currentSong, AudioController controller) {
+  Widget _buildAlbumArtSection(Song currentSong, AudioController controller, Color accentColor) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Album Art with Hero Animation
           Expanded(
             child: Center(
               child: Hero(
@@ -373,18 +382,18 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                   width: 280,
                   height: 280,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.deepPurple.withOpacity(0.3),
-                        blurRadius: 40,
-                        spreadRadius: 5,
-                        offset: const Offset(0, 20),
+                        color: accentColor.withOpacity(0.4),
+                        blurRadius: 30,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 15),
                       ),
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(20),
                     child: currentSong.localArtworkPath != null
                         ? Image.file(File(currentSong.localArtworkPath!), fit: BoxFit.cover)
                         : Container(
@@ -392,11 +401,16 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                               gradient: LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: [Colors.deepPurple.shade300, Colors.purple.shade400],
+                                colors: [accentColor.withOpacity(0.6), accentColor],
                               ),
                             ),
                             child: Center(
-                              child: Icon(Icons.music_note_rounded, size: 100, color: Colors.white.withOpacity(0.8)),
+                              child: Image.asset(
+                                'assets/images/album.png',
+                                width: 100,
+                                height: 100,
+                                color: Colors.white.withOpacity(0.8),
+                              ),
                             ),
                           ),
                   ),
@@ -405,8 +419,6 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
             ),
           ),
           SizedBox(height: 32),
-
-          // Song Info
           Column(
             children: [
               Text(
@@ -424,7 +436,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
               SizedBox(height: 8),
               Text(
                 currentSong.artist,
-                style: TextStyle(color: Colors.deepPurple.shade700, fontSize: 18, fontWeight: FontWeight.w600),
+                style: TextStyle(color: accentColor, fontSize: 18, fontWeight: FontWeight.w600),
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -445,9 +457,9 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildPlayerControls(AudioController controller) {
+  Widget _buildPlayerControls(AudioController controller, Color accentColor) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 16), // Lifted up
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -458,13 +470,17 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
               children: [
                 SliderTheme(
                   data: SliderTheme.of(context).copyWith(
-                    trackHeight: 4,
-                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8, elevation: 4, pressedElevation: 6),
-                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-                    activeTrackColor: Colors.deepPurple,
-                    inactiveTrackColor: Colors.deepPurple.withOpacity(0.2),
-                    thumbColor: Colors.deepPurple,
-                    overlayColor: Colors.deepPurple.withOpacity(0.1),
+                    trackHeight: 3, // Thinner track
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 5,
+                      elevation: 2,
+                      pressedElevation: 4,
+                    ), // Smaller thumb
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                    activeTrackColor: accentColor,
+                    inactiveTrackColor: accentColor.withOpacity(0.2),
+                    thumbColor: accentColor,
+                    overlayColor: accentColor.withOpacity(0.1),
                   ),
                   child: Slider(
                     value: controller.position.inSeconds.toDouble().clamp(
@@ -484,11 +500,19 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                     children: [
                       Text(
                         _formatDuration(controller.position),
-                        style: TextStyle(color: Colors.deepPurple.shade600, fontSize: 12, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          color: accentColor.withOpacity(0.8),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       Text(
                         _formatDuration(controller.duration),
-                        style: TextStyle(color: Colors.deepPurple.shade600, fontSize: 12, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          color: accentColor.withOpacity(0.8),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
@@ -496,8 +520,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
               ],
             ),
           ),
-          SizedBox(height: 24),
-
+          SizedBox(height: 16), // Reduced spacing
           // Control Buttons
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -506,16 +529,32 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                 imagePath: 'assets/images/shuffle.png',
                 isActive: controller.isShuffleEnabled,
                 onTap: controller.toggleShuffle,
-                size: 22,
+                size: 18, // Smaller icon
+                accentColor: accentColor,
+                containerSize: 40, // Smaller container
               ),
-              _buildControlButton(imagePath: 'assets/images/skip_previous.png', size: 32, onTap: controller.previous),
-              _buildPlayButton(controller),
-              _buildControlButton(imagePath: 'assets/images/skip_next.png', size: 32, onTap: controller.next),
+              _buildControlButton(
+                imagePath: 'assets/images/skip_previous.png',
+                size: 24, // Smaller icon
+                onTap: controller.previous,
+                accentColor: accentColor,
+                containerSize: 40,
+              ),
+              _buildPlayButton(controller, accentColor),
+              _buildControlButton(
+                imagePath: 'assets/images/skip_next.png',
+                size: 24, // Smaller icon
+                onTap: controller.next,
+                accentColor: accentColor,
+                containerSize: 40,
+              ),
               _buildControlButton(
                 imagePath: 'assets/images/repeat.png',
                 isActive: controller.repeatMode > 0,
                 onTap: controller.toggleRepeat,
-                size: 22,
+                size: 18, // Smaller icon
+                accentColor: accentColor,
+                containerSize: 40,
               ),
             ],
           ),
@@ -526,33 +565,36 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
 
   Widget _buildControlButton({
     required String imagePath,
-    double size = 28,
+    double size = 24,
+    double containerSize = 48,
     bool isActive = false,
     required VoidCallback onTap,
+    required Color accentColor,
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.deepPurple.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
-        ),
-        child: Center(
-          child: Image.asset(
-            imagePath,
-            width: size,
-            height: size,
-            color: isActive ? Colors.deepPurple : Colors.grey.shade600,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            width: containerSize,
+            height: containerSize,
+            decoration: BoxDecoration(
+              color: isActive ? accentColor.withOpacity(0.2) : Colors.white.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withOpacity(0.2), width: 0.5),
+            ),
+            child: Center(
+              child: Image.asset(imagePath, width: size, height: size, color: isActive ? accentColor : Colors.black87),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildPlayButton(AudioController controller) {
+  Widget _buildPlayButton(AudioController controller, Color accentColor) {
     return GestureDetector(
       onTap: () {
         if (controller.isPlaying) {
@@ -562,29 +604,20 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
         }
       },
       child: Container(
-        width: 70,
-        height: 70,
+        width: 64, // Smaller play button
+        height: 64,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Colors.deepPurple.shade600, Colors.purple.shade600],
-          ),
+          color: accentColor,
           shape: BoxShape.circle,
           boxShadow: [
-            BoxShadow(
-              color: Colors.deepPurple.withOpacity(0.4),
-              blurRadius: 20,
-              spreadRadius: 5,
-              offset: const Offset(0, 8),
-            ),
+            BoxShadow(color: accentColor.withOpacity(0.4), blurRadius: 16, spreadRadius: 4, offset: const Offset(0, 6)),
           ],
         ),
         child: Center(
           child: Image.asset(
             controller.isPlaying ? 'assets/images/pause.png' : 'assets/images/play.png',
-            width: 36,
-            height: 36,
+            width: 28,
+            height: 28,
             color: Colors.white,
           ),
         ),

@@ -9,6 +9,7 @@ import '../presentation/widgets/scaffold_with_nav_bar.dart';
 import '../presentation/pages/artists_list_page.dart';
 import '../presentation/pages/playlist_page.dart';
 import '../presentation/pages/artist_details_page.dart';
+import '../presentation/pages/album_details_page.dart';
 import '../presentation/pages/search_page.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -91,6 +92,34 @@ final GoRouter appRouter = GoRouter(
         return CustomTransitionPage(
           key: state.pageKey,
           child: ArtistDetailsPage(artistName: artistName, heroTag: heroTag),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(0.0, 0.1);
+            const end = Offset.zero;
+            const curve = Curves.easeOutCubic;
+
+            var slideTween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+            var fadeTween = Tween(begin: 0.0, end: 1.0);
+
+            return SlideTransition(
+              position: animation.drive(slideTween),
+              child: FadeTransition(opacity: animation.drive(fadeTween), child: child),
+            );
+          },
+        );
+      },
+    ),
+    GoRoute(
+      path: '/album/:name',
+      name: 'album_details',
+      pageBuilder: (context, state) {
+        final albumName = state.pathParameters['name']!;
+        final extra = state.extra as Map<String, dynamic>?;
+        final songs = extra?['songs'] as List<Song>? ?? [];
+        final heroTag = extra?['heroTag'] as String?;
+
+        return CustomTransitionPage(
+          key: state.pageKey,
+          child: AlbumDetailsPage(albumName: albumName, songs: songs, heroTag: heroTag),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const begin = Offset(0.0, 0.1);
             const end = Offset.zero;

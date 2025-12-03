@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:audio_x/data/models/song_model.dart';
 import 'package:audio_x/presentation/controllers/audio_controller.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shimmer/shimmer.dart';
 
 enum ViewMode { grid, list }
 
@@ -24,11 +25,20 @@ class _AlbumsPageState extends State<AlbumsPage> {
   SortOrder _sortOrder = SortOrder.aToZ;
   double _scrollOffset = 0;
   double _lastScrollOffset = 0;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // Simulate loading for premium feel
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    });
   }
 
   void _onScroll() {
@@ -111,6 +121,13 @@ class _AlbumsPageState extends State<AlbumsPage> {
           // Albums Grid
           Consumer<AudioController>(
             builder: (context, controller, child) {
+              if (_isLoading) {
+                return SliverPadding(
+                  padding: const EdgeInsets.all(16),
+                  sliver: _viewMode == ViewMode.grid ? _buildGridShimmer() : _buildListShimmer(),
+                );
+              }
+
               if (controller.songs.isEmpty) {
                 return SliverFillRemaining(
                   child: Center(
@@ -511,6 +528,115 @@ class _AlbumsPageState extends State<AlbumsPage> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: const Icon(Icons.album_rounded, color: Colors.white54, size: 28),
+    );
+  }
+
+  Widget _buildGridShimmer() {
+    return SliverGrid(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.75,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          return Shimmer.fromColors(
+            baseColor: Colors.grey.shade300,
+            highlightColor: Colors.grey.shade100,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 160,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  height: 16,
+                  width: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  height: 12,
+                  width: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+        childCount: 6,
+      ),
+    );
+  }
+
+  Widget _buildListShimmer() {
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          return Shimmer.fromColors(
+            baseColor: Colors.grey.shade300,
+            highlightColor: Colors.grey.shade100,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 16,
+                          width: 150,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          height: 12,
+                          width: 100,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+        childCount: 10,
+      ),
     );
   }
 }

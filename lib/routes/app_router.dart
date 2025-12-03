@@ -10,6 +10,7 @@ import '../presentation/pages/artists_list_page.dart';
 import '../presentation/pages/playlist_page.dart';
 import '../presentation/pages/artist_details_page.dart';
 import '../presentation/pages/album_details_page.dart';
+import '../presentation/pages/album_info_page.dart';
 import '../presentation/pages/search_page.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -138,5 +139,23 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(path: '/equalizer', name: 'equalizer', builder: (context, state) => const EqualizerPage()),
     GoRoute(path: '/search', name: 'search', builder: (context, state) => const SearchPage()),
+    GoRoute(
+      path: '/album_info',
+      name: 'album_info',
+      pageBuilder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>;
+        return CustomTransitionPage(
+          key: state.pageKey,
+          child: AlbumInfoPage(
+            albumName: extra['albumName'],
+            artistName: extra['artistName'],
+            albumArt: extra['albumArt'],
+          ),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        );
+      },
+    ),
   ],
 );

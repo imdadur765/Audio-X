@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../data/models/song_model.dart';
 import '../controllers/audio_controller.dart';
 
@@ -162,18 +163,21 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
               ),
             ],
           ),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(color: Colors.deepPurple.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
-              ],
-            ),
-            child: Center(
-              child: Image.asset('assets/images/more.png', width: 20, height: 20, color: Colors.deepPurple),
+          GestureDetector(
+            onTap: _showOptionsMenu,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(color: Colors.deepPurple.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: Center(
+                child: Image.asset('assets/images/more.png', width: 20, height: 20, color: Colors.deepPurple),
+              ),
             ),
           ),
         ],
@@ -286,65 +290,73 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
         children: [
           Expanded(
             flex: 2,
-            child: GestureDetector(
+            child: _buildGlassButton(
+              text: 'Play All',
+              iconPath: 'assets/images/play.png',
               onTap: _playAll,
-              child: Container(
-                height: 56,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [Colors.deepPurple.shade600, Colors.purple.shade600]),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.deepPurple.withOpacity(0.4),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset('assets/images/play.png', width: 24, height: 24, color: Colors.white),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Play All',
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ),
+              isPrimary: true,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
-            child: GestureDetector(
+            child: _buildGlassButton(
+              text: 'Shuffle',
+              iconPath: 'assets/images/shuffle.png',
               onTap: _shuffleAll,
-              child: Container(
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.deepPurple.withOpacity(0.3)),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5)),
-                  ],
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset('assets/images/shuffle.png', width: 20, height: 20, color: Colors.deepPurple),
-                    const SizedBox(height: 2),
-                    const Text(
-                      'Shuffle',
-                      style: TextStyle(color: Colors.deepPurple, fontSize: 12, fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ),
+              isPrimary: false,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGlassButton({
+    required String text,
+    required String iconPath,
+    required VoidCallback onTap,
+    required bool isPrimary,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            height: 56,
+            decoration: BoxDecoration(
+              color: isPrimary ? Colors.deepPurple.withOpacity(0.8) : Colors.white.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: isPrimary ? Colors.transparent : Colors.deepPurple.withOpacity(0.3), width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: isPrimary ? Colors.deepPurple.withOpacity(0.3) : Colors.black.withOpacity(0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(iconPath, width: 24, height: 24, color: isPrimary ? Colors.white : Colors.deepPurple),
+                if (isPrimary) ...[
+                  const SizedBox(width: 12),
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -498,5 +510,155 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
       return '$hours hr $minutes min';
     }
     return '$minutes min';
+  }
+
+  void _showOptionsMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 24),
+            // Header with Album Art
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.deepPurple.withOpacity(0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child:
+                          _albumArtwork ??
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Colors.deepPurple.shade300, Colors.purple.shade400],
+                              ),
+                            ),
+                            child: const Icon(Icons.album_rounded, color: Colors.white54, size: 28),
+                          ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.albumName,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _artistName,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.deepPurple.shade700,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Divider(height: 1),
+            // Options
+            _buildOptionTile(
+              iconPath: 'assets/images/playlist_open.png',
+              title: 'Add to Playlist',
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Playlist feature coming soon!'),
+                    backgroundColor: Colors.deepPurple,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                );
+              },
+            ),
+            _buildOptionTile(
+              iconPath: 'assets/images/share.png',
+              title: 'Share Album',
+              onTap: () async {
+                Navigator.pop(context);
+                final firstSong = widget.songs.firstOrNull;
+                final path = firstSong?.localArtworkPath;
+                final text =
+                    '🎵 Check out this album on Audio X!\n\nAlbum: ${widget.albumName}\nArtist: $_artistName\n\n#AudioX #Music';
+
+                if (path != null && File(path).existsSync()) {
+                  await Share.shareXFiles([XFile(path)], text: text);
+                } else {
+                  await Share.share(text);
+                }
+              },
+            ),
+            _buildOptionTile(
+              iconPath: 'assets/images/info.png',
+              title: 'Album Info',
+              onTap: () {
+                Navigator.pop(context);
+                context.pushNamed(
+                  'album_info',
+                  extra: {'albumName': widget.albumName, 'artistName': _artistName, 'albumArt': _albumArtwork},
+                );
+              },
+            ),
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOptionTile({required String iconPath, required String title, required VoidCallback onTap}) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: Colors.deepPurple.shade50, borderRadius: BorderRadius.circular(8)),
+        child: Image.asset(iconPath, width: 24, height: 24, color: Colors.deepPurple),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.black87),
+      ),
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+    );
   }
 }

@@ -252,7 +252,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       // B. Try to fetch from iTunes (if online)
       try {
         final query = '${song.artist} ${song.album}';
-        final artworkUrl = await iTunesService.fetchArtwork(query, retries: 1);
+        final artworkUrl = await ITunesService.fetchArtwork(query, retries: 1);
 
         if (artworkUrl != null) {
           final response = await http.get(Uri.parse(artworkUrl)).timeout(Duration(seconds: 10));
@@ -394,5 +394,36 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     await _audioHandler.setSpeed(_speed);
     await _saveState();
     notifyListeners();
+  }
+
+  Future<Map<String, dynamic>?> getAlbumInfo(String album, String artist) async {
+    try {
+      final box = await Hive.openBox('album_info_cache');
+      final key = '${album}_$artist'.toLowerCase().replaceAll(RegExp(r'\s+'), '_');
+
+      if (box.containsKey(key)) {
+        final cachedData = box.get(key);
+        if (cachedData != null) {
+          // Convert LinkedMap to Map<String, dynamic> if needed
+          try {
+            return Map<String, dynamic>.from(cachedData);
+          } catch (e) {
+            print('Error parsing cached data: $e');
+          }
+        }
+      }
+
+      final service = ITunesService();
+      final data = await service.fetchAlbumDetails(album, artist);
+
+      if (data != null) {
+        await box.put(key, data);
+      }
+
+      return data;
+    } catch (e) {
+      print('Error getting album info: $e');
+      return null;
+    }
   }
 }

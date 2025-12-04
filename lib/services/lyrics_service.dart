@@ -9,7 +9,7 @@ class LyricsService {
   static const String _baseUrl = 'https://lrclib.net/api';
   static const Duration _timeout = Duration(seconds: 10);
 
-  // Fetch lyrics from LRCLIB API
+  // Fetch lyrics from LRCLIB API with FAST parallel search
   Future<Lyrics?> fetchFromLRCLIB({
     required String title,
     required String artist,
@@ -17,45 +17,175 @@ class LyricsService {
     int? durationSeconds,
   }) async {
     try {
-      // Build query parameters
-      final queryParams = {
-        'track_name': title,
-        'artist_name': artist,
-        if (album != null && album.isNotEmpty) 'album_name': album,
-        if (durationSeconds != null) 'duration': durationSeconds.toString(),
-      };
+      print('🚀 Starting FAST parallel lyrics search...');
 
-      final uri = Uri.parse('$_baseUrl/get').replace(queryParameters: queryParams);
+      // Phase 1: Run multiple strategies in parallel
+      final List<Future<Lyrics?>> parallelSearches = [];
 
-      print('🎵 Fetching lyrics from LRCLIB: $title - $artist');
-
-      final response = await http.get(uri).timeout(_timeout);
-
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body);
-        final lyrics = Lyrics.fromLRCLIB(json);
-
-        if (lyrics.isNotEmpty) {
-          print('✅ Lyrics found: ${lyrics.lines.length} lines');
-          return lyrics;
-        } else {
-          print('⚠️ Lyrics response empty');
-          return null;
-        }
-      } else if (response.statusCode == 404) {
-        print('❌ Lyrics not found on LRCLIB');
-        return null;
-      } else {
-        print('❌ LRCLIB API error: ${response.statusCode}');
-        return null;
+      if (album != null && album.isNotEmpty) {
+        parallelSearches.add(
+          _performSearch(
+            queryParams: {'track_name': title, 'artist_name': artist, 'album_name': album},
+            targetDuration: durationSeconds,
+            strategyName: 'Album+Artist+Track',
+          ),
+        );
       }
+
+      parallelSearches.add(
+        _performSearch(
+          queryParams: {'track_name': title, 'artist_name': artist},
+          targetDuration: durationSeconds,
+          strategyName: 'Artist+Track',
+        ),
+      );
+
+      parallelSearches.add(
+        _performSearch(
+          queryParams: {'q': '$title $artist'},
+          targetDuration: durationSeconds,
+          strategyName: 'General Query',
+        ),
+      );
+
+      parallelSearches.add(
+        _performSearch(
+          queryParams: {'track_name': title},
+          targetDuration: durationSeconds,
+          filterArtist: artist,
+          strategyName: 'Track Only',
+        ),
+      );
+
+      // Wait for all parallel searches
+      final results = await Future.wait(parallelSearches);
+
+      // Return first successful result
+      for (var result in results) {
+        if (result != null) return result;
+      }
+
+      // Phase 2: If all failed, try cleaned metadata (also in parallel)
+      final cleanTitle = _cleanString(title);
+      final cleanArtist = _cleanString(artist);
+
+      if (cleanTitle != title || cleanArtist != artist) {
+        print('🔄 Trying cleaned metadata...');
+
+        final cleanedResults = await Future.wait([
+          _performSearch(
+            queryParams: {'track_name': cleanTitle, 'artist_name': cleanArtist},
+            targetDuration: durationSeconds,
+            strategyName: 'Cleaned',
+          ),
+          _performSearch(
+            queryParams: {'q': '$cleanTitle $cleanArtist'},
+            targetDuration: durationSeconds,
+            strategyName: 'Cleaned Query',
+          ),
+        ]);
+
+        for (var result in cleanedResults) {
+          if (result != null) return result;
+        }
+      }
+
+      print('❌ No lyrics found');
+      return null;
     } catch (e) {
-      print('❌ Error fetching lyrics: $e');
+      print('❌ Error: $e');
       return null;
     }
   }
 
-  // Save lyrics to local cache
+  Future<Lyrics?> _performSearch({
+    required Map<String, String> queryParams,
+    int? targetDuration,
+    String? filterArtist,
+    String? strategyName,
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/search').replace(queryParameters: queryParams);
+
+      final response = await http.get(uri).timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> results = jsonDecode(response.body);
+
+        if (results.isEmpty) return null;
+
+        // Filter and Find Best Match
+        dynamic bestMatch;
+        double bestScore = -1;
+
+        for (var item in results) {
+          double score = 0;
+
+          // 1. Artist Match Check (Critical if filterArtist is provided)
+          if (filterArtist != null) {
+            final itemArtist = item['artistName'] as String? ?? '';
+            if (!_isFuzzyMatch(filterArtist, itemArtist)) {
+              continue;
+            }
+            score += 10;
+          }
+
+          // 2. Duration Match (High Priority)
+          final itemDuration = item['duration'] as double?;
+          if (targetDuration != null && itemDuration != null) {
+            final diff = (itemDuration - targetDuration).abs();
+            if (diff <= 2) {
+              score += 20;
+            } else if (diff <= 5) {
+              score += 10;
+            } else {
+              if (filterArtist == null) score -= 10;
+            }
+          }
+
+          // 3. Synced Lyrics Preference
+          if (item['syncedLyrics'] != null && (item['syncedLyrics'] as String).isNotEmpty) {
+            score += 5;
+          }
+
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = item;
+          }
+        }
+
+        if (bestMatch != null && bestScore >= 0) {
+          final strategy = strategyName != null ? '[$strategyName] ' : '';
+          print(
+            '✅ ${strategy}Match found: ${bestMatch['trackName']} by ${bestMatch['artistName']} (Score: $bestScore)',
+          );
+          return Lyrics.fromLRCLIB(bestMatch);
+        }
+      }
+      return null;
+    } catch (e) {
+      print('⚠️ Search attempt failed: $e');
+      return null;
+    }
+  }
+
+  bool _isFuzzyMatch(String s1, String s2) {
+    final n1 = _normalize(s1);
+    final n2 = _normalize(s2);
+    return n1.contains(n2) || n2.contains(n1);
+  }
+
+  String _normalize(String s) {
+    return s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
+
+  String _cleanString(String input) {
+    var cleaned = input.replaceAll(RegExp(r'[\(\[].*?[\)\]]'), '');
+    cleaned = cleaned.replaceAll(RegExp(r'\b(feat|ft|live|remastered|mix|edit)\b.*', caseSensitive: false), '');
+    cleaned = cleaned.replaceAll(RegExp(r'[^\w\s]'), '');
+    return cleaned.trim();
+  }
+
   Future<String?> saveLRCFile(String songId, String lrcContent) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
@@ -76,7 +206,6 @@ class LyricsService {
     }
   }
 
-  // Load lyrics from local cache
   Future<Lyrics?> loadLocalLRC(String songId) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
@@ -94,7 +223,6 @@ class LyricsService {
     }
   }
 
-  // Load lyrics from user-provided file path
   Future<Lyrics?> loadFromPath(String filePath) async {
     try {
       final file = File(filePath);
@@ -109,7 +237,6 @@ class LyricsService {
     }
   }
 
-  // Pick .lrc file from device
   Future<String?> pickLRCFile() async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -130,7 +257,6 @@ class LyricsService {
     }
   }
 
-  // Get lyrics with priority: manual > cached > online
   Future<Lyrics?> getLyrics({
     required String songId,
     required String title,
@@ -139,7 +265,6 @@ class LyricsService {
     int? durationSeconds,
     String? manualLyricsPath,
   }) async {
-    // Priority 1: Manual lyrics
     if (manualLyricsPath != null) {
       final lyrics = await loadFromPath(manualLyricsPath);
       if (lyrics != null) {
@@ -148,14 +273,12 @@ class LyricsService {
       }
     }
 
-    // Priority 2: Cached lyrics
     final cachedLyrics = await loadLocalLRC(songId);
     if (cachedLyrics != null) {
       print('✅ Using cached lyrics');
       return cachedLyrics;
     }
 
-    // Priority 3: Fetch from LRCLIB
     final onlineLyrics = await fetchFromLRCLIB(
       title: title,
       artist: artist,
@@ -164,7 +287,6 @@ class LyricsService {
     );
 
     if (onlineLyrics != null) {
-      // Cache it for offline use
       final lrcString = onlineLyrics.lines.map((line) => line.toString()).join('\n');
       await saveLRCFile(songId, lrcString);
       print('✅ Using online lyrics (cached for offline)');
@@ -175,7 +297,6 @@ class LyricsService {
     return null;
   }
 
-  // Delete cached lyrics
   Future<void> deleteCachedLyrics(String songId) async {
     try {
       final directory = await getApplicationDocumentsDirectory();

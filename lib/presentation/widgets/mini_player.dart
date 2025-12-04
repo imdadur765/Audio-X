@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../controllers/audio_controller.dart';
 import 'package:go_router/go_router.dart';
+import 'glass_button.dart';
 
 class MiniPlayer extends StatelessWidget {
   const MiniPlayer({super.key});
@@ -16,44 +17,51 @@ class MiniPlayer extends StatelessWidget {
         final song = controller.currentSong;
         if (song == null) return const SizedBox.shrink();
 
+        // Use primary color if no specific accent color logic here yet
+        final accentColor = Colors.deepPurple;
+
         return GestureDetector(
           onTap: () {
             context.pushNamed('player', extra: {'song': song, 'heroTag': 'mini_player_${song.id}'});
           },
           child: Container(
-            height: 68,
+            height: 72, // Slightly increased height
             margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Colors.white, Colors.deepPurple.shade50],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(color: Colors.deepPurple.withOpacity(0.15), blurRadius: 20, offset: const Offset(0, 8)),
-              ],
+              color: Colors.white.withOpacity(0.9), // Glassy background for miniplayer itself
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 8))],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
               child: Row(
                 children: [
                   // Album Art
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Colors.deepPurple.shade300, Colors.purple.shade400],
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Hero(
+                      tag: 'mini_player_${song.id}',
+                      child: Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 4)),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: song.localArtworkPath != null
+                              ? Image.file(File(song.localArtworkPath!), fit: BoxFit.cover)
+                              : Container(
+                                  color: Colors.grey.shade200,
+                                  child: Icon(Icons.music_note_rounded, color: Colors.grey.shade400),
+                                ),
+                        ),
                       ),
                     ),
-                    child: song.localArtworkPath != null
-                        ? Image.file(File(song.localArtworkPath!), fit: BoxFit.cover)
-                        : Center(child: Icon(Icons.music_note_rounded, color: Colors.white.withOpacity(0.8), size: 28)),
                   ),
-                  const SizedBox(width: 10),
 
                   // Song Info
                   Expanded(
@@ -65,31 +73,36 @@ class MiniPlayer extends StatelessWidget {
                           song.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87),
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 4),
                         Text(
                           song.artist,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                         ),
                       ],
                     ),
                   ),
 
-                  // Controls
+                  // Controls using GlassButton
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _buildControlButton(
+                      GlassButton(
                         imagePath: 'assets/images/skip_previous.png',
-                        size: 18,
+                        size: 20,
+                        containerSize: 40,
                         onTap: () => controller.previous(),
                       ),
-                      const SizedBox(width: 6),
-                      _buildPlayPauseButton(
-                        isPlaying: controller.isPlaying,
+                      const SizedBox(width: 8),
+                      GlassButton(
+                        imagePath: controller.isPlaying ? 'assets/images/pause.png' : 'assets/images/play.png',
+                        size: 22,
+                        containerSize: 48,
+                        isActive: true, // Highlight play button
+                        accentColor: accentColor,
                         onTap: () {
                           if (controller.isPlaying) {
                             controller.pause();
@@ -98,66 +111,22 @@ class MiniPlayer extends StatelessWidget {
                           }
                         },
                       ),
-                      const SizedBox(width: 6),
-                      _buildControlButton(
+                      const SizedBox(width: 8),
+                      GlassButton(
                         imagePath: 'assets/images/skip_next.png',
-                        size: 18,
+                        size: 20,
+                        containerSize: 40,
                         onTap: () => controller.next(),
                       ),
+                      const SizedBox(width: 12),
                     ],
                   ),
-                  const SizedBox(width: 10),
                 ],
               ),
             ),
           ),
         );
       },
-    );
-  }
-
-  Widget _buildControlButton({required String imagePath, required double size, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [BoxShadow(color: Colors.deepPurple.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))],
-        ),
-        child: Center(
-          child: Image.asset(imagePath, width: size, height: size, color: Colors.deepPurple),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlayPauseButton({required bool isPlaying, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Colors.deepPurple.shade600, Colors.purple.shade600],
-          ),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [BoxShadow(color: Colors.deepPurple.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
-        ),
-        child: Center(
-          child: Image.asset(
-            isPlaying ? 'assets/images/pause.png' : 'assets/images/play.png',
-            width: 20,
-            height: 20,
-            color: Colors.white,
-          ),
-        ),
-      ),
     );
   }
 }

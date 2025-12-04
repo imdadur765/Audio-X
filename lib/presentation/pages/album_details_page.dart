@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../data/models/song_model.dart';
 import '../controllers/audio_controller.dart';
 import '../widgets/hybrid_song_artwork.dart';
+import '../widgets/glass_button.dart';
 
 class AlbumDetailsPage extends StatefulWidget {
   final String albumName;
@@ -131,20 +132,12 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          GestureDetector(
+          GlassButton(
+            imagePath: 'assets/images/back.png',
             onTap: () => Navigator.of(context).pop(),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(color: Colors.deepPurple.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
-                ],
-              ),
-              child: Image.asset('assets/images/back.png', width: 24, height: 24, color: Colors.deepPurple),
-            ),
+            size: 24,
+            containerSize: 40,
+            accentColor: Colors.deepPurple,
           ),
           Column(
             children: [
@@ -164,22 +157,12 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
               ),
             ],
           ),
-          GestureDetector(
+          GlassButton(
+            imagePath: 'assets/images/more.png',
             onTap: _showOptionsMenu,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(color: Colors.deepPurple.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
-                ],
-              ),
-              child: Center(
-                child: Image.asset('assets/images/more.png', width: 20, height: 20, color: Colors.deepPurple),
-              ),
-            ),
+            size: 20,
+            containerSize: 40,
+            accentColor: Colors.deepPurple,
           ),
         ],
       ),

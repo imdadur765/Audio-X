@@ -7,6 +7,7 @@ import '../../data/models/song_model.dart';
 import '../../data/services/artist_service.dart';
 import '../controllers/audio_controller.dart';
 import 'player_page.dart';
+import '../widgets/glass_button.dart';
 
 class ArtistDetailsPage extends StatefulWidget {
   final String artistName;
@@ -137,24 +138,13 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
       backgroundColor: Colors.white,
       elevation: opacity * 4,
       shadowColor: Colors.black.withValues(alpha: 0.1),
-      leading: Container(
-        margin: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: opacity),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            if (opacity > 0.5)
-              BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 5)),
-          ],
-        ),
-        child: IconButton(
-          icon: Image.asset(
-            'assets/images/back.png',
-            width: 24,
-            height: 24,
-            color: opacity > 0.5 ? Colors.black87 : Colors.white,
-          ),
-          onPressed: () => Navigator.of(context).pop(),
+      leading: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: GlassButton(
+          imagePath: 'assets/images/back.png',
+          onTap: () => Navigator.of(context).pop(),
+          size: 24,
+          containerSize: 40,
         ),
       ),
       flexibleSpace: FlexibleSpaceBar(

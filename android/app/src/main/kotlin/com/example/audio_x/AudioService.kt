@@ -175,6 +175,24 @@ class AudioService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        android.util.Log.d("AudioX", "Service being destroyed")
+        
+        // Only create stop marker if player actually had media items
+        // This prevents false markers when service stops naturally
+        val hadMediaItems = mediaSession?.player?.mediaItemCount ?: 0 > 0
+        
+        if (hadMediaItems) {
+            try {
+                val markerFile = java.io.File(filesDir, "playback_stopped.marker")
+                markerFile.createNewFile()
+                android.util.Log.d("AudioX", "✅ Stop marker created - player had ${mediaSession?.player?.mediaItemCount} items")
+            } catch (e: Exception) {
+                android.util.Log.e("AudioX", "Failed to create stop marker: ${e.message}")
+            }
+        } else {
+            android.util.Log.d("AudioX", "No marker needed - player was empty")
+        }
+        
         // Release audio effects
         equalizer?.release()
         bassBoost?.release()

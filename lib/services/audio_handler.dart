@@ -3,6 +3,21 @@ import 'package:flutter/services.dart';
 class AudioHandler {
   static const MethodChannel _channel = MethodChannel('com.example.audio_x/audio');
 
+  // Callback for when player is stopped from notification
+  Function()? onStoppedCallback;
+
+  AudioHandler() {
+    _channel.setMethodCallHandler(_handleMethodCall);
+  }
+
+  Future<dynamic> _handleMethodCall(MethodCall call) async {
+    print('📞 Received method call: ${call.method}');
+    if (call.method == 'onPlayerStopped') {
+      print('🛑 Player stopped from notification - clearing session');
+      onStoppedCallback?.call();
+    }
+  }
+
   Future<void> play() async {
     try {
       await _channel.invokeMethod('play');

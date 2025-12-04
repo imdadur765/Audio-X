@@ -29,14 +29,33 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
 
   Color? _accentColor;
   String? _lastSongId;
+  bool _showBlur = false; // Delay blur effect for faster opening
+
+  // Static global cache shared across all instances for better performance
+  static final Map<String, Color> _globalPaletteCache = {};
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
     _animationController.forward();
-    _loadLyrics();
-    _updatePalette(widget.song.localArtworkPath);
+
+    // Set default color immediately - no blocking
+    _accentColor = Colors.deepPurple;
+
+    // Defer ALL heavy operations to after first frame for instant opening
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Enable blur after initial render
+      if (mounted) {
+        setState(() => _showBlur = true);
+      }
+
+      // Load palette in background
+      _updatePalette(widget.song.localArtworkPath, widget.song.id);
+
+      // Load lyrics in background
+      _loadLyrics();
+    });
   }
 
   @override
@@ -45,25 +64,41 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  Future<void> _updatePalette(String? artworkPath) async {
+  Future<void> _updatePalette(String? artworkPath, String songId) async {
     if (artworkPath == null) {
-      setState(() => _accentColor = Colors.deepPurple);
+      if (mounted) setState(() => _accentColor = Colors.deepPurple);
       return;
     }
-    try {
-      final palette = await PaletteGenerator.fromImageProvider(FileImage(File(artworkPath)), maximumColorCount: 20);
+
+    // Check global cache first (persists across instances)
+    if (_globalPaletteCache.containsKey(songId)) {
       if (mounted) {
-        setState(() {
-          _accentColor = palette.dominantColor?.color ?? palette.vibrantColor?.color ?? Colors.deepPurple;
-        });
+        setState(() => _accentColor = _globalPaletteCache[songId]);
+      }
+      return;
+    }
+
+    try {
+      final palette = await PaletteGenerator.fromImageProvider(
+        FileImage(File(artworkPath)),
+        maximumColorCount: 6, // Further reduced for speed
+        timeout: const Duration(milliseconds: 300), // Timeout to prevent blocking
+      );
+
+      if (mounted) {
+        final color = palette.dominantColor?.color ?? palette.vibrantColor?.color ?? Colors.deepPurple;
+        _globalPaletteCache[songId] = color; // Cache globally
+        setState(() => _accentColor = color);
       }
     } catch (e) {
-      // Fallback
+      // Fallback on any error or timeout
       if (mounted) setState(() => _accentColor = Colors.deepPurple);
     }
   }
 
   Future<void> _loadLyrics() async {
+    if (!mounted) return; // Early exit if widget disposed
+
     setState(() {
       _isLoadingLyrics = true;
     });
@@ -102,7 +137,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
       _loadLyrics();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Lyrics file loaded!'),
+          content: const Text('Lyrics file loaded!'),
           backgroundColor: Colors.deepPurple,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -150,7 +185,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Lyrics not found'),
+            content: const Text('Lyrics not found'),
             backgroundColor: Colors.deepPurple,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -166,10 +201,11 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
       builder: (context, controller, child) {
         final currentSong = controller.currentSong ?? widget.song;
 
+        // Only update palette when song actually changes
         if (_lastSongId != currentSong.id) {
           _lastSongId = currentSong.id;
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _updatePalette(currentSong.localArtworkPath);
+            _updatePalette(currentSong.localArtworkPath, currentSong.id);
           });
         }
 
@@ -181,65 +217,48 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
             key: const Key('player_dismiss'),
             direction: DismissDirection.down,
             onDismissed: (_) => Navigator.of(context).pop(),
-            child: RepaintBoundary(
-              child: Stack(
-                children: [
-                  // Gradient Background
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [accentColor.withOpacity(0.1), Colors.white, accentColor.withOpacity(0.05)],
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Subtle Blur Effect
-                  Positioned.fill(
-                    child: currentSong.localArtworkPath != null
-                        ? Image.file(File(currentSong.localArtworkPath!), fit: BoxFit.cover)
-                        : Container(),
-                  ),
-                  Positioned.fill(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                      child: Container(color: Colors.white.withOpacity(0.5)),
-                    ),
-                  ),
+            child: Stack(
+              children: [
+                // Background - lightweight initially, blur added after first frame
+                _showBlur
+                    ? _CachedBlurBackground(artworkPath: currentSong.localArtworkPath, accentColor: accentColor)
+                    : _SimpleGradientBackground(accentColor: accentColor),
 
-                  // Content
-                  SafeArea(
-                    child: Column(
-                      children: [
-                        _buildAppBar(context, accentColor),
-                        Expanded(
-                          child: _showLyrics && _lyrics != null
-                              ? Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [Colors.white.withOpacity(0.9), accentColor.withOpacity(0.1)],
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
+                // Content
+                SafeArea(
+                  child: Column(
+                    children: [
+                      _buildAppBar(context, accentColor),
+                      Expanded(
+                        child: _showLyrics && _lyrics != null
+                            ? Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [Colors.white.withOpacity(0.9), accentColor.withOpacity(0.1)],
                                   ),
-                                  margin: EdgeInsets.all(16),
-                                  child: LyricsView(
-                                    lyrics: _lyrics!,
-                                    currentPosition: controller.position,
-                                    onSeek: (position) => controller.seek(position),
-                                  ),
-                                )
-                              : _buildAlbumArtSection(currentSong, controller, accentColor),
-                        ),
-                        RepaintBoundary(child: _buildPlayerControls(controller, accentColor)),
-                      ],
-                    ),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                margin: const EdgeInsets.all(16),
+                                child: LyricsView(
+                                  lyrics: _lyrics!,
+                                  currentPosition: controller.position,
+                                  onSeek: (position) => controller.seek(position),
+                                ),
+                              )
+                            : _AlbumArtSection(
+                                currentSong: currentSong,
+                                heroTag: widget.heroTag,
+                                accentColor: accentColor,
+                              ),
+                      ),
+                      // Player controls in separate widget to minimize rebuilds
+                      _PlayerControls(controller: controller, accentColor: accentColor),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );
@@ -269,9 +288,9 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                 style: TextStyle(color: accentColor, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2),
               ),
               const SizedBox(height: 4),
-              Text(
+              const Text(
                 'Your Library',
-                style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.bold),
+                style: TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -327,12 +346,12 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                         break;
                     }
                   },
-                  itemBuilder: (context) => [
+                  itemBuilder: (context) => const [
                     PopupMenuItem(
                       value: 'upload',
                       child: Row(
                         children: [
-                          Image.asset('assets/images/upload_lrc.png', width: 20, height: 20, color: Colors.black87),
+                          Icon(Icons.upload_file, size: 20, color: Colors.black87),
                           SizedBox(width: 12),
                           Text('Upload .lrc file', style: TextStyle(color: Colors.black87)),
                         ],
@@ -342,7 +361,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                       value: 'search',
                       child: Row(
                         children: [
-                          Image.asset('assets/images/search.png', width: 20, height: 20, color: Colors.black87),
+                          Icon(Icons.search, size: 20, color: Colors.black87),
                           SizedBox(width: 12),
                           Text('Search lyrics', style: TextStyle(color: Colors.black87)),
                         ],
@@ -352,7 +371,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                       value: 'equalizer',
                       child: Row(
                         children: [
-                          Image.asset('assets/images/equalizer.png', width: 20, height: 20, color: Colors.black87),
+                          Icon(Icons.equalizer, size: 20, color: Colors.black87),
                           SizedBox(width: 12),
                           Text('Equalizer', style: TextStyle(color: Colors.black87)),
                         ],
@@ -367,234 +386,330 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
       ),
     );
   }
+}
 
-  Widget _buildAlbumArtSection(Song currentSong, AudioController controller, Color accentColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+// Separate widget for cached blur background to prevent rebuilds
+class _CachedBlurBackground extends StatelessWidget {
+  final String? artworkPath;
+  final Color accentColor;
+
+  const _CachedBlurBackground({required this.artworkPath, required this.accentColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: Stack(
         children: [
-          Expanded(
-            child: Center(
-              child: Hero(
-                tag: widget.heroTag ?? 'song_${currentSong.id}',
-                child: Container(
-                  width: 280,
-                  height: 280,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: accentColor.withOpacity(0.4),
-                        blurRadius: 30,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 15),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: currentSong.localArtworkPath != null
-                        ? Image.file(File(currentSong.localArtworkPath!), fit: BoxFit.cover)
-                        : Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [accentColor.withOpacity(0.6), accentColor],
-                              ),
-                            ),
-                            child: Center(
-                              child: Image.asset(
-                                'assets/images/album.png',
-                                width: 100,
-                                height: 100,
-                                color: Colors.white.withOpacity(0.8),
-                              ),
-                            ),
-                          ),
-                  ),
+          // Gradient Background
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [accentColor.withOpacity(0.1), Colors.white, accentColor.withOpacity(0.05)],
                 ),
               ),
             ),
           ),
-          SizedBox(height: 32),
-          Column(
-            children: [
-              Text(
-                currentSong.title,
-                style: const TextStyle(
-                  color: Colors.black87,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+          // Blurred artwork background
+          if (artworkPath != null)
+            Positioned.fill(
+              child: Image.file(
+                File(artworkPath!),
+                fit: BoxFit.cover,
+                cacheWidth: 400, // Cache scaled down version for better performance
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
               ),
-              SizedBox(height: 8),
-              Text(
-                currentSong.artist,
-                style: TextStyle(color: accentColor, fontSize: 18, fontWeight: FontWeight.w600),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              SizedBox(height: 4),
-              Text(
-                currentSong.album,
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+            ),
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+              child: Container(color: Colors.white.withOpacity(0.5)),
+            ),
           ),
-          SizedBox(height: 24),
         ],
       ),
     );
   }
+}
 
-  Widget _buildPlayerControls(AudioController controller, Color accentColor) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 16), // Lifted up
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Progress Bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Column(
-              children: [
-                SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    trackHeight: 3, // Thinner track
-                    thumbShape: const RoundSliderThumbShape(
-                      enabledThumbRadius: 5,
-                      elevation: 2,
-                      pressedElevation: 4,
-                    ), // Smaller thumb
-                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
-                    activeTrackColor: accentColor,
-                    inactiveTrackColor: accentColor.withOpacity(0.2),
-                    thumbColor: accentColor,
-                    overlayColor: accentColor.withOpacity(0.1),
-                  ),
-                  child: Slider(
-                    value: controller.position.inSeconds.toDouble().clamp(
-                      0.0,
-                      controller.duration.inSeconds.toDouble(),
+// Separate widget for album art section to prevent rebuilds
+class _AlbumArtSection extends StatelessWidget {
+  final Song currentSong;
+  final String? heroTag;
+  final Color accentColor;
+
+  const _AlbumArtSection({required this.currentSong, required this.heroTag, required this.accentColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Center(
+                child: Hero(
+                  tag: heroTag ?? 'song_${currentSong.id}',
+                  child: Container(
+                    width: 280,
+                    height: 280,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: accentColor.withOpacity(0.4),
+                          blurRadius: 30,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 15),
+                        ),
+                      ],
                     ),
-                    max: controller.duration.inSeconds.toDouble() > 0 ? controller.duration.inSeconds.toDouble() : 1.0,
-                    onChanged: (value) {
-                      controller.seek(Duration(seconds: value.toInt()));
-                    },
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: currentSong.localArtworkPath != null
+                          ? Image.file(
+                              File(currentSong.localArtworkPath!),
+                              fit: BoxFit.cover,
+                              cacheWidth: 600, // Cache optimized size
+                            )
+                          : Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [accentColor.withOpacity(0.6), accentColor],
+                                ),
+                              ),
+                              child: Center(
+                                child: Image.asset(
+                                  'assets/images/album.png',
+                                  width: 100,
+                                  height: 100,
+                                  color: Colors.white.withOpacity(0.8),
+                                ),
+                              ),
+                            ),
+                    ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        _formatDuration(controller.position),
-                        style: TextStyle(
-                          color: accentColor.withOpacity(0.8),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        _formatDuration(controller.duration),
-                        style: TextStyle(
-                          color: accentColor.withOpacity(0.8),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+              ),
+            ),
+            const SizedBox(height: 32),
+            Column(
+              children: [
+                Text(
+                  currentSong.title,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
                   ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  currentSong.artist,
+                  style: TextStyle(color: accentColor, fontSize: 18, fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  currentSong.album,
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
-          ),
-          SizedBox(height: 16), // Reduced spacing
-          // Control Buttons
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildControlButton(
-                imagePath: 'assets/images/shuffle.png',
-                isActive: controller.isShuffleEnabled,
-                onTap: controller.toggleShuffle,
-                size: 18, // Smaller icon
-                accentColor: accentColor,
-                containerSize: 40, // Smaller container
-              ),
-              _buildControlButton(
-                imagePath: 'assets/images/skip_previous.png',
-                size: 24, // Smaller icon
-                onTap: controller.previous,
-                accentColor: accentColor,
-                containerSize: 40,
-              ),
-              _buildPlayButton(controller, accentColor),
-              _buildControlButton(
-                imagePath: 'assets/images/skip_next.png',
-                size: 24, // Smaller icon
-                onTap: controller.next,
-                accentColor: accentColor,
-                containerSize: 40,
-              ),
-              _buildControlButton(
-                imagePath: 'assets/images/repeat.png',
-                isActive: controller.repeatMode > 0,
-                onTap: controller.toggleRepeat,
-                size: 18, // Smaller icon
-                accentColor: accentColor,
-                containerSize: 40,
-              ),
-            ],
-          ),
-        ],
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
+}
 
-  Widget _buildControlButton({
-    required String imagePath,
-    double size = 24,
-    double containerSize = 48,
-    bool isActive = false,
-    required VoidCallback onTap,
-    required Color accentColor,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            width: containerSize,
-            height: containerSize,
-            decoration: BoxDecoration(
-              color: isActive ? accentColor.withOpacity(0.2) : Colors.white.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.2), width: 0.5),
+// Separate widget for player controls with optimized rebuilds
+class _PlayerControls extends StatelessWidget {
+  final AudioController controller;
+  final Color accentColor;
+
+  const _PlayerControls({required this.controller, required this.accentColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Progress Bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Column(
+                children: [
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 3,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5, elevation: 2, pressedElevation: 4),
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                      activeTrackColor: accentColor,
+                      inactiveTrackColor: accentColor.withOpacity(0.2),
+                      thumbColor: accentColor,
+                      overlayColor: accentColor.withOpacity(0.1),
+                    ),
+                    child: Slider(
+                      value: controller.position.inSeconds.toDouble().clamp(
+                        0.0,
+                        controller.duration.inSeconds.toDouble(),
+                      ),
+                      max: controller.duration.inSeconds.toDouble() > 0
+                          ? controller.duration.inSeconds.toDouble()
+                          : 1.0,
+                      onChanged: (value) {
+                        controller.seek(Duration(seconds: value.toInt()));
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _formatDuration(controller.position),
+                          style: TextStyle(
+                            color: accentColor.withOpacity(0.8),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          _formatDuration(controller.duration),
+                          style: TextStyle(
+                            color: accentColor.withOpacity(0.8),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Center(
-              child: Image.asset(imagePath, width: size, height: size, color: isActive ? accentColor : Colors.black87),
+            const SizedBox(height: 16),
+            // Control Buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _ControlButton(
+                  imagePath: 'assets/images/shuffle.png',
+                  isActive: controller.isShuffleEnabled,
+                  onTap: controller.toggleShuffle,
+                  size: 18,
+                  accentColor: accentColor,
+                  containerSize: 40,
+                ),
+                _ControlButton(
+                  imagePath: 'assets/images/skip_previous.png',
+                  size: 24,
+                  onTap: controller.previous,
+                  accentColor: accentColor,
+                  containerSize: 40,
+                ),
+                _PlayButton(controller: controller, accentColor: accentColor),
+                _ControlButton(
+                  imagePath: 'assets/images/skip_next.png',
+                  size: 24,
+                  onTap: controller.next,
+                  accentColor: accentColor,
+                  containerSize: 40,
+                ),
+                _ControlButton(
+                  imagePath: 'assets/images/repeat.png',
+                  isActive: controller.repeatMode > 0,
+                  onTap: controller.toggleRepeat,
+                  size: 18,
+                  accentColor: accentColor,
+                  containerSize: 40,
+                ),
+              ],
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildPlayButton(AudioController controller, Color accentColor) {
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
+    if (duration.inHours > 0) {
+      return "${duration.inHours}:${twoDigits(minutes)}:${twoDigits(seconds)}";
+    }
+    return "$minutes:${twoDigits(seconds)}";
+  }
+}
+
+// Optimized control button widget
+class _ControlButton extends StatelessWidget {
+  final String imagePath;
+  final double size;
+  final double containerSize;
+  final bool isActive;
+  final VoidCallback onTap;
+  final Color accentColor;
+
+  const _ControlButton({
+    required this.imagePath,
+    this.size = 24,
+    this.containerSize = 48,
+    this.isActive = false,
+    required this.onTap,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: containerSize,
+        height: containerSize,
+        decoration: BoxDecoration(
+          color: isActive ? accentColor.withOpacity(0.2) : Colors.white.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Center(
+          child: Image.asset(imagePath, width: size, height: size, color: isActive ? accentColor : Colors.black87),
+        ),
+      ),
+    );
+  }
+}
+
+// Optimized play button widget
+class _PlayButton extends StatelessWidget {
+  final AudioController controller;
+  final Color accentColor;
+
+  const _PlayButton({required this.controller, required this.accentColor});
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
         if (controller.isPlaying) {
@@ -604,7 +719,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
         }
       },
       child: Container(
-        width: 64, // Smaller play button
+        width: 64,
         height: 64,
         decoration: BoxDecoration(
           color: accentColor,
@@ -624,14 +739,26 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
       ),
     );
   }
+}
 
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, "0");
-    final minutes = duration.inMinutes.remainder(60);
-    final seconds = duration.inSeconds.remainder(60);
-    if (duration.inHours > 0) {
-      return "${duration.inHours}:${twoDigits(minutes)}:${twoDigits(seconds)}";
-    }
-    return "$minutes:${twoDigits(seconds)}";
+// Simple gradient background for instant opening (no blur)
+class _SimpleGradientBackground extends StatelessWidget {
+  final Color accentColor;
+
+  const _SimpleGradientBackground({required this.accentColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [accentColor.withOpacity(0.15), Colors.white, accentColor.withOpacity(0.08)],
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -13,11 +13,36 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.example.audio_x/audio"
+    private val EVENT_CHANNEL = "com.example.audio_x/audio_events"
     private var mediaController: MediaController? = null
     private var controllerFuture: ListenableFuture<MediaController>? = null
+    private var methodChannel: MethodChannel? = null
+    
+    private val stopReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+            if (intent?.action == "com.example.audio_x.ACTION_PLAYER_STOPPED") {
+                android.util.Log.d("AudioX", "Received stop broadcast - notifying Flutter")
+                // Notify Flutter to clear session
+                methodChannel?.invokeMethod("onPlayerStopped", null)
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Register broadcast receiver for stop action
+        val filter = android.content.IntentFilter("com.example.audio_x.ACTION_PLAYER_STOPPED")
+        registerReceiver(stopReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+    }
+    
+    override fun onDestroy() {
+        try {
+            unregisterReceiver(stopReceiver)
+        } catch (e: Exception) {
+            // Already unregistered
+        }
+        super.onDestroy()
     }
 
     override fun onStart() {
@@ -41,7 +66,8 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+        methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+        methodChannel?.setMethodCallHandler { call, result ->
             val controller = mediaController
             if (controller == null) {
                 result.error("NO_CONTROLLER", "MediaController not ready", null)

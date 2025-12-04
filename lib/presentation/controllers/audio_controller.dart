@@ -34,6 +34,11 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
 
   AudioController() {
     WidgetsBinding.instance.addObserver(this);
+
+    // Listen for stop events from notification
+    _audioHandler.onStoppedCallback = () {
+      stop();
+    };
   }
 
   @override
@@ -44,17 +49,53 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
     print('📱 App lifecycle changed: $state');
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       // App going to background - save state and stop timer
       print('⏸️ App going to background, saving state and stopping timer');
       _saveState();
       _stopProgressTimer();
-    } else if (state == AppLifecycleState.resumed && _isPlaying) {
-      // App resumed and was playing - restart timer
-      print('▶️ App resumed, restarting timer');
-      _startProgressTimer();
+    } else if (state == AppLifecycleState.resumed) {
+      // App resumed - check for stop marker file first
+      print('▶️ App resumed - checking for stop marker');
+      await _checkStopMarker();
+
+      // Only restart timer if still playing after marker check
+      if (_isPlaying) {
+        print('▶️ Still playing, restarting timer');
+        _startProgressTimer();
+      }
+    }
+  }
+
+  /// Check if playback was stopped from notification while app was in background
+  Future<void> _checkStopMarker() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final markerFile = File('${directory.parent.path}/files/playback_stopped.marker');
+
+      if (await markerFile.exists()) {
+        print('🛑 Stop marker found - clearing playback state');
+        await markerFile.delete();
+
+        // Clear playback state
+        _isPlaying = false;
+        _currentSong = null;
+        _position = Duration.zero;
+        _duration = Duration.zero;
+        _stopProgressTimer();
+
+        // Clear saved session
+        final settingsBox = Hive.box('settings');
+        await settingsBox.delete('lastPlayedSongId');
+        await settingsBox.delete('lastPosition');
+
+        print('✅ Playback cleared due to notification close');
+        notifyListeners();
+      }
+    } catch (e) {
+      print('⚠️ Error checking stop marker: $e');
     }
   }
 
@@ -124,6 +165,28 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _restoreSession() async {
     print('🔄 Starting session restoration...');
+
+    // Check for stop marker file (created when user closes from notification)
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final markerFile = File('${directory.parent.path}/files/playback_stopped.marker');
+
+      if (await markerFile.exists()) {
+        print('🛑 Stop marker found - skipping session restoration');
+        await markerFile.delete();
+
+        // Clear session
+        final settingsBox = Hive.box('settings');
+        await settingsBox.delete('lastPlayedSongId');
+        await settingsBox.delete('lastPosition');
+
+        print('✅ Session cleared - fresh start');
+        return;
+      }
+    } catch (e) {
+      print('⚠️ Error checking stop marker: $e');
+    }
+
     final settingsBox = Hive.box('settings');
     final lastSongId = settingsBox.get('lastPlayedSongId');
     final lastPosition = settingsBox.get('lastPosition') as int? ?? 0;
@@ -170,18 +233,42 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
               },
             )
             .toList();
-        await _audioHandler.setPlaylist(songMaps, initialIndex: index);
 
-        // IMPORTANT: Pause immediately to prevent auto-play
-        await _audioHandler.pause();
+        // Retry logic for when service was just killed and restarted
+        bool success = false;
+        int retries = 0;
 
-        // Small delay to ensure pause command processed
-        await Future.delayed(const Duration(milliseconds: 100));
+        while (!success && retries < 3) {
+          try {
+            await _audioHandler.setPlaylist(songMaps, initialIndex: index);
 
-        // Now seek to the saved position
-        await _audioHandler.seek(Duration(milliseconds: lastPosition));
+            // IMPORTANT: Pause immediately to prevent auto-play
+            await _audioHandler.pause();
 
-        print('🎵 Player prepared at index $index, paused at ${lastPosition}ms');
+            // Small delay to ensure pause command processed
+            await Future.delayed(const Duration(milliseconds: 200));
+
+            // Now seek to the saved position
+            await _audioHandler.seek(Duration(milliseconds: lastPosition));
+
+            success = true;
+            print('🎵 Player prepared at index $index, paused at ${lastPosition}ms');
+          } catch (e) {
+            retries++;
+            print('⚠️ Retry $retries: Failed to restore session - ${e.toString()}');
+            if (retries < 3) {
+              await Future.delayed(Duration(milliseconds: 500 * retries)); // Exponential backoff
+            }
+          }
+        }
+
+        if (!success) {
+          print('❌ Failed to restore session after 3 retries');
+          // Clear invalid session
+          final settingsBox = Hive.box('settings');
+          await settingsBox.delete('lastPlayedSongId');
+          await settingsBox.delete('lastPosition');
+        }
       }
       notifyListeners();
     } else {
@@ -401,6 +488,39 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     _speed = speed.clamp(0.5, 2.0);
     await _audioHandler.setSpeed(_speed);
     await _saveState();
+    notifyListeners();
+  }
+
+  /// Stop playback and clear session (called from notification close button)
+  Future<void> stop() async {
+    print('🛑 Stop called - clearing session');
+
+    // Stop timer
+    _stopProgressTimer();
+
+    // Clear state
+    _isPlaying = false;
+    _currentSong = null;
+    _position = Duration.zero;
+    _duration = Duration.zero;
+
+    // Clear saved session so app doesn't try to restore
+    final settingsBox = Hive.box('settings');
+    await settingsBox.delete('lastPlayedSongId');
+    await settingsBox.delete('lastPosition');
+
+    // Also delete marker file if it exists (for consistency)
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final markerFile = File('${directory.parent.path}/files/playback_stopped.marker');
+      if (await markerFile.exists()) {
+        await markerFile.delete();
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+
+    print('✅ Session cleared - fresh start on next open');
     notifyListeners();
   }
 

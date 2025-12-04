@@ -76,6 +76,17 @@ class AudioService : MediaSessionService() {
                     return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                         .build()
                 }
+                
+                override fun onPlaybackResumption(
+                    mediaSession: MediaSession,
+                    controller: MediaSession.ControllerInfo
+                ): com.google.common.util.concurrent.ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+                    android.util.Log.d("AudioX", "onPlaybackResumption called")
+                    // Return empty result - we handle playback through Flutter
+                    return com.google.common.util.concurrent.Futures.immediateFuture(
+                        MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0)
+                    )
+                }
             })
             .build()
         
@@ -217,11 +228,23 @@ class AudioService : MediaSessionService() {
                 }
             }
             ACTION_STOP -> {
-                android.util.Log.d("AudioX", "Close button clicked")
+                android.util.Log.d("AudioX", "Close button clicked - creating stop marker")
+                
+                // Create a marker file that Flutter will check during restoration
+                try {
+                    val markerFile = java.io.File(filesDir, "playback_stopped.marker")
+                    markerFile.createNewFile()
+                    android.util.Log.d("AudioX", "✅ Stop marker created: ${markerFile.absolutePath}")
+                } catch (e: Exception) {
+                    android.util.Log.e("AudioX", "Failed to create stop marker: ${e.message}")
+                }
+                
+                // Stop player and service
                 mediaSession?.player?.stop()
                 mediaSession?.player?.clearMediaItems()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
+                
                 return START_NOT_STICKY
             }
         }

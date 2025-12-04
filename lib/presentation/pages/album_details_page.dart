@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../data/models/song_model.dart';
 import '../controllers/audio_controller.dart';
+import '../widgets/hybrid_song_artwork.dart';
 
 class AlbumDetailsPage extends StatefulWidget {
   final String albumName;
@@ -411,26 +412,54 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                       padding: const EdgeInsets.all(12),
                       child: Row(
                         children: [
-                          // Track number or playing indicator
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: isCurrentlyPlaying ? Colors.deepPurple : Colors.deepPurple.shade50,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: isPlaying
-                                  ? const Icon(Icons.equalizer_rounded, color: Colors.white, size: 18)
-                                  : Text(
+                          // Album artwork thumbnail with track number
+                          Stack(
+                            children: [
+                              HybridSongArtwork.fromSong(song: song, size: 48, borderRadius: 8),
+                              // Track number overlay or playing indicator
+                              if (isPlaying)
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: Colors.deepPurple.withOpacity(0.8),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Center(
+                                    child: Icon(Icons.equalizer_rounded, color: Colors.white, size: 20),
+                                  ),
+                                )
+                              else if (isCurrentlyPlaying)
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: Colors.deepPurple.withOpacity(0.7),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Center(child: Icon(Icons.pause_rounded, color: Colors.white, size: 24)),
+                                )
+                              else
+                                Positioned(
+                                  bottom: 2,
+                                  right: 2,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black54,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
                                       '${index + 1}',
-                                      style: TextStyle(
-                                        color: isCurrentlyPlaying ? Colors.white : Colors.deepPurple.shade700,
+                                      style: const TextStyle(
+                                        color: Colors.white,
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 14,
+                                        fontSize: 10,
                                       ),
                                     ),
-                            ),
+                                  ),
+                                ),
+                            ],
                           ),
                           const SizedBox(width: 12),
                           // Song info

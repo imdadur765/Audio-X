@@ -2,11 +2,16 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/playlist_model.dart';
-import '../../data/models/song_model.dart';
+
 import '../../services/playlist_service.dart';
 import '../controllers/audio_controller.dart';
 import '../widgets/glass_button.dart';
 import 'playlist_details_page.dart';
+import 'recently_added_page.dart';
+import 'most_played_page.dart';
+import 'favorites_page.dart';
+import 'all_songs_page.dart';
+import 'recently_played_page.dart';
 
 enum SortOrder { aToZ, zToA, newest, oldest }
 
@@ -375,17 +380,29 @@ class _PlaylistPageState extends State<PlaylistPage> {
 
     return GestureDetector(
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => PlaylistDetailsPage(
-              playlistId: playlist.id,
-              title: playlist.name,
-              songs: songs,
-              gradientColors: gradientColors,
-              isAuto: playlist.isAuto,
+        if (playlist.id == 'auto_recently_added') {
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) => RecentlyAddedPage(songs: songs)));
+        } else if (playlist.id == 'auto_most_played') {
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) => MostPlayedPage(songs: songs)));
+        } else if (playlist.id == 'auto_favorites') {
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) => FavoritesPage(songs: songs)));
+        } else if (playlist.id == 'auto_all_songs') {
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) => AllSongsPage(songs: songs)));
+        } else if (playlist.id == 'auto_recent') {
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) => RecentlyPlayedPage(songs: songs)));
+        } else {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => PlaylistDetailsPage(
+                playlistId: playlist.id,
+                title: playlist.name,
+                songs: songs,
+                gradientColors: gradientColors,
+                isAuto: playlist.isAuto,
+              ),
             ),
-          ),
-        );
+          );
+        }
       },
       child: Container(
         decoration: BoxDecoration(
@@ -475,17 +492,29 @@ class _PlaylistPageState extends State<PlaylistPage> {
         ),
         trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
         onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => PlaylistDetailsPage(
-                playlistId: playlist.id,
-                title: playlist.name,
-                songs: songs,
-                gradientColors: gradientColors,
-                isAuto: playlist.isAuto,
+          if (playlist.id == 'auto_recently_added') {
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => RecentlyAddedPage(songs: songs)));
+          } else if (playlist.id == 'auto_most_played') {
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => MostPlayedPage(songs: songs)));
+          } else if (playlist.id == 'auto_favorites') {
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => FavoritesPage(songs: songs)));
+          } else if (playlist.id == 'auto_all_songs') {
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => AllSongsPage(songs: songs)));
+          } else if (playlist.id == 'auto_recent') {
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => RecentlyPlayedPage(songs: songs)));
+          } else {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => PlaylistDetailsPage(
+                  playlistId: playlist.id,
+                  title: playlist.name,
+                  songs: songs,
+                  gradientColors: gradientColors,
+                  isAuto: playlist.isAuto,
+                ),
               ),
-            ),
-          );
+            );
+          }
         },
       ),
     );
@@ -495,8 +524,8 @@ class _PlaylistPageState extends State<PlaylistPage> {
     if (playlist.isAuto) {
       String assetName = 'playlist_open.png'; // Default
       if (playlist.id == 'auto_favorites') assetName = 'favorite.png';
-      if (playlist.id == 'auto_recent') assetName = 'playlist_open.png'; // Recently Played
-      if (playlist.id == 'auto_recently_added') assetName = 'recently_added.png';
+      if (playlist.id == 'auto_recent') assetName = 'recently_played.png'; // Recently Played
+      if (playlist.id == 'auto_recently_added') assetName = 'duration.png';
       if (playlist.id == 'auto_most_played') assetName = 'most_played.png';
       if (playlist.id == 'auto_all_songs') assetName = 'song.png';
 

@@ -513,17 +513,35 @@ class _AlbumArtSection extends StatelessWidget {
             const SizedBox(height: 32),
             Column(
               children: [
-                Text(
-                  currentSong.title,
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        currentSong.title,
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: Icon(
+                        currentSong.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                        color: currentSong.isFavorite ? Colors.red : Colors.grey.shade400,
+                        size: 28,
+                      ),
+                      onPressed: () {
+                        Provider.of<AudioController>(context, listen: false).toggleFavorite(currentSong);
+                      },
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Text(

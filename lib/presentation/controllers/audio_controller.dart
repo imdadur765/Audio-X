@@ -107,6 +107,21 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     _progressTimer?.cancel();
     _progressTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) async {
       final pos = await _audioHandler.getPosition();
+
+      // Check for auto-song change
+      final currentIndex = await _audioHandler.getCurrentMediaItemIndex();
+      if (currentIndex != -1 && currentIndex < _songs.length) {
+        final playingSong = _songs[currentIndex];
+        if (_currentSong?.id != playingSong.id) {
+          print('🔄 Detected auto song change: ${playingSong.title}');
+          _currentSong = playingSong;
+          _hasCountedPlay = false;
+          _duration = Duration(milliseconds: playingSong.duration);
+          // Save new state immediately
+          await _saveState();
+        }
+      }
+
       if (_currentSong != null) {
         _duration = Duration(milliseconds: _currentSong!.duration);
 
@@ -123,7 +138,6 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
         }
       }
       _position = pos;
-      _saveState(); // Persist state
       notifyListeners();
     });
   }

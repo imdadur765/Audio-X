@@ -7,8 +7,9 @@ class LyricsView extends StatefulWidget {
   final Lyrics lyrics;
   final Duration currentPosition;
   final Function(Duration)? onSeek;
+  final Function(Duration)? onOffsetChanged; // NEW: Callback for offset changes
 
-  const LyricsView({super.key, required this.lyrics, required this.currentPosition, this.onSeek});
+  const LyricsView({super.key, required this.lyrics, required this.currentPosition, this.onSeek, this.onOffsetChanged});
 
   @override
   State<LyricsView> createState() => _LyricsViewState();
@@ -84,6 +85,20 @@ class _LyricsViewState extends State<LyricsView> with SingleTickerProviderStateM
 
     final newIndex = widget.lyrics.getCurrentLineIndex(widget.currentPosition);
 
+    // CRITICAL: Only consider a line as "current" if we're actually close to it
+    // This prevents marking lines as current when they're still far in the future
+    if (newIndex >= 0 && newIndex < widget.lyrics.lines.length) {
+      final line = widget.lyrics.lines[newIndex];
+      final timeUntilLine = line.timestamp - widget.currentPosition;
+
+      // If line is more than 5 seconds in the future, don't mark it as current yet
+      // This handles edge case where getCurrentLineIndex returns too early
+      if (timeUntilLine > const Duration(seconds: 5)) {
+        // Keep previous line as current, or stay at -1
+        return;
+      }
+    }
+
     // Only update and scroll if the line INDEX actually changed
     if (newIndex != _currentLineIndex && newIndex >= 0) {
       final oldIndex = _currentLineIndex;
@@ -94,15 +109,82 @@ class _LyricsViewState extends State<LyricsView> with SingleTickerProviderStateM
       // Only auto-scroll if:
       // 1. User is not manually scrolling
       // 2. Line actually changed (not just position update)
+      // 3. NOT in a long gap (smart gap detection)
       if (!_isUserScrolling && oldIndex != newIndex) {
-        // Small delay to ensure the line is actually active and layout updated
-        Future.delayed(const Duration(milliseconds: 50), () {
-          if (mounted && _currentLineIndex == newIndex) {
-            _scrollToCurrentLine();
-          }
-        });
+        // Check if we should scroll or freeze (for long gaps)
+        final shouldScroll = _shouldScrollToLine(oldIndex, newIndex);
+
+        if (shouldScroll) {
+          // Small delay to ensure the line is actually active and layout updated
+          Future.delayed(const Duration(milliseconds: 50), () {
+            if (mounted && _currentLineIndex == newIndex) {
+              _scrollToCurrentLine();
+            }
+          });
+        }
       }
     }
+  }
+
+  // Smart logic to decide if we should scroll during line change
+  bool _shouldScrollToLine(int oldIndex, int newIndex) {
+    // Going backwards (seeking) - always scroll
+    if (newIndex < oldIndex && oldIndex != -1) {
+      return true;
+    }
+
+    // CRITICAL FIX: Check if we're actually CLOSE to the next line
+    // Don't scroll if the next line is still far away in the future
+    if (newIndex >= 0 && newIndex < widget.lyrics.lines.length) {
+      final nextLine = widget.lyrics.lines[newIndex];
+      final currentPosition = widget.currentPosition;
+
+      // If next line is more than 3 seconds in the future, DON'T scroll yet
+      // This handles long intros and gaps
+      final timeUntilNextLine = nextLine.timestamp - currentPosition;
+      if (timeUntilNextLine > const Duration(seconds: 3)) {
+        return false; // Too early to scroll
+      }
+    }
+
+    // Special handling for first line activation
+    if (oldIndex == -1 && newIndex == 0) {
+      // Check if first line starts much later (long intro)
+      if (widget.lyrics.lines.isNotEmpty) {
+        final firstLine = widget.lyrics.lines[0];
+        final currentPosition = widget.currentPosition;
+
+        // If we're activating first line but it's still >2 seconds away, wait
+        final timeUntilFirstLine = firstLine.timestamp - currentPosition;
+        if (timeUntilFirstLine > const Duration(seconds: 2)) {
+          return false; // Long intro detected - don't scroll yet
+        }
+      }
+      return true; // First line and we're close to it
+    }
+
+    // Check if there's a long gap between old and new line
+    if (oldIndex >= 0 && oldIndex < widget.lyrics.lines.length) {
+      final isLongGap = widget.lyrics.isLongGap(oldIndex);
+
+      // If we're IN a long gap, check if we're actually close to next line
+      if (isLongGap) {
+        if (newIndex >= 0 && newIndex < widget.lyrics.lines.length) {
+          final nextLine = widget.lyrics.lines[newIndex];
+          final currentPosition = widget.currentPosition;
+
+          // Only scroll if we're within 2 seconds of the next line
+          final timeUntilNextLine = nextLine.timestamp - currentPosition;
+          if (timeUntilNextLine > const Duration(seconds: 2)) {
+            return false; // Still in gap, don't scroll
+          }
+        }
+        return true; // Close to next line after gap, scroll now
+      }
+    }
+
+    // Default: scroll normally for regular line changes
+    return true;
   }
 
   void _scrollToCurrentLine({bool force = false}) {
@@ -213,6 +295,79 @@ class _LyricsViewState extends State<LyricsView> with SingleTickerProviderStateM
           },
         ),
 
+        // Sync Offset Adjustment (Top)
+        if (widget.onOffsetChanged != null)
+          Positioned(
+            top: 12,
+            left: 20,
+            right: 20,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [Colors.white.withOpacity(0.25), Colors.white.withOpacity(0.15)]),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.sync, size: 16, color: Colors.white.withOpacity(0.9)),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Sync:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withOpacity(0.9),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Decrease button
+                      _buildOffsetButton(
+                        icon: Icons.remove,
+                        onTap: () {
+                          final newOffset = widget.lyrics.syncOffset - const Duration(milliseconds: 500);
+                          widget.onOffsetChanged!(newOffset);
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      // Offset display
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${widget.lyrics.syncOffset.isNegative ? "-" : "+"}${(widget.lyrics.syncOffset.inMilliseconds.abs() / 1000).toStringAsFixed(1)}s',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Increase button
+                      _buildOffsetButton(
+                        icon: Icons.add,
+                        onTap: () {
+                          final newOffset = widget.lyrics.syncOffset + const Duration(milliseconds: 500);
+                          widget.onOffsetChanged!(newOffset);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
         // Attribution at bottom
         if (widget.lyrics.attribution != null)
           Positioned(
@@ -263,6 +418,8 @@ class _LyricsViewState extends State<LyricsView> with SingleTickerProviderStateM
     final isCurrentLine = index == _currentLineIndex;
     final isPastLine = index < _currentLineIndex;
     final isFutureLine = index > _currentLineIndex;
+    final isInstrumental = line.isInstrumental;
+    final isDialogue = line.isDialogue;
 
     return GestureDetector(
       key: _lineKeys[index],
@@ -310,7 +467,7 @@ class _LyricsViewState extends State<LyricsView> with SingleTickerProviderStateM
                 child: Stack(
                   children: [
                     // Pulsating glow for current line
-                    if (isCurrentLine)
+                    if (isCurrentLine && !isInstrumental)
                       AnimatedBuilder(
                         animation: _glowController,
                         builder: (context, child) {
@@ -339,17 +496,32 @@ class _LyricsViewState extends State<LyricsView> with SingleTickerProviderStateM
                         color: isCurrentLine
                             ? Colors.white
                             : isPastLine
-                            ? Colors.white.withOpacity(0.25)
-                            : Colors.white.withOpacity(0.45),
+                            ? Colors.white.withOpacity(isInstrumental ? 0.2 : 0.25)
+                            : Colors.white.withOpacity(isInstrumental ? 0.35 : 0.45),
                         fontWeight: isCurrentLine ? FontWeight.w700 : FontWeight.w400,
-                        fontSize: isCurrentLine ? 24 : 16,
+                        fontSize: isCurrentLine ? 24 : (isInstrumental ? 14 : 16),
+                        fontStyle: (isInstrumental || isDialogue) ? FontStyle.italic : FontStyle.normal,
                         height: 1.5,
                         letterSpacing: isCurrentLine ? 0.3 : 0.1,
                         shadows: isCurrentLine
                             ? [const Shadow(blurRadius: 10, color: Colors.black, offset: Offset(0, 1))]
                             : [],
                       ),
-                      child: Text(line.text, textAlign: TextAlign.center),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Music note icon for instrumental sections
+                          if (isInstrumental && isCurrentLine) ...[
+                            Icon(Icons.music_note_rounded, size: 18, color: Colors.white.withOpacity(0.6)),
+                            const SizedBox(width: 8),
+                          ],
+                          Flexible(child: Text(line.text, textAlign: TextAlign.center)),
+                          if (isInstrumental && isCurrentLine) ...[
+                            const SizedBox(width: 8),
+                            Icon(Icons.music_note_rounded, size: 18, color: Colors.white.withOpacity(0.6)),
+                          ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -401,6 +573,22 @@ class _LyricsViewState extends State<LyricsView> with SingleTickerProviderStateM
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // Helper method to build offset adjustment buttons
+  Widget _buildOffsetButton({required IconData icon, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+        ),
+        child: Icon(icon, size: 16, color: Colors.white),
       ),
     );
   }

@@ -96,8 +96,10 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
     }
   }
 
-  Future<void> _loadLyrics() async {
+  Future<void> _loadLyrics([Song? song]) async {
     if (!mounted) return; // Early exit if widget disposed
+
+    final targetSong = song ?? widget.song; // Use provided song or default to widget.song
 
     setState(() {
       _isLoadingLyrics = true;
@@ -105,12 +107,12 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
 
     try {
       final lyrics = await _lyricsService.getLyrics(
-        songId: widget.song.id,
-        title: widget.song.title,
-        artist: widget.song.artist,
-        album: widget.song.album,
-        durationSeconds: widget.song.duration ~/ 1000,
-        manualLyricsPath: widget.song.lyricsPath,
+        songId: targetSong.id,
+        title: targetSong.title,
+        artist: targetSong.artist,
+        album: targetSong.album,
+        durationSeconds: targetSong.duration ~/ 1000,
+        manualLyricsPath: targetSong.lyricsPath,
       );
 
       if (mounted) {
@@ -204,8 +206,13 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
         // Only update palette when song actually changes
         if (_lastSongId != currentSong.id) {
           _lastSongId = currentSong.id;
+          // Clear lyrics and reload for new song
+          _lyrics = null;
+          _showLyrics = false;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _updatePalette(currentSong.localArtworkPath, currentSong.id);
+            // Reload lyrics for new song
+            _loadLyrics(currentSong);
           });
         }
 
@@ -245,6 +252,11 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                                   lyrics: _lyrics!,
                                   currentPosition: controller.position,
                                   onSeek: (position) => controller.seek(position),
+                                  onOffsetChanged: (newOffset) {
+                                    setState(() {
+                                      _lyrics = _lyrics!.copyWith(syncOffset: newOffset);
+                                    });
+                                  },
                                 ),
                               )
                             : _AlbumArtSection(

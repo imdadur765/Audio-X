@@ -237,7 +237,7 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
                   value: 'delete',
                   child: Row(
                     children: [
-                      const Icon(Icons.delete, size: 20, color: Colors.red),
+                      Image.asset('assets/images/delete.png', width: 20, height: 20, color: Colors.red),
                       const SizedBox(width: 12),
                       const Text('Delete Playlist', style: TextStyle(color: Colors.red)),
                     ],

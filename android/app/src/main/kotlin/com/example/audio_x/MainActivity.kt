@@ -270,7 +270,8 @@ class MainActivity : FlutterActivity() {
             android.provider.MediaStore.Audio.Media.ALBUM,
             android.provider.MediaStore.Audio.Media.DATA,
             android.provider.MediaStore.Audio.Media.DURATION,
-            android.provider.MediaStore.Audio.Media.ALBUM_ID
+            android.provider.MediaStore.Audio.Media.ALBUM_ID,
+            android.provider.MediaStore.Audio.Media.DATE_ADDED
         )
 
         val selection = "${android.provider.MediaStore.Audio.Media.IS_MUSIC} != 0"
@@ -290,6 +291,7 @@ class MainActivity : FlutterActivity() {
             val dataColumn = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.DATA)
             val durationColumn = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.DURATION)
             val albumIdColumn = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.ALBUM_ID)
+            val dateAddedColumn = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.DATE_ADDED)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
@@ -299,6 +301,7 @@ class MainActivity : FlutterActivity() {
                 val uri = cursor.getString(dataColumn)
                 val duration = cursor.getLong(durationColumn)
                 val albumId = cursor.getLong(albumIdColumn)
+                val dateAdded = cursor.getLong(dateAddedColumn)
 
                 // Artwork URI
                 val artworkUri = android.content.ContentUris.withAppendedId(
@@ -314,7 +317,8 @@ class MainActivity : FlutterActivity() {
                         "album" to album,
                         "uri" to uri,
                         "duration" to duration,
-                        "artworkUri" to artworkUri
+                        "artworkUri" to artworkUri,
+                        "dateAdded" to dateAdded
                     )
                 )
             }

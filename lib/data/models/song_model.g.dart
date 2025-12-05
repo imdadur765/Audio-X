@@ -13,9 +13,7 @@ class SongAdapter extends TypeAdapter<Song> {
   @override
   Song read(BinaryReader reader) {
     final numOfFields = reader.readByte();
-    final fields = <int, dynamic>{
-      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
-    };
+    final fields = <int, dynamic>{for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read()};
     return Song(
       id: fields[0] as String,
       title: fields[1] as String,
@@ -29,13 +27,14 @@ class SongAdapter extends TypeAdapter<Song> {
       lyricsSource: fields[9] as String?,
       isFavorite: fields[10] as bool,
       playCount: fields[11] as int,
+      dateAdded: fields[12] as int? ?? 0,
     );
   }
 
   @override
   void write(BinaryWriter writer, Song obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -59,7 +58,9 @@ class SongAdapter extends TypeAdapter<Song> {
       ..writeByte(10)
       ..write(obj.isFavorite)
       ..writeByte(11)
-      ..write(obj.playCount);
+      ..write(obj.playCount)
+      ..writeByte(12)
+      ..write(obj.dateAdded);
   }
 
   @override
@@ -67,8 +68,5 @@ class SongAdapter extends TypeAdapter<Song> {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is SongAdapter &&
-          runtimeType == other.runtimeType &&
-          typeId == other.typeId;
+      identical(this, other) || other is SongAdapter && runtimeType == other.runtimeType && typeId == other.typeId;
 }

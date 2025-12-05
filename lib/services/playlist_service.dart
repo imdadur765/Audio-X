@@ -179,12 +179,30 @@ class PlaylistService {
     );
   }
 
+  // Get Recently Added playlist
+  Playlist getRecentlyAddedPlaylist(List<Song> allSongs) {
+    // Sort songs by dateAdded (descending) and take top 50
+    final sortedSongs = List<Song>.from(allSongs)..sort((a, b) => b.dateAdded.compareTo(a.dateAdded));
+
+    final topSongs = sortedSongs.take(50).toList();
+
+    return Playlist(
+      id: 'auto_recently_added',
+      name: 'Recently Added',
+      songIds: topSongs.map((s) => s.id).toList(),
+      created: DateTime.now(),
+      isAuto: true,
+      iconEmoji: '🆕',
+    );
+  }
+
   // Get all playlists (auto + custom)
   Future<List<Playlist>> getAllPlaylists(List<Song> allSongs) async {
     final autoPlaylists = [
       getFavoritesPlaylist(allSongs),
       await getRecentlyPlayedPlaylist(allSongs),
       getMostPlayedPlaylist(allSongs),
+      getRecentlyAddedPlaylist(allSongs),
       getAllSongsPlaylist(allSongs),
     ];
 

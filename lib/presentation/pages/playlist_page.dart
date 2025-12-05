@@ -5,6 +5,7 @@ import '../../data/models/playlist_model.dart';
 import '../../data/models/song_model.dart';
 import '../../services/playlist_service.dart';
 import '../controllers/audio_controller.dart';
+import '../widgets/glass_button.dart';
 import 'playlist_details_page.dart';
 
 enum SortOrder { aToZ, zToA, newest, oldest }
@@ -201,7 +202,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showCreatePlaylistDialog,
         backgroundColor: Colors.deepPurple,
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
+        icon: Image.asset('assets/images/create.png', width: 24, height: 24, color: Colors.white),
         label: const Text(
           'Create',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -222,35 +223,30 @@ class _PlaylistPageState extends State<PlaylistPage> {
       shadowColor: Colors.black.withOpacity(0.1),
       actions: [
         // View toggle buttons
-        Container(
-          margin: const EdgeInsets.only(right: 8),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(opacity),
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: opacity > 0.5
-                ? [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))]
-                : [],
-          ),
-          child: Row(
-            children: [
-              _buildViewButton(
-                icon: Icons.grid_view_rounded,
-                isSelected: _viewMode == ViewMode.grid,
-                onTap: () => setState(() => _viewMode = ViewMode.grid),
-                isCompact: opacity > 0.5,
-              ),
-              _buildViewButton(
-                icon: Icons.view_list_rounded,
-                isSelected: _viewMode == ViewMode.list,
-                onTap: () => setState(() => _viewMode = ViewMode.list),
-                isCompact: opacity > 0.5,
-              ),
-            ],
-          ),
+        Row(
+          children: [
+            GlassButton(
+              imagePath: 'assets/images/girdview.png',
+              onTap: () => setState(() => _viewMode = ViewMode.grid),
+              isActive: _viewMode == ViewMode.grid,
+              accentColor: Colors.deepPurple,
+              size: 20,
+              containerSize: 40,
+            ),
+            const SizedBox(width: 8),
+            GlassButton(
+              imagePath: 'assets/images/listview.png',
+              onTap: () => setState(() => _viewMode = ViewMode.list),
+              isActive: _viewMode == ViewMode.list,
+              accentColor: Colors.deepPurple,
+              size: 20,
+              containerSize: 40,
+            ),
+          ],
         ),
+        const SizedBox(width: 8),
         // Sort button
         PopupMenuButton<SortOrder>(
-          icon: Icon(Icons.sort_rounded, color: opacity > 0.5 ? Colors.deepPurple : Colors.white),
           onSelected: (order) => setState(() => _sortOrder = order),
           offset: const Offset(0, 40),
           itemBuilder: (context) => [
@@ -259,8 +255,15 @@ class _PlaylistPageState extends State<PlaylistPage> {
             const PopupMenuItem(value: SortOrder.aToZ, child: Text('A to Z')),
             const PopupMenuItem(value: SortOrder.zToA, child: Text('Z to A')),
           ],
+          child: GlassButton(
+            imagePath: 'assets/images/sort.png',
+            onTap: () {}, // Handled by PopupMenuButton
+            accentColor: Colors.deepPurple,
+            size: 20,
+            containerSize: 40,
+          ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 16),
       ],
       flexibleSpace: FlexibleSpaceBar(
         title: AnimatedOpacity(
@@ -329,33 +332,6 @@ class _PlaylistPageState extends State<PlaylistPage> {
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildViewButton({
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required bool isCompact,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? (isCompact ? Colors.deepPurple.shade50 : Colors.white.withOpacity(0.3))
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: isCompact
-              ? (isSelected ? Colors.deepPurple : Colors.grey[600])
-              : (isSelected ? Colors.white : Colors.white60),
         ),
       ),
     );
@@ -432,7 +408,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
                   ),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                 ),
-                child: Center(child: Text(playlist.iconEmoji, style: const TextStyle(fontSize: 48))),
+                child: Center(child: _buildPlaylistIcon(playlist, size: 48)),
               ),
             ),
             // Info
@@ -490,7 +466,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
             gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: gradientColors),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Center(child: Text(playlist.iconEmoji, style: const TextStyle(fontSize: 24))),
+          child: Center(child: _buildPlaylistIcon(playlist, size: 24)),
         ),
         title: Text(playlist.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
         subtitle: Text(
@@ -513,6 +489,20 @@ class _PlaylistPageState extends State<PlaylistPage> {
         },
       ),
     );
+  }
+
+  Widget _buildPlaylistIcon(Playlist playlist, {required double size}) {
+    if (playlist.isAuto) {
+      String assetName = 'playlist_open.png'; // Default
+      if (playlist.id == 'auto_favorites') assetName = 'favorite.png';
+      if (playlist.id == 'auto_recent') assetName = 'playlist_open.png'; // Recently Played
+      if (playlist.id == 'auto_recently_added') assetName = 'recently_added.png';
+      if (playlist.id == 'auto_most_played') assetName = 'most_played.png';
+      if (playlist.id == 'auto_all_songs') assetName = 'song.png';
+
+      return Image.asset('assets/images/$assetName', width: size, height: size, color: Colors.white);
+    }
+    return Text(playlist.iconEmoji, style: TextStyle(fontSize: size));
   }
 
   Widget _buildEmptyState() {

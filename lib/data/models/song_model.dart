@@ -40,6 +40,9 @@ class Song extends HiveObject {
   @HiveField(11)
   int playCount;
 
+  @HiveField(12)
+  int dateAdded;
+
   Song({
     required this.id,
     required this.title,
@@ -53,5 +56,6 @@ class Song extends HiveObject {
     this.lyricsSource,
     this.isFavorite = false,
     this.playCount = 0,
+    this.dateAdded = 0,
   });
 }

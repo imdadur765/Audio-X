@@ -54,20 +54,16 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
-    print('📱 App lifecycle changed: $state');
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       // App going to background - save state and stop timer
-      print('⏸️ App going to background, saving state and stopping timer');
       _saveState();
       _stopProgressTimer();
     } else if (state == AppLifecycleState.resumed) {
       // App resumed - check for stop marker file first
-      print('▶️ App resumed - checking for stop marker');
       await _checkStopMarker();
 
       // Only restart timer if still playing after marker check
       if (_isPlaying) {
-        print('▶️ Still playing, restarting timer');
         _startProgressTimer();
       }
     }
@@ -80,7 +76,6 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       final markerFile = File('${directory.parent.path}/files/playback_stopped.marker');
 
       if (await markerFile.exists()) {
-        print('🛑 Stop marker found - clearing playback state');
         await markerFile.delete();
 
         // Clear playback state
@@ -95,7 +90,6 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
         await settingsBox.delete('lastPlayedSongId');
         await settingsBox.delete('lastPosition');
 
-        print('✅ Playback cleared due to notification close');
         notifyListeners();
       }
     } catch (e) {
@@ -113,7 +107,6 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       if (currentIndex != -1 && currentIndex < _songs.length) {
         final playingSong = _songs[currentIndex];
         if (_currentSong?.id != playingSong.id) {
-          print('🔄 Detected auto song change: ${playingSong.title}');
           _currentSong = playingSong;
           _hasCountedPlay = false;
           _duration = Duration(milliseconds: playingSong.duration);
@@ -133,7 +126,6 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
           if (pos.inSeconds >= threshold) {
             _hasCountedPlay = true;
             incrementPlayCount(_currentSong!);
-            print('📈 Play count incremented for: ${_currentSong!.title}');
           }
         }
       }
@@ -163,19 +155,34 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       final songsData = await _audioHandler.getSongs();
       final box = Hive.box<Song>('songs');
 
-      // Clear existing (simple cache strategy for now)
-      // In a real app, we would sync/update
+      // Create a map of existing songs to preserve user data
+      final Map<String, Song> existingSongs = {};
+      for (var song in box.values) {
+        existingSongs[song.id] = song;
+      }
+
+      // Clear box to remove deleted songs
       await box.clear();
 
       for (var data in songsData) {
+        final id = data['id'].toString();
+        final existing = existingSongs[id];
+
         final song = Song(
-          id: data['id'].toString(),
+          id: id,
           title: data['title'].toString(),
           artist: data['artist'].toString(),
           album: data['album'].toString(),
           uri: data['uri'].toString(),
           duration: int.tryParse(data['duration'].toString()) ?? 0,
           artworkUri: data['artworkUri']?.toString(),
+          dateAdded: int.tryParse(data['dateAdded'].toString()) ?? 0,
+          // Preserve user data if exists
+          isFavorite: existing?.isFavorite ?? false,
+          playCount: existing?.playCount ?? 0,
+          lyricsPath: existing?.lyricsPath,
+          lyricsSource: existing?.lyricsSource,
+          localArtworkPath: existing?.localArtworkPath,
         );
         box.add(song);
       }
@@ -194,15 +201,12 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> _restoreSession() async {
-    print('🔄 Starting session restoration...');
-
     // Check for stop marker file (created when user closes from notification)
     try {
       final directory = await getApplicationDocumentsDirectory();
       final markerFile = File('${directory.parent.path}/files/playback_stopped.marker');
 
       if (await markerFile.exists()) {
-        print('🛑 Stop marker found - skipping session restoration');
         await markerFile.delete();
 
         // Clear session
@@ -210,7 +214,6 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
         await settingsBox.delete('lastPlayedSongId');
         await settingsBox.delete('lastPosition');
 
-        print('✅ Session cleared - fresh start');
         return;
       }
     } catch (e) {
@@ -224,8 +227,6 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     final repeatMode = settingsBox.get('repeatMode') as int? ?? 0;
     final volume = settingsBox.get('volume') as double? ?? 1.0;
     final speed = settingsBox.get('speed') as double? ?? 1.0;
-
-    print('📖 Restored values: songId=$lastSongId, pos=${lastPosition}ms, shuffle=$shuffleMode, repeat=$repeatMode');
 
     // Restore playback settings
     _isShuffleEnabled = shuffleMode;
@@ -244,8 +245,6 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       _currentSong = song;
       _duration = Duration(milliseconds: song.duration);
       _position = Duration(milliseconds: lastPosition);
-
-      print('✅ Restored song: ${song.title} at ${_position.inSeconds}s / ${_duration.inSeconds}s');
 
       // Prepare player in paused state
       final index = _songs.indexOf(song);
@@ -282,10 +281,8 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
             await _audioHandler.seek(Duration(milliseconds: lastPosition));
 
             success = true;
-            print('🎵 Player prepared at index $index, paused at ${lastPosition}ms');
           } catch (e) {
             retries++;
-            print('⚠️ Retry $retries: Failed to restore session - ${e.toString()}');
             if (retries < 3) {
               await Future.delayed(Duration(milliseconds: 500 * retries)); // Exponential backoff
             }
@@ -293,7 +290,6 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
         }
 
         if (!success) {
-          print('❌ Failed to restore session after 3 retries');
           // Clear invalid session
           final settingsBox = Hive.box('settings');
           await settingsBox.delete('lastPlayedSongId');
@@ -301,8 +297,6 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
         }
       }
       notifyListeners();
-    } else {
-      print('⚠️ No previous session found or no songs available');
     }
   }
 
@@ -315,7 +309,6 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       await settingsBox.put('repeatMode', _repeatMode);
       await settingsBox.put('volume', _volume);
       await settingsBox.put('speed', _speed);
-      print('💾 Session Saved: ${_currentSong!.title} at ${_position.inSeconds}s');
     }
   }
 
@@ -337,7 +330,6 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       ).timeout(
         Duration(seconds: 30), // Batch timeout
         onTimeout: () {
-          print('⚠️ Batch timeout, moving to next');
           return [];
         },
       );
@@ -377,7 +369,6 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
             await itunesFile.writeAsBytes(response.bodyBytes);
             song.localArtworkPath = itunesPath;
             await song.save();
-            print('✅ iTunes: ${song.title}');
             return; // Success, skip fallback
           }
         }
@@ -592,8 +583,6 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Stop playback and clear session (called from notification close button)
   Future<void> stop() async {
-    print('🛑 Stop called - clearing session');
-
     // Stop timer
     _stopProgressTimer();
 
@@ -619,7 +608,6 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       // Ignore errors
     }
 
-    print('✅ Session cleared - fresh start on next open');
     notifyListeners();
   }
 

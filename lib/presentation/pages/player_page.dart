@@ -358,14 +358,14 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                         break;
                     }
                   },
-                  itemBuilder: (context) => const [
+                  itemBuilder: (context) => [
                     PopupMenuItem(
                       value: 'upload',
                       child: Row(
                         children: [
-                          Icon(Icons.upload_file, size: 20, color: Colors.black87),
-                          SizedBox(width: 12),
-                          Text('Upload .lrc file', style: TextStyle(color: Colors.black87)),
+                          Image.asset('assets/images/upload_lrc.png', width: 20, height: 20, color: Colors.black87),
+                          const SizedBox(width: 12),
+                          const Text('Upload .lrc file', style: TextStyle(color: Colors.black87)),
                         ],
                       ),
                     ),
@@ -373,9 +373,9 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                       value: 'search',
                       child: Row(
                         children: [
-                          Icon(Icons.search, size: 20, color: Colors.black87),
-                          SizedBox(width: 12),
-                          Text('Search lyrics', style: TextStyle(color: Colors.black87)),
+                          Image.asset('assets/images/search.png', width: 20, height: 20, color: Colors.black87),
+                          const SizedBox(width: 12),
+                          const Text('Search lyrics', style: TextStyle(color: Colors.black87)),
                         ],
                       ),
                     ),
@@ -383,9 +383,9 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                       value: 'equalizer',
                       child: Row(
                         children: [
-                          Icon(Icons.equalizer, size: 20, color: Colors.black87),
-                          SizedBox(width: 12),
-                          Text('Equalizer', style: TextStyle(color: Colors.black87)),
+                          Image.asset('assets/images/equalizer.png', width: 20, height: 20, color: Colors.black87),
+                          const SizedBox(width: 12),
+                          const Text('Equalizer', style: TextStyle(color: Colors.black87)),
                         ],
                       ),
                     ),

@@ -34,6 +34,12 @@ class Song extends HiveObject {
   @HiveField(9)
   String? lyricsSource; // 'lrclib', 'manual', 'cached', null
 
+  @HiveField(10)
+  bool isFavorite;
+
+  @HiveField(11)
+  int playCount;
+
   Song({
     required this.id,
     required this.title,
@@ -45,5 +51,7 @@ class Song extends HiveObject {
     this.localArtworkPath,
     this.lyricsPath,
     this.lyricsSource,
+    this.isFavorite = false,
+    this.playCount = 0,
   });
 }

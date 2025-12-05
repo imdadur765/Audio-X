@@ -308,9 +308,9 @@ class _LyricsViewState extends State<LyricsView> with SingleTickerProviderStateM
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [Colors.white.withOpacity(0.25), Colors.white.withOpacity(0.15)]),
+                    gradient: LinearGradient(colors: [Colors.black.withOpacity(0.4), Colors.black.withOpacity(0.3)]),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
+                    border: Border.all(color: Colors.white.withOpacity(0.2), width: 1.5),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -339,7 +339,7 @@ class _LyricsViewState extends State<LyricsView> with SingleTickerProviderStateM
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.3),
+                          color: Colors.black.withOpacity(0.4),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -381,7 +381,7 @@ class _LyricsViewState extends State<LyricsView> with SingleTickerProviderStateM
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: Colors.white.withOpacity(0.15), width: 1),
                   ),
@@ -584,9 +584,9 @@ class _LyricsViewState extends State<LyricsView> with SingleTickerProviderStateM
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
+          color: Colors.white.withOpacity(0.15),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+          border: Border.all(color: Colors.white.withOpacity(0.25), width: 1),
         ),
         child: Icon(icon, size: 16, color: Colors.white),
       ),

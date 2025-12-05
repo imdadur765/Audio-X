@@ -7,7 +7,9 @@ import 'package:path_provider/path_provider.dart';
 import '../../data/models/song_model.dart';
 import '../../services/audio_handler.dart';
 import '../../data/services/itunes_service.dart';
+import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   final AudioHandler _audioHandler = AudioHandler();
@@ -21,6 +23,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   int _repeatMode = 0; // 0: Off, 1: One, 2: All
   double _volume = 1.0;
   double _speed = 1.0;
+  bool _hasCountedPlay = false; // Track if current song play has been counted
 
   List<Song> get songs => _songs;
   bool get isPlaying => _isPlaying;
@@ -31,6 +34,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   int get repeatMode => _repeatMode;
   double get volume => _volume;
   double get speed => _speed;
+  List<Song> get allSongs => _songs; // Access to all songs for playlists
 
   AudioController() {
     WidgetsBinding.instance.addObserver(this);
@@ -105,6 +109,18 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       final pos = await _audioHandler.getPosition();
       if (_currentSong != null) {
         _duration = Duration(milliseconds: _currentSong!.duration);
+
+        // Check if we should increment play count
+        if (!_hasCountedPlay && _duration.inSeconds > 0) {
+          // Count if played > 30 seconds OR > 50% of duration (for short songs)
+          final threshold = _duration.inSeconds < 60 ? _duration.inSeconds * 0.5 : 30.0;
+
+          if (pos.inSeconds >= threshold) {
+            _hasCountedPlay = true;
+            incrementPlayCount(_currentSong!);
+            print('📈 Play count incremented for: ${_currentSong!.title}');
+          }
+        }
       }
       _position = pos;
       _saveState(); // Persist state
@@ -397,10 +413,44 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       await _audioHandler.setPlaylist(songMaps, initialIndex: index);
       _isPlaying = true;
       _currentSong = song;
+      _hasCountedPlay = false; // Reset for new song
       _duration = Duration(milliseconds: song.duration);
       _startProgressTimer();
       notifyListeners();
     }
+  }
+
+  /// Play a custom list of songs (for playlists)
+  Future<void> playSongList(List<Song> songs, int initialIndex, {bool shuffle = false}) async {
+    if (songs.isEmpty) return;
+
+    final songMaps = songs
+        .map(
+          (s) => {
+            'id': s.id,
+            'title': s.title,
+            'artist': s.artist,
+            'album': s.album,
+            'uri': s.uri,
+            'artworkUri': s.artworkUri,
+          },
+        )
+        .toList();
+
+    await _audioHandler.setPlaylist(songMaps, initialIndex: initialIndex);
+
+    // Apply shuffle if requested
+    if (shuffle && !_isShuffleEnabled) {
+      _isShuffleEnabled = true;
+      await _audioHandler.setShuffleMode(true);
+    }
+
+    _isPlaying = true;
+    _currentSong = songs[initialIndex];
+    _hasCountedPlay = false; // Reset for new song
+    _duration = Duration(milliseconds: _currentSong!.duration);
+    _startProgressTimer();
+    notifyListeners();
   }
 
   Future<void> pause() async {
@@ -436,6 +486,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
 
     if (currentIndex >= 0 && currentIndex < _songs.length) {
       _currentSong = _songs[currentIndex];
+      _hasCountedPlay = false; // Reset for new song
       _duration = Duration(milliseconds: _currentSong!.duration);
       _position = Duration.zero;
     }
@@ -455,6 +506,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
 
     if (currentIndex >= 0 && currentIndex < _songs.length) {
       _currentSong = _songs[currentIndex];
+      _hasCountedPlay = false; // Reset for new song
       _duration = Duration(milliseconds: _currentSong!.duration);
       _position = Duration.zero;
     }
@@ -489,6 +541,39 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     await _audioHandler.setSpeed(_speed);
     await _saveState();
     notifyListeners();
+  }
+
+  Future<void> toggleFavorite(Song song) async {
+    song.isFavorite = !song.isFavorite;
+    await song.save(); // Persist to Hive
+    notifyListeners();
+  }
+
+  Future<void> incrementPlayCount(Song song) async {
+    song.playCount = song.playCount + 1;
+    await song.save(); // Persist to Hive
+
+    // Also add to play history
+    final prefs = await SharedPreferences.getInstance();
+    final historyJson = prefs.getString('play_history');
+    List<dynamic> history = [];
+
+    if (historyJson != null) {
+      try {
+        history = jsonDecode(historyJson);
+      } catch (e) {
+        print('Error parsing history: $e');
+      }
+    }
+
+    history.add({'songId': song.id, 'timestamp': DateTime.now().toIso8601String()});
+
+    // Keep only last 100 entries
+    if (history.length > 100) {
+      history = history.sublist(history.length - 100);
+    }
+
+    await prefs.setString('play_history', jsonEncode(history));
   }
 
   /// Stop playback and clear session (called from notification close button)

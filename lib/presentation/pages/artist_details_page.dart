@@ -106,7 +106,7 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                   BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 10)),
                 ],
               ),
-              child: const Icon(Icons.person_rounded, size: 40, color: Colors.deepPurple),
+              child: Image.asset('assets/images/artist_open.png', width: 40, height: 40, color: Colors.deepPurple),
             ),
             const SizedBox(height: 20),
             Text(
@@ -244,7 +244,7 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
                   ),
-                  child: const Icon(Icons.person_rounded, size: 60, color: Colors.white54),
+                  child: Image.asset('assets/images/artist_open.png', width: 60, height: 60, color: Colors.white54),
                 ),
                 const SizedBox(height: 20),
               ],
@@ -701,8 +701,13 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                                   color: Colors.black.withValues(alpha: 0.4),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Center(
-                                  child: Icon(Icons.equalizer_rounded, color: Colors.white, size: 20),
+                                child: Center(
+                                  child: Image.asset(
+                                    'assets/images/equalizer.png',
+                                    width: 20,
+                                    height: 20,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                           ],
@@ -750,7 +755,12 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                                 builder: (context, double value, child) {
                                   return Transform.scale(
                                     scale: value,
-                                    child: Icon(Icons.volume_up_rounded, color: Colors.deepPurple, size: 18),
+                                    child: Image.asset(
+                                      'assets/images/equalizer.png',
+                                      width: 18,
+                                      height: 18,
+                                      color: Colors.deepPurple,
+                                    ),
                                   );
                                 },
                               ),
@@ -817,7 +827,7 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                child: const Icon(Icons.play_arrow_rounded, size: 16, color: Colors.deepPurple),
+                child: Image.asset('assets/images/play.png', width: 16, height: 16, color: Colors.deepPurple),
               ),
               const SizedBox(width: 12),
               Text('Playing ${songs.length} songs'),
@@ -852,7 +862,7 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                child: const Icon(Icons.shuffle_rounded, size: 16, color: Colors.deepPurple),
+                child: Image.asset('assets/images/shuffle.png', width: 16, height: 16, color: Colors.deepPurple),
               ),
               const SizedBox(width: 12),
               Text('Shuffling ${songs.length} songs'),
@@ -931,7 +941,9 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                         ),
                       ],
                     ),
-                    child: artist['image']!.isEmpty ? const Icon(Icons.person, color: Colors.grey) : null,
+                    child: artist['image']!.isEmpty
+                        ? Image.asset('assets/images/artist_open.png', width: 24, height: 24, color: Colors.grey)
+                        : null,
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -993,7 +1005,9 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                         ),
                       ],
                     ),
-                    child: album['image']!.isEmpty ? const Icon(Icons.album, color: Colors.grey, size: 40) : null,
+                    child: album['image']!.isEmpty
+                        ? Image.asset('assets/images/album.png', width: 40, height: 40, color: Colors.grey)
+                        : null,
                   ),
                   const SizedBox(height: 8),
                   Flexible(

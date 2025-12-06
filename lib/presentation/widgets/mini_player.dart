@@ -56,7 +56,12 @@ class MiniPlayer extends StatelessWidget {
                               ? Image.file(File(song.localArtworkPath!), fit: BoxFit.cover)
                               : Container(
                                   color: Colors.grey.shade200,
-                                  child: Icon(Icons.music_note_rounded, color: Colors.grey.shade400),
+                                  child: Image.asset(
+                                    'assets/images/song.png',
+                                    width: 24,
+                                    height: 24,
+                                    color: Colors.grey.shade400,
+                                  ),
                                 ),
                         ),
                       ),

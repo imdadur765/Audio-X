@@ -9,6 +9,7 @@ import '../../services/lyrics_service.dart';
 import '../controllers/audio_controller.dart';
 import '../widgets/lyrics_view.dart';
 import 'equalizer_page.dart';
+import '../widgets/add_to_playlist_sheet.dart';
 
 class PlayerPage extends StatefulWidget {
   final Song song;
@@ -531,15 +532,40 @@ class _AlbumArtSection extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    IconButton(
-                      icon: Icon(
-                        currentSong.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                        color: currentSong.isFavorite ? Colors.red : Colors.grey.shade400,
-                        size: 28,
-                      ),
-                      onPressed: () {
+                    // Favorite Button
+                    GestureDetector(
+                      onTap: () {
                         Provider.of<AudioController>(context, listen: false).toggleFavorite(currentSong);
                       },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        child: Image.asset(
+                          'assets/images/favorite.png',
+                          width: 24,
+                          height: 24,
+                          color: currentSong.isFavorite ? Colors.pink : Colors.grey.shade400,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    // Add to Playlist Button
+                    GestureDetector(
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => AddToPlaylistSheet(song: currentSong),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        child: Image.asset(
+                          'assets/images/create.png',
+                          width: 24,
+                          height: 24,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -785,7 +811,7 @@ class _SimpleGradientBackground extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [accentColor.withOpacity(0.15), Colors.white, accentColor.withOpacity(0.08)],
+            colors: [accentColor.withOpacity(0.1), Colors.white, accentColor.withOpacity(0.05)],
           ),
         ),
       ),

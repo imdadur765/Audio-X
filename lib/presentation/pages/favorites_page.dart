@@ -6,6 +6,7 @@ import '../../data/models/song_model.dart';
 import '../controllers/audio_controller.dart';
 import '../widgets/hybrid_song_artwork.dart';
 import '../widgets/glass_button.dart';
+import '../widgets/more_options_button.dart';
 
 class FavoritesPage extends StatefulWidget {
   final List<Song> songs;
@@ -89,7 +90,12 @@ class _FavoritesPageState extends State<FavoritesPage> {
             Positioned(
               right: -50,
               top: -50,
-              child: Icon(Icons.favorite_rounded, size: 250, color: Colors.white.withOpacity(0.1)),
+              child: Image.asset(
+                'assets/images/favorite.png',
+                width: 250,
+                height: 250,
+                color: Colors.white.withOpacity(0.1),
+              ),
             ),
 
             // Content
@@ -238,7 +244,9 @@ class _FavoritesPageState extends State<FavoritesPage> {
                       color: Colors.deepPurple.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Center(child: Icon(Icons.equalizer_rounded, color: Colors.white)),
+                    child: Center(
+                      child: Image.asset('assets/images/equalizer.png', width: 24, height: 24, color: Colors.white),
+                    ),
                   ),
               ],
             ),
@@ -266,9 +274,12 @@ class _FavoritesPageState extends State<FavoritesPage> {
                 Text(_formatDuration(song.duration), style: TextStyle(color: Colors.grey.shade400, fontSize: 11)),
               ],
             ),
-            trailing: IconButton(
-              icon: const Icon(Icons.favorite_rounded, color: Colors.red),
-              onPressed: () => audioController.toggleFavorite(song),
+            trailing: MoreOptionsButton(
+              song: song,
+              trailing: IconButton(
+                icon: Image.asset('assets/images/favorite.png', width: 24, height: 24, color: Colors.red),
+                onPressed: () => audioController.toggleFavorite(song),
+              ),
             ),
           ),
         );

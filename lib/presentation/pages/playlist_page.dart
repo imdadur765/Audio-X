@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/playlist_model.dart';
 
+import 'package:go_router/go_router.dart';
 import '../../services/playlist_service.dart';
 import '../controllers/audio_controller.dart';
 import '../widgets/glass_button.dart';
@@ -40,6 +41,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    PlaylistService.playlistChangeNotifier.addListener(_loadPlaylists);
     _loadPlaylists();
   }
 
@@ -47,6 +49,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
   void dispose() {
     _searchController.dispose();
     _scrollController.dispose();
+    PlaylistService.playlistChangeNotifier.removeListener(_loadPlaylists);
     super.dispose();
   }
 
@@ -103,55 +106,87 @@ class _PlaylistPageState extends State<PlaylistPage> {
     return filtered;
   }
 
-  void _showCreatePlaylistDialog() {
+  void _showCreatePlaylistDialog(BuildContext context) {
     final nameController = TextEditingController();
-    String selectedEmoji = '🎵';
+    String selectedIcon = 'playlist_open.png'; // Default asset
 
-    final emojis = ['🎵', '🎸', '🎹', '🎤', '🎧', '🎼', '🎺', '🎷', '🥁', '🎻', '💜', '❤️', '🔥', '⚡', '🌟'];
+    final icons = [
+      'playlist_open.png',
+      'favorite.png',
+      'most_played.png',
+      'recently_played.png',
+      'recently_added.png',
+      'song.png',
+      'album.png',
+      'popularity.png',
+      'followers.png',
+      'share.png',
+      'info.png',
+      'lyrics.png',
+      'equalizer.png',
+      'upload_lrc.png',
+      'search.png',
+    ];
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            backgroundColor: Colors.grey[900],
-            title: const Text('Create Playlist', style: TextStyle(color: Colors.white)),
+            backgroundColor: Colors.white.withOpacity(0.95),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            title: const Text(
+              'Create Playlist',
+              style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextField(
                   controller: nameController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
+                  style: const TextStyle(color: Colors.black87),
+                  decoration: InputDecoration(
                     hintText: 'Playlist Name',
-                    hintStyle: TextStyle(color: Colors.white54),
-                    enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
-                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.deepPurpleAccent)),
+                    hintStyle: TextStyle(color: Colors.grey.shade400),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text('Choose Icon', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                const SizedBox(height: 8),
+                const SizedBox(height: 24),
+                const Text(
+                  'Choose Icon',
+                  style: TextStyle(color: Colors.black54, fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
                 SizedBox(
-                  height: 50,
+                  height: 180,
                   width: double.maxFinite,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: emojis.length,
+                  child: GridView.builder(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 5,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: icons.length,
                     itemBuilder: (context, index) {
-                      final emoji = emojis[index];
-                      final isSelected = selectedEmoji == emoji;
+                      final iconName = icons[index];
+                      final isSelected = selectedIcon == iconName;
                       return GestureDetector(
-                        onTap: () => setState(() => selectedEmoji = emoji),
+                        onTap: () => setState(() => selectedIcon = iconName),
                         child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: isSelected ? Colors.deepPurpleAccent.withOpacity(0.3) : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
-                            border: isSelected ? Border.all(color: Colors.deepPurpleAccent) : null,
+                            color: isSelected ? Colors.deepPurple.withOpacity(0.1) : Colors.grey.shade500,
+                            borderRadius: BorderRadius.circular(12),
+                            border: isSelected ? Border.all(color: Colors.deepPurple, width: 2) : null,
                           ),
-                          child: Text(emoji, style: const TextStyle(fontSize: 20)),
+                          child: Image.asset(
+                            'assets/images/$iconName',
+                            color: isSelected ? Colors.deepPurple : Colors.grey.shade600,
+                          ),
                         ),
                       );
                     },
@@ -162,17 +197,22 @@ class _PlaylistPageState extends State<PlaylistPage> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
               ),
-              TextButton(
+              ElevatedButton(
                 onPressed: () async {
                   if (nameController.text.isNotEmpty) {
-                    await _playlistService.createPlaylist(nameController.text, iconEmoji: selectedEmoji);
+                    await _playlistService.createPlaylist(nameController.text, iconEmoji: selectedIcon);
                     Navigator.pop(context);
-                    _loadPlaylists();
                   }
                 },
-                child: const Text('Create', style: TextStyle(color: Colors.deepPurpleAccent)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: const Text('Create'),
               ),
             ],
           );
@@ -205,7 +245,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showCreatePlaylistDialog,
+        onPressed: () => _showCreatePlaylistDialog(context),
         backgroundColor: Colors.deepPurple,
         icon: Image.asset('assets/images/create.png', width: 24, height: 24, color: Colors.white),
         label: const Text(
@@ -320,10 +360,18 @@ class _PlaylistPageState extends State<PlaylistPage> {
                       decoration: InputDecoration(
                         hintText: 'Search playlists...',
                         hintStyle: const TextStyle(color: Colors.white60),
-                        prefixIcon: const Icon(Icons.search_rounded, color: Colors.white70, size: 20),
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Image.asset('assets/images/search.png', color: Colors.white70, width: 20, height: 20),
+                        ),
                         suffixIcon: _searchController.text.isNotEmpty
                             ? IconButton(
-                                icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                                icon: Image.asset(
+                                  'assets/images/home_close.png',
+                                  color: Colors.white70,
+                                  width: 20,
+                                  height: 20,
+                                ),
                                 onPressed: () => setState(() => _searchController.clear()),
                               )
                             : null,
@@ -381,26 +429,25 @@ class _PlaylistPageState extends State<PlaylistPage> {
     return GestureDetector(
       onTap: () {
         if (playlist.id == 'auto_recently_added') {
-          Navigator.of(context).push(MaterialPageRoute(builder: (context) => RecentlyAddedPage(songs: songs)));
+          context.pushNamed('recently_added', extra: songs);
         } else if (playlist.id == 'auto_most_played') {
-          Navigator.of(context).push(MaterialPageRoute(builder: (context) => MostPlayedPage(songs: songs)));
+          context.pushNamed('most_played', extra: songs);
         } else if (playlist.id == 'auto_favorites') {
-          Navigator.of(context).push(MaterialPageRoute(builder: (context) => FavoritesPage(songs: songs)));
+          context.pushNamed('favorites', extra: songs);
         } else if (playlist.id == 'auto_all_songs') {
-          Navigator.of(context).push(MaterialPageRoute(builder: (context) => AllSongsPage(songs: songs)));
+          context.pushNamed('all_songs', extra: songs);
         } else if (playlist.id == 'auto_recent') {
-          Navigator.of(context).push(MaterialPageRoute(builder: (context) => RecentlyPlayedPage(songs: songs)));
+          context.pushNamed('recently_played', extra: songs);
         } else {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => PlaylistDetailsPage(
-                playlistId: playlist.id,
-                title: playlist.name,
-                songs: songs,
-                gradientColors: gradientColors,
-                isAuto: playlist.isAuto,
-              ),
-            ),
+          context.pushNamed(
+            'playlist_details',
+            pathParameters: {'id': playlist.id},
+            extra: {
+              'title': playlist.name,
+              'songs': songs,
+              'gradientColors': gradientColors,
+              'isAuto': playlist.isAuto,
+            },
           );
         }
       },
@@ -493,26 +540,25 @@ class _PlaylistPageState extends State<PlaylistPage> {
         trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
         onTap: () {
           if (playlist.id == 'auto_recently_added') {
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => RecentlyAddedPage(songs: songs)));
+            context.pushNamed('recently_added', extra: songs);
           } else if (playlist.id == 'auto_most_played') {
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => MostPlayedPage(songs: songs)));
+            context.pushNamed('most_played', extra: songs);
           } else if (playlist.id == 'auto_favorites') {
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => FavoritesPage(songs: songs)));
+            context.pushNamed('favorites', extra: songs);
           } else if (playlist.id == 'auto_all_songs') {
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => AllSongsPage(songs: songs)));
+            context.pushNamed('all_songs', extra: songs);
           } else if (playlist.id == 'auto_recent') {
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => RecentlyPlayedPage(songs: songs)));
+            context.pushNamed('recently_played', extra: songs);
           } else {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => PlaylistDetailsPage(
-                  playlistId: playlist.id,
-                  title: playlist.name,
-                  songs: songs,
-                  gradientColors: gradientColors,
-                  isAuto: playlist.isAuto,
-                ),
-              ),
+            context.pushNamed(
+              'playlist_details',
+              pathParameters: {'id': playlist.id},
+              extra: {
+                'title': playlist.name,
+                'songs': songs,
+                'gradientColors': gradientColors,
+                'isAuto': playlist.isAuto,
+              },
             );
           }
         },
@@ -531,6 +577,10 @@ class _PlaylistPageState extends State<PlaylistPage> {
 
       return Image.asset('assets/images/$assetName', width: size, height: size, color: Colors.white);
     }
+    // Check if it's an asset path (ends with .png)
+    if (playlist.iconEmoji.endsWith('.png')) {
+      return Image.asset('assets/images/${playlist.iconEmoji}', width: size, height: size, color: Colors.white);
+    }
     return Text(playlist.iconEmoji, style: TextStyle(fontSize: size));
   }
 
@@ -543,7 +593,12 @@ class _PlaylistPageState extends State<PlaylistPage> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(color: Colors.deepPurple.shade50, shape: BoxShape.circle),
-            child: Icon(Icons.queue_music_rounded, size: 50, color: Colors.deepPurple.shade300),
+            child: Image.asset(
+              'assets/images/playlist_open.png',
+              width: 50,
+              height: 50,
+              color: Colors.deepPurple.shade300,
+            ),
           ),
           const SizedBox(height: 20),
           const Text(

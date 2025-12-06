@@ -254,7 +254,10 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                       decoration: InputDecoration(
                         hintText: 'Search artists...',
                         hintStyle: const TextStyle(color: Colors.white60),
-                        prefixIcon: const Icon(Icons.search_rounded, color: Colors.white70, size: 20),
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Image.asset('assets/images/search.png', width: 20, height: 20, color: Colors.white70),
+                        ),
                         suffixIcon: _searchController.text.isNotEmpty
                             ? IconButton(
                                 icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
@@ -554,7 +557,7 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
         ),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Icon(Icons.person_rounded, color: Colors.white54, size: 28),
+      child: Image.asset('assets/images/artist_open.png', width: 28, height: 28, color: Colors.white54),
     );
   }
 
@@ -577,7 +580,7 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
           colors: [Colors.deepPurple.shade300, Colors.pink.shade400],
         ),
       ),
-      child: const Center(child: Icon(Icons.person_rounded, color: Colors.white54, size: 40)),
+      child: Center(child: Image.asset('assets/images/artist_open.png', width: 40, height: 40, color: Colors.white54)),
     );
   }
 }

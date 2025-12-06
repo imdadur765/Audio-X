@@ -12,6 +12,12 @@ import '../presentation/pages/artist_details_page.dart';
 import '../presentation/pages/album_details_page.dart';
 import '../presentation/pages/album_info_page.dart';
 import '../presentation/pages/search_page.dart';
+import '../presentation/pages/recently_added_page.dart';
+import '../presentation/pages/most_played_page.dart';
+import '../presentation/pages/favorites_page.dart';
+import '../presentation/pages/all_songs_page.dart';
+import '../presentation/pages/recently_played_page.dart';
+import '../presentation/pages/playlist_details_page.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/home',
@@ -41,6 +47,110 @@ final GoRouter appRouter = GoRouter(
           path: '/playlists',
           name: 'playlists',
           pageBuilder: (context, state) => const NoTransitionPage(child: PlaylistPage()),
+          routes: [
+            GoRoute(
+              path: 'recently_added',
+              name: 'recently_added',
+              pageBuilder: (context, state) {
+                final songs = state.extra as List<Song>;
+                return CustomTransitionPage(
+                  child: RecentlyAddedPage(songs: songs),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    return SlideTransition(
+                      position: Tween(begin: const Offset(1.0, 0.0), end: Offset.zero).animate(animation),
+                      child: child,
+                    );
+                  },
+                );
+              },
+            ),
+            GoRoute(
+              path: 'most_played',
+              name: 'most_played',
+              pageBuilder: (context, state) {
+                final songs = state.extra as List<Song>;
+                return CustomTransitionPage(
+                  child: MostPlayedPage(songs: songs),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    return SlideTransition(
+                      position: Tween(begin: const Offset(1.0, 0.0), end: Offset.zero).animate(animation),
+                      child: child,
+                    );
+                  },
+                );
+              },
+            ),
+            GoRoute(
+              path: 'favorites',
+              name: 'favorites',
+              pageBuilder: (context, state) {
+                final songs = state.extra as List<Song>;
+                return CustomTransitionPage(
+                  child: FavoritesPage(songs: songs),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    return SlideTransition(
+                      position: Tween(begin: const Offset(1.0, 0.0), end: Offset.zero).animate(animation),
+                      child: child,
+                    );
+                  },
+                );
+              },
+            ),
+            GoRoute(
+              path: 'all_songs',
+              name: 'all_songs',
+              pageBuilder: (context, state) {
+                final songs = state.extra as List<Song>;
+                return CustomTransitionPage(
+                  child: AllSongsPage(songs: songs),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    return SlideTransition(
+                      position: Tween(begin: const Offset(1.0, 0.0), end: Offset.zero).animate(animation),
+                      child: child,
+                    );
+                  },
+                );
+              },
+            ),
+            GoRoute(
+              path: 'recently_played',
+              name: 'recently_played',
+              pageBuilder: (context, state) {
+                final songs = state.extra as List<Song>;
+                return CustomTransitionPage(
+                  child: RecentlyPlayedPage(songs: songs),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    return SlideTransition(
+                      position: Tween(begin: const Offset(1.0, 0.0), end: Offset.zero).animate(animation),
+                      child: child,
+                    );
+                  },
+                );
+              },
+            ),
+            GoRoute(
+              path: 'details/:id',
+              name: 'playlist_details',
+              pageBuilder: (context, state) {
+                final extra = state.extra as Map<String, dynamic>;
+                return CustomTransitionPage(
+                  child: PlaylistDetailsPage(
+                    playlistId: state.pathParameters['id']!,
+                    title: extra['title'],
+                    songs: extra['songs'],
+                    gradientColors: extra['gradientColors'],
+                    isAuto: extra['isAuto'],
+                  ),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    return SlideTransition(
+                      position: Tween(begin: const Offset(1.0, 0.0), end: Offset.zero).animate(animation),
+                      child: child,
+                    );
+                  },
+                );
+              },
+            ),
+          ],
         ),
       ],
     ),

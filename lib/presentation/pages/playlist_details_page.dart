@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../data/models/song_model.dart';
 import '../../services/playlist_service.dart';
 import '../controllers/audio_controller.dart';
+import '../widgets/more_options_button.dart';
 
 class PlaylistDetailsPage extends StatefulWidget {
   final String playlistId;
@@ -132,7 +133,7 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
                               : () {
                                   audioController.playSongList(_songs, 0);
                                 },
-                          icon: const Icon(Icons.play_arrow, color: Colors.white),
+                          icon: Image.asset('assets/images/play.png', width: 24, height: 24, color: Colors.white),
                           label: const Text(
                             'Play All',
                             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
@@ -297,7 +298,7 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(colors: [widget.gradientColors.first, widget.gradientColors.last]),
                   ),
-                  child: const Icon(Icons.music_note, color: Colors.white),
+                  child: Image.asset('assets/images/song.png', width: 24, height: 24, color: Colors.white),
                 ),
         ),
         title: Text(
@@ -310,12 +311,15 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(song.artist, maxLines: 1, overflow: TextOverflow.ellipsis),
-        trailing: !widget.isAuto
-            ? IconButton(
-                icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-                onPressed: () => _removeSongFromPlaylist(song),
-              )
-            : null,
+        trailing: MoreOptionsButton(
+          song: song,
+          trailing: !widget.isAuto
+              ? IconButton(
+                  icon: Image.asset('assets/images/delete.png', width: 24, height: 24, color: Colors.red),
+                  onPressed: () => _removeSongFromPlaylist(song),
+                )
+              : null,
+        ),
       ),
     );
   }
@@ -325,7 +329,7 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.music_note_outlined, size: 64, color: Colors.grey.shade400),
+          Image.asset('assets/images/playlist_open.png', width: 64, height: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text('No songs in this playlist', style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
         ],

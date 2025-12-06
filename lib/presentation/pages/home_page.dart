@@ -141,7 +141,12 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
           child: IconButton(
-            icon: Icon(Icons.search_rounded, color: opacity > 0.5 ? Colors.deepPurple : Colors.white),
+            icon: Image.asset(
+              'assets/images/search.png',
+              width: 24,
+              height: 24,
+              color: opacity > 0.5 ? Colors.deepPurple : Colors.white,
+            ),
             onPressed: () {},
           ),
         ),
@@ -175,10 +180,10 @@ class _HomePageState extends State<HomePage> {
                     backgroundImage: NetworkImage(_authService.userPhotoUrl!),
                     backgroundColor: Colors.grey[200],
                   )
-                : const CircleAvatar(
+                : CircleAvatar(
                     radius: 16,
                     backgroundColor: Colors.white,
-                    child: Icon(Icons.person, color: Colors.deepPurple, size: 20),
+                    child: Image.asset('assets/images/profile.png', width: 20, height: 20, color: Colors.deepPurple),
                   ),
           ),
         ),
@@ -316,7 +321,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.volume_up_rounded, color: Colors.white, size: 14), // Reduced icon
+                      child: Image.asset('assets/images/equalizer.png', width: 14, height: 14, color: Colors.white),
                     ),
                   ),
               ],
@@ -506,7 +511,7 @@ class _HomePageState extends State<HomePage> {
                   _buildPlaylistCard(
                     'Most Played',
                     '${homeController.mostPlayed.length} songs',
-                    Icons.trending_up_rounded,
+                    'most_played.png',
                     [Colors.orange.shade400, Colors.deepOrange.shade600],
                     () {
                       Navigator.of(context).push(
@@ -523,7 +528,7 @@ class _HomePageState extends State<HomePage> {
                   _buildPlaylistCard(
                     'Recently Added',
                     '${homeController.recentlyAdded.length} songs',
-                    Icons.new_releases_rounded,
+                    'recently_added.png',
                     [Colors.blue.shade400, Colors.indigo.shade600],
                     () {
                       Navigator.of(context).push(
@@ -549,7 +554,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildPlaylistCard(
     String title,
     String subtitle,
-    IconData icon,
+    String iconAsset,
     List<Color> gradientColors,
     VoidCallback onTap,
   ) {
@@ -578,7 +583,7 @@ class _HomePageState extends State<HomePage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
-                child: Icon(icon, color: Colors.white, size: 24),
+                child: Image.asset('assets/images/$iconAsset', color: Colors.white, width: 24, height: 24),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -685,7 +690,7 @@ class _HomePageState extends State<HomePage> {
                     child: Container(
                       padding: const EdgeInsets.all(3), // Reduced padding
                       decoration: BoxDecoration(color: Colors.deepPurple, shape: BoxShape.circle),
-                      child: const Icon(Icons.volume_up_rounded, color: Colors.white, size: 12), // Reduced icon
+                      child: Image.asset('assets/images/equalizer.png', width: 12, height: 12, color: Colors.white),
                     ),
                   ),
               ],
@@ -727,7 +732,12 @@ class _HomePageState extends State<HomePage> {
               width: 120, // Reduced size
               height: 120,
               decoration: BoxDecoration(color: Colors.deepPurple.shade50, shape: BoxShape.circle),
-              child: Icon(Icons.library_music_outlined, size: 50, color: Colors.deepPurple.shade300), // Reduced icon
+              child: Image.asset(
+                'assets/images/album_list_open.png',
+                width: 50,
+                height: 50,
+                color: Colors.deepPurple.shade300,
+              ),
             ),
             const SizedBox(height: 20), // Reduced spacing
             const Text(

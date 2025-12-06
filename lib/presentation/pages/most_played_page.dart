@@ -1,4 +1,3 @@
-
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +6,7 @@ import '../../data/models/song_model.dart';
 import '../controllers/audio_controller.dart';
 import '../widgets/hybrid_song_artwork.dart';
 import '../widgets/glass_button.dart';
+import '../widgets/more_options_button.dart';
 
 class MostPlayedPage extends StatefulWidget {
   final List<Song> songs;
@@ -90,7 +90,12 @@ class _MostPlayedPageState extends State<MostPlayedPage> {
             Positioned(
               right: -50,
               top: -50,
-              child: Icon(Icons.local_fire_department_rounded, size: 250, color: Colors.white.withOpacity(0.1)),
+              child: Image.asset(
+                'assets/images/most_played.png',
+                width: 250,
+                height: 250,
+                color: Colors.white.withOpacity(0.1),
+              ),
             ),
 
             // Content
@@ -239,7 +244,9 @@ class _MostPlayedPageState extends State<MostPlayedPage> {
                       color: Colors.deepOrange.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Center(child: Icon(Icons.equalizer_rounded, color: Colors.white)),
+                    child: Center(
+                      child: Image.asset('assets/images/equalizer.png', width: 24, height: 24, color: Colors.white),
+                    ),
                   ),
                 // Rank Badge
                 if (index < 3)
@@ -287,7 +294,7 @@ class _MostPlayedPageState extends State<MostPlayedPage> {
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    Icon(Icons.play_arrow_rounded, size: 14, color: Colors.deepOrange.shade300),
+                    Image.asset('assets/images/play.png', width: 14, height: 14, color: Colors.deepOrange.shade300),
                     const SizedBox(width: 2),
                     Text(
                       '${song.playCount} plays',
@@ -297,12 +304,17 @@ class _MostPlayedPageState extends State<MostPlayedPage> {
                 ),
               ],
             ),
-            trailing: IconButton(
-              icon: Icon(
-                song.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                color: song.isFavorite ? Colors.red : Colors.grey.shade400,
+            trailing: MoreOptionsButton(
+              song: song,
+              trailing: IconButton(
+                icon: Image.asset(
+                  'assets/images/favorite.png',
+                  width: 24,
+                  height: 24,
+                  color: song.isFavorite ? Colors.red : Colors.grey.shade400,
+                ),
+                onPressed: () => audioController.toggleFavorite(song),
               ),
-              onPressed: () => audioController.toggleFavorite(song),
             ),
           ),
         );

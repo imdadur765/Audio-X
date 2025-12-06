@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../data/models/playlist_model.dart';
@@ -9,6 +10,9 @@ class PlaylistService {
   static const String _playHistoryKey = 'play_history';
 
   final Uuid _uuid = const Uuid();
+
+  // Notifier for playlist changes to update UI across the app
+  static final ValueNotifier<bool> playlistChangeNotifier = ValueNotifier(false);
 
   // Get all custom playlists
   Future<List<Playlist>> getCustomPlaylists() async {
@@ -50,6 +54,7 @@ class PlaylistService {
 
     playlists.add(newPlaylist);
     await _saveCustomPlaylists(playlists);
+    playlistChangeNotifier.value = !playlistChangeNotifier.value;
 
     return newPlaylist;
   }
@@ -64,6 +69,7 @@ class PlaylistService {
         final updatedSongIds = List<String>.from(playlists[index].songIds)..add(songId);
         playlists[index] = playlists[index].copyWith(songIds: updatedSongIds);
         await _saveCustomPlaylists(playlists);
+        playlistChangeNotifier.value = !playlistChangeNotifier.value;
       }
     }
   }
@@ -77,6 +83,7 @@ class PlaylistService {
       final updatedSongIds = List<String>.from(playlists[index].songIds)..remove(songId);
       playlists[index] = playlists[index].copyWith(songIds: updatedSongIds);
       await _saveCustomPlaylists(playlists);
+      playlistChangeNotifier.value = !playlistChangeNotifier.value;
     }
   }
 
@@ -85,6 +92,7 @@ class PlaylistService {
     final playlists = await getCustomPlaylists();
     playlists.removeWhere((p) => p.id == playlistId);
     await _saveCustomPlaylists(playlists);
+    playlistChangeNotifier.value = !playlistChangeNotifier.value;
   }
 
   // Rename playlist
@@ -95,6 +103,7 @@ class PlaylistService {
     if (index != -1) {
       playlists[index] = playlists[index].copyWith(name: newName);
       await _saveCustomPlaylists(playlists);
+      playlistChangeNotifier.value = !playlistChangeNotifier.value;
     }
   }
 

@@ -138,7 +138,12 @@ class _AlbumsPageState extends State<AlbumsPage> {
                           width: 120,
                           height: 120,
                           decoration: BoxDecoration(color: Colors.deepPurple.shade50, shape: BoxShape.circle),
-                          child: Icon(Icons.album_outlined, size: 50, color: Colors.deepPurple.shade300),
+                          child: Image.asset(
+                            'assets/images/album.png',
+                            width: 50,
+                            height: 50,
+                            color: Colors.deepPurple.shade300,
+                          ),
                         ),
                         const SizedBox(height: 20),
                         const Text(
@@ -291,7 +296,10 @@ class _AlbumsPageState extends State<AlbumsPage> {
                       decoration: InputDecoration(
                         hintText: 'Search albums...',
                         hintStyle: const TextStyle(color: Colors.white60),
-                        prefixIcon: const Icon(Icons.search_rounded, color: Colors.white70, size: 20),
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Image.asset('assets/images/search.png', width: 20, height: 20, color: Colors.white70),
+                        ),
                         suffixIcon: _searchQuery.isNotEmpty
                             ? IconButton(
                                 icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
@@ -407,7 +415,14 @@ class _AlbumsPageState extends State<AlbumsPage> {
           colors: [Colors.deepPurple.shade300, Colors.purple.shade400],
         ),
       ),
-      child: Center(child: Icon(Icons.album_rounded, size: 48, color: Colors.white.withValues(alpha: 0.7))),
+      child: Center(
+        child: Image.asset(
+          'assets/images/album.png',
+          width: 48,
+          height: 48,
+          color: Colors.white.withValues(alpha: 0.7),
+        ),
+      ),
     );
   }
 
@@ -527,7 +542,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
         ),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Icon(Icons.album_rounded, color: Colors.white54, size: 28),
+      child: Image.asset('assets/images/album.png', width: 28, height: 28, color: Colors.white54),
     );
   }
 
@@ -539,104 +554,77 @@ class _AlbumsPageState extends State<AlbumsPage> {
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          return Shimmer.fromColors(
-            baseColor: Colors.grey.shade300,
-            highlightColor: Colors.grey.shade100,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  height: 160,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  height: 16,
-                  width: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  height: 12,
-                  width: 80,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-        childCount: 6,
-      ),
+      delegate: SliverChildBuilderDelegate((context, index) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: 160,
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                height: 16,
+                width: 120,
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                height: 12,
+                width: 80,
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+              ),
+            ],
+          ),
+        );
+      }, childCount: 6),
     );
   }
 
   Widget _buildListShimmer() {
     return SliverList(
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          return Shimmer.fromColors(
-            baseColor: Colors.grey.shade300,
-            highlightColor: Colors.grey.shade100,
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+      delegate: SliverChildBuilderDelegate((context, index) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        height: 16,
+                        width: 150,
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        height: 12,
+                        width: 100,
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          height: 16,
-                          width: 150,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Container(
-                          height: 12,
-                          width: 100,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          );
-        },
-        childCount: 10,
-      ),
+          ),
+        );
+      }, childCount: 10),
     );
   }
 }

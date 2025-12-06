@@ -6,6 +6,7 @@ import '../../data/models/song_model.dart';
 import '../controllers/audio_controller.dart';
 import '../widgets/hybrid_song_artwork.dart';
 import '../widgets/glass_button.dart';
+import '../widgets/more_options_button.dart';
 
 class RecentlyPlayedPage extends StatefulWidget {
   final List<Song> songs;
@@ -89,7 +90,12 @@ class _RecentlyPlayedPageState extends State<RecentlyPlayedPage> {
             Positioned(
               right: -50,
               top: -50,
-              child: Icon(Icons.history_rounded, size: 250, color: Colors.white.withOpacity(0.1)),
+              child: Image.asset(
+                'assets/images/recently_played.png',
+                width: 250,
+                height: 250,
+                color: Colors.white.withOpacity(0.1),
+              ),
             ),
 
             // Content
@@ -107,7 +113,12 @@ class _RecentlyPlayedPageState extends State<RecentlyPlayedPage> {
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Image.asset('assets/images/recently_played.png', width: 32, height: 32, color: Colors.white),
+                      child: Image.asset(
+                        'assets/images/recently_played.png',
+                        width: 32,
+                        height: 32,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     const Text(
@@ -238,7 +249,9 @@ class _RecentlyPlayedPageState extends State<RecentlyPlayedPage> {
                       color: Colors.blueGrey.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Center(child: Icon(Icons.equalizer_rounded, color: Colors.white)),
+                    child: Center(
+                      child: Image.asset('assets/images/equalizer.png', width: 24, height: 24, color: Colors.white),
+                    ),
                   ),
               ],
             ),
@@ -266,12 +279,17 @@ class _RecentlyPlayedPageState extends State<RecentlyPlayedPage> {
                 Text(_formatDuration(song.duration), style: TextStyle(color: Colors.grey.shade400, fontSize: 11)),
               ],
             ),
-            trailing: IconButton(
-              icon: Icon(
-                song.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                color: song.isFavorite ? Colors.red : Colors.grey.shade400,
+            trailing: MoreOptionsButton(
+              song: song,
+              trailing: IconButton(
+                icon: Image.asset(
+                  'assets/images/favorite.png',
+                  width: 24,
+                  height: 24,
+                  color: song.isFavorite ? Colors.red : Colors.grey.shade400,
+                ),
+                onPressed: () => audioController.toggleFavorite(song),
               ),
-              onPressed: () => audioController.toggleFavorite(song),
             ),
           ),
         );

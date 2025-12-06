@@ -243,7 +243,7 @@ class _AlbumInfoPageState extends State<AlbumInfoPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline_rounded, size: 60, color: Colors.deepPurple.shade200),
+          Image.asset('assets/images/info.png', width: 60, height: 60, color: Colors.deepPurple.shade200),
           const SizedBox(height: 16),
           Text(
             'Could not load album info',

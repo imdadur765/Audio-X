@@ -199,7 +199,14 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                     colors: [Colors.deepPurple.shade300, Colors.purple.shade400],
                   ),
                 ),
-                child: Center(child: Icon(Icons.album_rounded, size: 100, color: Colors.white.withOpacity(0.8))),
+                child: Center(
+                  child: Image.asset(
+                    'assets/images/album.png',
+                    width: 100,
+                    height: 100,
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                ),
               ),
         ),
       ),
@@ -246,9 +253,9 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildInfoChip(icon: Icons.music_note_rounded, text: '${widget.songs.length} songs'),
+              _buildInfoChip(icon: 'assets/images/song.png', text: '${widget.songs.length} songs'),
               const SizedBox(width: 12),
-              _buildInfoChip(icon: Icons.access_time_rounded, text: _formatTotalDuration(_totalDuration)),
+              _buildInfoChip(icon: 'assets/images/duration.png', text: _formatTotalDuration(_totalDuration)),
             ],
           ),
         ],
@@ -256,7 +263,7 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
     );
   }
 
-  Widget _buildInfoChip({required IconData icon, required String text}) {
+  Widget _buildInfoChip({required String icon, required String text}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -267,7 +274,7 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: Colors.deepPurple),
+          Image.asset(icon, width: 16, height: 16, color: Colors.deepPurple),
           const SizedBox(width: 6),
           Text(
             text,
@@ -408,8 +415,13 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                                     color: Colors.deepPurple.withOpacity(0.8),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Center(
-                                    child: Icon(Icons.equalizer_rounded, color: Colors.white, size: 20),
+                                  child: Center(
+                                    child: Image.asset(
+                                      'assets/images/equalizer.png',
+                                      width: 20,
+                                      height: 20,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 )
                               else if (isCurrentlyPlaying)
@@ -420,7 +432,14 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                                     color: Colors.deepPurple.withOpacity(0.7),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Center(child: Icon(Icons.pause_rounded, color: Colors.white, size: 24)),
+                                  child: Center(
+                                    child: Image.asset(
+                                      'assets/images/pause.png',
+                                      width: 24,
+                                      height: 24,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                                 )
                               else
                                 Positioned(
@@ -584,7 +603,7 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                                 colors: [Colors.deepPurple.shade300, Colors.purple.shade400],
                               ),
                             ),
-                            child: const Icon(Icons.album_rounded, color: Colors.white54, size: 28),
+                            child: Image.asset('assets/images/album.png', width: 28, height: 28, color: Colors.white54),
                           ),
                     ),
                   ),

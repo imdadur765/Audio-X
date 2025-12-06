@@ -274,7 +274,7 @@ class MainActivity : FlutterActivity() {
             android.provider.MediaStore.Audio.Media.DATE_ADDED
         )
 
-        val selection = "${android.provider.MediaStore.Audio.Media.IS_MUSIC} != 0"
+        val selection = "${android.provider.MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${android.provider.MediaStore.Audio.Media.DURATION} >= 30000"
         val sortOrder = "${android.provider.MediaStore.Audio.Media.TITLE} ASC"
 
         contentResolver.query(

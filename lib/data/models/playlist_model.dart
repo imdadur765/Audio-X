@@ -17,9 +17,13 @@ class Playlist {
     this.iconEmoji = '🎵',
   });
 
-  // Get actual songs from song IDs
+  // Get actual songs from song IDs, preserving order
   List<Song> getSongs(List<Song> allSongs) {
-    return allSongs.where((song) => songIds.contains(song.id)).toList();
+    final songMap = {for (var s in allSongs) s.id: s};
+    return songIds
+        .map((id) => songMap[id])
+        .whereType<Song>() // Filter out nulls if song not found
+        .toList();
   }
 
   // Get total duration of all songs in playlist

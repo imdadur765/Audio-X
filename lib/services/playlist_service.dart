@@ -152,8 +152,11 @@ class PlaylistService {
 
   // Get Most Played playlist
   Playlist getMostPlayedPlaylist(List<Song> allSongs) {
+    // Filter songs that have been played at least once
+    final playedSongs = allSongs.where((s) => s.playCount > 0).toList();
+
     // Sort songs by play count and take top 25
-    final sortedSongs = List<Song>.from(allSongs)..sort((a, b) => b.playCount.compareTo(a.playCount));
+    final sortedSongs = playedSongs..sort((a, b) => b.playCount.compareTo(a.playCount));
 
     final topSongs = sortedSongs.take(25).toList();
 
@@ -181,8 +184,9 @@ class PlaylistService {
 
   // Get Recently Added playlist
   Playlist getRecentlyAddedPlaylist(List<Song> allSongs) {
-    // Sort songs by dateAdded (descending) and take top 50
-    final sortedSongs = List<Song>.from(allSongs)..sort((a, b) => b.dateAdded.compareTo(a.dateAdded));
+    // Filter out short songs (double check) and sort by dateAdded (descending)
+    final validSongs = allSongs.where((s) => s.duration >= 30000).toList();
+    final sortedSongs = List<Song>.from(validSongs)..sort((a, b) => b.dateAdded.compareTo(a.dateAdded));
 
     final topSongs = sortedSongs.take(50).toList();
 

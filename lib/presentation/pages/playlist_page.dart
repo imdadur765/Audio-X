@@ -524,7 +524,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
     if (playlist.isAuto) {
       String assetName = 'playlist_open.png'; // Default
       if (playlist.id == 'auto_favorites') assetName = 'favorite.png';
-      if (playlist.id == 'auto_recent') assetName = 'recently_played.png'; // Recently Played
+      if (playlist.id == 'auto_recent') assetName = 'recently_played.png';
       if (playlist.id == 'auto_recently_added') assetName = 'duration.png';
       if (playlist.id == 'auto_most_played') assetName = 'most_played.png';
       if (playlist.id == 'auto_all_songs') assetName = 'song.png';

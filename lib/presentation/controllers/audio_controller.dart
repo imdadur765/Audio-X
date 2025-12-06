@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   final AudioHandler _audioHandler = AudioHandler();
   List<Song> _songs = [];
+  List<Song> _queue = []; // Current playing queue
   bool _isPlaying = false;
   Song? _currentSong;
   Timer? _progressTimer;
@@ -26,6 +27,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   bool _hasCountedPlay = false; // Track if current song play has been counted
 
   List<Song> get songs => _songs;
+  List<Song> get queue => _queue;
   bool get isPlaying => _isPlaying;
   Song? get currentSong => _currentSong;
   Duration get position => _position;
@@ -104,8 +106,8 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
 
       // Check for auto-song change
       final currentIndex = await _audioHandler.getCurrentMediaItemIndex();
-      if (currentIndex != -1 && currentIndex < _songs.length) {
-        final playingSong = _songs[currentIndex];
+      if (currentIndex != -1 && currentIndex < _queue.length) {
+        final playingSong = _queue[currentIndex];
         if (_currentSong?.id != playingSong.id) {
           _currentSong = playingSong;
           _hasCountedPlay = false;
@@ -188,6 +190,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       }
 
       _songs = box.values.toList();
+      _queue = List.from(_songs); // Default queue is all songs
       notifyListeners();
 
       // Restore session only if requested
@@ -242,6 +245,9 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     if (lastSongId != null && _songs.isNotEmpty) {
       final song = _songs.firstWhere((s) => s.id == lastSongId, orElse: () => _songs.first);
 
+      // On restore, we default the queue to all songs unless we persist the queue (future improvement)
+      _queue = List.from(_songs);
+
       _currentSong = song;
       _duration = Duration(milliseconds: song.duration);
       _position = Duration(milliseconds: lastPosition);
@@ -250,7 +256,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       final index = _songs.indexOf(song);
       if (index != -1) {
         // Set playlist WITHOUT auto-playing
-        final songMaps = _songs
+        final songMaps = _queue
             .map(
               (s) => {
                 'id': s.id,
@@ -403,7 +409,10 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> playSong(Song song) async {
     final index = _songs.indexOf(song);
     if (index != -1) {
-      final songMaps = _songs
+      // playing from main list updates queue to main list
+      _queue = List.from(_songs);
+
+      final songMaps = _queue
           .map(
             (s) => {
               'id': s.id,
@@ -429,7 +438,10 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> playSongList(List<Song> songs, int initialIndex, {bool shuffle = false}) async {
     if (songs.isEmpty) return;
 
-    final songMaps = songs
+    // Update queue to the custom list
+    _queue = List.from(songs);
+
+    final songMaps = _queue
         .map(
           (s) => {
             'id': s.id,
@@ -489,8 +501,8 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     // Get the actual current media item index from the player
     final currentIndex = await _audioHandler.getCurrentMediaItemIndex();
 
-    if (currentIndex >= 0 && currentIndex < _songs.length) {
-      _currentSong = _songs[currentIndex];
+    if (currentIndex >= 0 && currentIndex < _queue.length) {
+      _currentSong = _queue[currentIndex];
       _hasCountedPlay = false; // Reset for new song
       _duration = Duration(milliseconds: _currentSong!.duration);
       _position = Duration.zero;
@@ -509,8 +521,8 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     // Get the actual current media item index from the player
     final currentIndex = await _audioHandler.getCurrentMediaItemIndex();
 
-    if (currentIndex >= 0 && currentIndex < _songs.length) {
-      _currentSong = _songs[currentIndex];
+    if (currentIndex >= 0 && currentIndex < _queue.length) {
+      _currentSong = _queue[currentIndex];
       _hasCountedPlay = false; // Reset for new song
       _duration = Duration(milliseconds: _currentSong!.duration);
       _position = Duration.zero;

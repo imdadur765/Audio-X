@@ -7,7 +7,10 @@ import 'package:share_plus/share_plus.dart';
 import '../../data/models/song_model.dart';
 import '../controllers/audio_controller.dart';
 import '../widgets/hybrid_song_artwork.dart';
+import '../widgets/add_to_playlist_sheet.dart';
 import '../widgets/glass_button.dart';
+
+// ... (inside class)
 
 class AlbumDetailsPage extends StatefulWidget {
   final String albumName;
@@ -285,6 +288,14 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
     );
   }
 
+  void _addToPlaylist() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AddToPlaylistSheet(songs: widget.songs),
+    );
+  }
+
   Widget _buildActionButtons() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -299,12 +310,21 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
               isPrimary: true,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: _buildGlassButton(
               text: 'Shuffle',
               iconPath: 'assets/images/shuffle.png',
               onTap: _shuffleAll,
+              isPrimary: false,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildGlassButton(
+              text: 'Add',
+              iconPath: 'assets/images/playlist_open.png',
+              onTap: _addToPlaylist,
               isPrimary: false,
             ),
           ),
@@ -643,14 +663,7 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
               title: 'Add to Playlist',
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Playlist feature coming soon!'),
-                    backgroundColor: Colors.deepPurple,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                );
+                _addToPlaylist();
               },
             ),
             _buildOptionTile(

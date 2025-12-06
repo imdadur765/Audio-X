@@ -543,7 +543,7 @@ class _AlbumArtSection extends StatelessWidget {
                           'assets/images/favorite.png',
                           width: 24,
                           height: 24,
-                          color: currentSong.isFavorite ? Colors.pink : Colors.grey.shade400,
+                          color: currentSong.isFavorite ? Colors.pink : const Color.fromARGB(255, 0, 0, 0),
                         ),
                       ),
                     ),
@@ -554,7 +554,7 @@ class _AlbumArtSection extends StatelessWidget {
                         showModalBottomSheet(
                           context: context,
                           backgroundColor: Colors.transparent,
-                          builder: (context) => AddToPlaylistSheet(song: currentSong),
+                          builder: (context) => AddToPlaylistSheet(songs: [currentSong]),
                         );
                       },
                       child: Container(
@@ -563,7 +563,7 @@ class _AlbumArtSection extends StatelessWidget {
                           'assets/images/create.png',
                           width: 24,
                           height: 24,
-                          color: Colors.grey.shade600,
+                          color: const Color.fromARGB(255, 0, 0, 0),
                         ),
                       ),
                     ),
@@ -580,7 +580,7 @@ class _AlbumArtSection extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   currentSong.album,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  style: TextStyle(color: const Color.fromARGB(255, 2, 2, 2), fontSize: 14),
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -612,7 +612,7 @@ class _PlayerControls extends StatelessWidget {
           children: [
             // Progress Bar
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical : 5),
               child: Column(
                 children: [
                   SliderTheme(
@@ -639,7 +639,7 @@ class _PlayerControls extends StatelessWidget {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [

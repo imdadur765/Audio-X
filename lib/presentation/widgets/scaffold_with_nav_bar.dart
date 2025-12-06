@@ -11,9 +11,10 @@ class ScaffoldWithNavBar extends StatelessWidget {
   int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/home')) return 0;
-    if (location.startsWith('/albums')) return 1;
+    if (location.startsWith('/songs')) return 1;
     if (location.startsWith('/artists')) return 2;
-    if (location.startsWith('/playlists')) return 3;
+    if (location.startsWith('/albums')) return 3;
+    if (location.startsWith('/playlists')) return 4;
     return 0;
   }
 
@@ -23,12 +24,15 @@ class ScaffoldWithNavBar extends StatelessWidget {
         context.go('/home');
         break;
       case 1:
-        context.go('/albums');
+        context.go('/songs');
         break;
       case 2:
         context.go('/artists');
         break;
       case 3:
+        context.go('/albums');
+        break;
+      case 4:
         context.go('/playlists');
         break;
     }
@@ -94,9 +98,9 @@ class ScaffoldWithNavBar extends StatelessWidget {
                       context,
                       index: 1,
                       selectedIndex: selectedIndex,
-                      activeImage: 'assets/images/album_list_open.png',
-                      inactiveImage: 'assets/images/album_list_close.png',
-                      label: 'Albums',
+                      activeImage: 'assets/images/song.png',
+                      inactiveImage: 'assets/images/song.png',
+                      label: 'Songs',
                     ),
                     _buildNavItem(
                       context,
@@ -109,6 +113,14 @@ class ScaffoldWithNavBar extends StatelessWidget {
                     _buildNavItem(
                       context,
                       index: 3,
+                      selectedIndex: selectedIndex,
+                      activeImage: 'assets/images/album_list_open.png',
+                      inactiveImage: 'assets/images/album_list_close.png',
+                      label: 'Albums',
+                    ),
+                    _buildNavItem(
+                      context,
+                      index: 4,
                       selectedIndex: selectedIndex,
                       activeImage: 'assets/images/playlist_open.png',
                       inactiveImage: 'assets/images/playlist_close.png',

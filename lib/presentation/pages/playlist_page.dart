@@ -2,17 +2,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/playlist_model.dart';
-
 import 'package:go_router/go_router.dart';
 import '../../services/playlist_service.dart';
 import '../controllers/audio_controller.dart';
-import '../widgets/glass_button.dart';
-import 'playlist_details_page.dart';
-import 'recently_added_page.dart';
-import 'most_played_page.dart';
-import 'favorites_page.dart';
-import 'all_songs_page.dart';
-import 'recently_played_page.dart';
 
 enum SortOrder { aToZ, zToA, newest, oldest }
 
@@ -162,13 +154,14 @@ class _PlaylistPageState extends State<PlaylistPage> {
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
-                  height: 180,
+                  height: 250, // Increased height
                   width: double.maxFinite,
                   child: GridView.builder(
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 5,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
+                      crossAxisCount: 4, // Reduced count
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1,
                     ),
                     itemCount: icons.length,
                     itemBuilder: (context, index) {
@@ -177,7 +170,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
                       return GestureDetector(
                         onTap: () => setState(() => selectedIcon = iconName),
                         child: Container(
-                          padding: const EdgeInsets.all(10),
+                          padding: const EdgeInsets.all(12), // Slightly more padding
                           decoration: BoxDecoration(
                             color: isSelected ? Colors.deepPurple.withOpacity(0.1) : Colors.grey.shade500,
                             borderRadius: BorderRadius.circular(12),
@@ -238,6 +231,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
             SliverFillRemaining(child: _buildEmptyState())
           else
             SliverPadding(
+              key: ValueKey(_viewMode),
               padding: const EdgeInsets.all(16),
               sliver: _viewMode == ViewMode.grid ? _buildGridView(playlists) : _buildListView(playlists),
             ),
@@ -263,31 +257,36 @@ class _PlaylistPageState extends State<PlaylistPage> {
       expandedHeight: 220,
       floating: false,
       pinned: true,
-      backgroundColor: Colors.white,
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       elevation: opacity * 4,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: const Color.fromARGB(255, 8, 8, 8).withOpacity(0.1),
       actions: [
         // View toggle buttons
-        Row(
-          children: [
-            GlassButton(
-              imagePath: 'assets/images/girdview.png',
-              onTap: () => setState(() => _viewMode = ViewMode.grid),
-              isActive: _viewMode == ViewMode.grid,
-              accentColor: Colors.deepPurple,
-              size: 20,
-              containerSize: 40,
-            ),
-            const SizedBox(width: 8),
-            GlassButton(
-              imagePath: 'assets/images/listview.png',
-              onTap: () => setState(() => _viewMode = ViewMode.list),
-              isActive: _viewMode == ViewMode.list,
-              accentColor: Colors.deepPurple,
-              size: 20,
-              containerSize: 40,
-            ),
-          ],
+        Container(
+          margin: const EdgeInsets.only(right: 16),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(opacity),
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: opacity > 0.5
+                ? [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))]
+                : [],
+          ),
+          child: Row(
+            children: [
+              _buildViewButton(
+                imagePath: 'assets/images/girdview.png',
+                isSelected: _viewMode == ViewMode.grid,
+                onTap: () => setState(() => _viewMode = ViewMode.grid),
+                isCompact: opacity > 0.5,
+              ),
+              _buildViewButton(
+                imagePath: 'assets/images/listview.png',
+                isSelected: _viewMode == ViewMode.list,
+                onTap: () => setState(() => _viewMode = ViewMode.list),
+                isCompact: opacity > 0.5,
+              ),
+            ],
+          ),
         ),
         const SizedBox(width: 8),
         // Sort button
@@ -300,12 +299,11 @@ class _PlaylistPageState extends State<PlaylistPage> {
             const PopupMenuItem(value: SortOrder.aToZ, child: Text('A to Z')),
             const PopupMenuItem(value: SortOrder.zToA, child: Text('Z to A')),
           ],
-          child: GlassButton(
+          child: _buildViewButton(
             imagePath: 'assets/images/sort.png',
+            isSelected: false,
             onTap: () {}, // Handled by PopupMenuButton
-            accentColor: Colors.deepPurple,
-            size: 20,
-            containerSize: 40,
+            isCompact: opacity > 0.5,
           ),
         ),
         const SizedBox(width: 16),
@@ -324,7 +322,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Colors.deepPurple.shade700, Colors.deepPurple.shade500, Colors.pink.shade400],
+              colors: [Colors.orange.shade600, Colors.deepOrange.shade500],
             ),
           ),
           child: SafeArea(
@@ -334,14 +332,32 @@ class _PlaylistPageState extends State<PlaylistPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  const Text(
-                    'Playlists',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
-                    ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Image.asset(
+                          'assets/images/playlist_open.png',
+                          width: 28,
+                          height: 28,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Text(
+                        'Playlists',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   const Text('Your custom collections', style: TextStyle(color: Colors.white70, fontSize: 16)),
@@ -612,6 +628,34 @@ class _PlaylistPageState extends State<PlaylistPage> {
             style: TextStyle(color: Colors.grey, fontSize: 14),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildViewButton({
+    required String imagePath,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required bool isCompact,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isCompact ? Colors.deepPurple.shade50 : Colors.white.withOpacity(0.3))
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Image.asset(
+          imagePath,
+          width: 20,
+          height: 20,
+          color: isCompact
+              ? (isSelected ? Colors.deepPurple : Colors.grey[600])
+              : (isSelected ? Colors.white : Colors.white60),
+        ),
       ),
     );
   }

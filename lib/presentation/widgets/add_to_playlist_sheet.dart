@@ -4,9 +4,9 @@ import '../../services/playlist_service.dart';
 import '../../data/models/song_model.dart';
 
 class AddToPlaylistSheet extends StatefulWidget {
-  final Song song;
+  final List<Song> songs;
 
-  const AddToPlaylistSheet({super.key, required this.song});
+  const AddToPlaylistSheet({super.key, required this.songs});
 
   @override
   State<AddToPlaylistSheet> createState() => _AddToPlaylistSheetState();
@@ -89,13 +89,14 @@ class _AddToPlaylistSheetState extends State<AddToPlaylistSheet> {
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
-                  height: 180,
+                  height: 250, // Increased height
                   width: double.maxFinite,
                   child: GridView.builder(
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 5,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
+                      crossAxisCount: 4, // Reduced count for larger icons
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1,
                     ),
                     itemCount: icons.length,
                     itemBuilder: (context, index) {
@@ -104,10 +105,10 @@ class _AddToPlaylistSheetState extends State<AddToPlaylistSheet> {
                       return GestureDetector(
                         onTap: () => setState(() => selectedIcon = iconName),
                         child: Container(
-                          padding: const EdgeInsets.all(10),
+                          padding: const EdgeInsets.all(12), // Slightly more padding
                           decoration: BoxDecoration(
-                            color: isSelected ? Colors.deepPurple.withOpacity(0.1) : Colors.grey.shade500,
-                            borderRadius: BorderRadius.circular(12),
+                            color: isSelected ? Colors.deepPurple.withOpacity(0.1) : Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(16),
                             border: isSelected ? Border.all(color: Colors.deepPurple, width: 2) : null,
                           ),
                           child: Image.asset(
@@ -134,15 +135,17 @@ class _AddToPlaylistSheetState extends State<AddToPlaylistSheet> {
                       iconEmoji: selectedIcon,
                     );
 
-                    // Add song to the new playlist immediately
-                    await _playlistService.addSongToPlaylist(newPlaylist.id, widget.song.id);
+                    // Add songs to the new playlist
+                    for (var song in widget.songs) {
+                      await _playlistService.addSongToPlaylist(newPlaylist.id, song.id);
+                    }
 
                     if (mounted) {
                       Navigator.pop(context); // Close dialog
                       Navigator.pop(context); // Close sheet
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Added to "${newPlaylist.name}"'),
+                          content: Text('Added ${widget.songs.length} song(s) to "${newPlaylist.name}"'),
                           backgroundColor: Colors.deepPurple,
                           behavior: SnackBarBehavior.floating,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -167,12 +170,15 @@ class _AddToPlaylistSheetState extends State<AddToPlaylistSheet> {
   }
 
   Future<void> _addToPlaylist(Playlist playlist) async {
-    await _playlistService.addSongToPlaylist(playlist.id, widget.song.id);
+    for (var song in widget.songs) {
+      await _playlistService.addSongToPlaylist(playlist.id, song.id);
+    }
+
     if (mounted) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Added to ${playlist.name}'),
+          content: Text('Added ${widget.songs.length} song(s) to ${playlist.name}'),
           backgroundColor: Colors.deepPurple,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -233,7 +239,12 @@ class _AddToPlaylistSheetState extends State<AddToPlaylistSheet> {
                 itemCount: _playlists.length,
                 itemBuilder: (context, index) {
                   final playlist = _playlists[index];
-                  final bool alreadyIn = playlist.songIds.contains(widget.song.id);
+                  // For multiple songs, "alreadyIn" is complex. We'll show "Add" generally, or maybe a check if ALL are in.
+                  // For simplicity, let's just show "Add" icon or maybe check if at least one is missing?
+                  // User behavior: usually you want to add anyway. Let's simplifiy logic to always allow adding,
+                  // or show check only if *all* songs are already in.
+
+                  final allIn = widget.songs.every((s) => playlist.songIds.contains(s.id));
 
                   return ListTile(
                     leading: Container(
@@ -256,10 +267,10 @@ class _AddToPlaylistSheetState extends State<AddToPlaylistSheet> {
                     ),
                     title: Text(playlist.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text('${playlist.songIds.length} songs', style: const TextStyle(fontSize: 12)),
-                    trailing: alreadyIn
+                    trailing: allIn
                         ? const Icon(Icons.check_circle_rounded, color: Colors.green)
                         : Image.asset('assets/images/create.png', width: 24, height: 24, color: Colors.grey),
-                    onTap: alreadyIn ? null : () => _addToPlaylist(playlist),
+                    onTap: allIn ? null : () => _addToPlaylist(playlist),
                   );
                 },
               ),

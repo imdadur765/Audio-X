@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:audio_x/data/models/song_model.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../presentation/controllers/audio_controller.dart';
 import '../presentation/pages/home_page.dart';
 import '../presentation/pages/albums_page.dart';
 import '../presentation/pages/player_page.dart';
@@ -37,6 +39,17 @@ final GoRouter appRouter = GoRouter(
           path: '/albums',
           name: 'albums',
           pageBuilder: (context, state) => const NoTransitionPage(child: AlbumsPage()),
+        ),
+        GoRoute(
+          path: '/songs',
+          name: 'songs',
+          pageBuilder: (context, state) {
+            return NoTransitionPage(
+              child: Consumer<AudioController>(
+                builder: (context, controller, child) => AllSongsPage(songs: controller.allSongs),
+              ),
+            );
+          },
         ),
         GoRoute(
           path: '/artists',

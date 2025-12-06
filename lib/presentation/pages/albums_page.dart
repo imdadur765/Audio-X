@@ -260,7 +260,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Colors.deepPurple.shade700, Colors.deepPurple.shade500, Colors.pink.shade400],
+              colors: [Colors.indigo.shade600, Colors.blue.shade600],
             ),
           ),
           child: SafeArea(
@@ -270,14 +270,27 @@ class _AlbumsPageState extends State<AlbumsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  const Text(
-                    'Albums',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
-                    ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Image.asset('assets/images/album.png', width: 28, height: 28, color: Colors.white),
+                      ),
+                      const SizedBox(width: 16),
+                      const Text(
+                        'Albums',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   const Text('Your music collection', style: TextStyle(color: Colors.white70, fontSize: 16)),

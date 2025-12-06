@@ -81,7 +81,7 @@ class MoreOptionsButton extends StatelessWidget {
                 showModalBottomSheet(
                   context: context,
                   backgroundColor: Colors.transparent,
-                  builder: (context) => AddToPlaylistSheet(song: song),
+                  builder: (context) => AddToPlaylistSheet(songs: [song]),
                 );
               },
             ),

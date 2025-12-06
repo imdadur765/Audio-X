@@ -8,6 +8,7 @@ import '../../data/services/artist_service.dart';
 import '../controllers/audio_controller.dart';
 import 'player_page.dart';
 import '../widgets/glass_button.dart';
+import '../widgets/add_to_playlist_sheet.dart';
 
 class ArtistDetailsPage extends StatefulWidget {
   final String artistName;
@@ -565,6 +566,16 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
     );
   }
 
+  void _addToPlaylist(List<Song> songs) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AddToPlaylistSheet(songs: songs),
+    );
+  }
+
+
+
   Widget _buildActionButtons(List<Song> songs) {
     return SliverToBoxAdapter(
       child: Padding(
@@ -638,11 +649,44 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                 ),
               ),
             ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Container(
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 5)),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => _addToPlaylist(songs),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset('assets/images/playlist_open.png', width: 20, height: 20, color: Colors.deepPurple),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Add',
+                          style: TextStyle(color: Colors.deepPurple, fontSize: 12, fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+
 
   Widget _buildSongsList(List<Song> songs) {
     return Consumer<AudioController>(

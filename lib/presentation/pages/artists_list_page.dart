@@ -212,7 +212,7 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Colors.deepPurple.shade700, Colors.deepPurple.shade500, Colors.pink.shade400],
+              colors: [Colors.lightBlue.shade400, Colors.cyan.shade300],
             ),
           ),
           child: SafeArea(
@@ -224,11 +224,20 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                 children: [
                   Row(
                     children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Image.asset('assets/images/artist_open.png', width: 28, height: 28, color: Colors.white),
+                      ),
+                      const SizedBox(width: 16),
                       const Text(
                         'Artists',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 36,
+                          fontSize: 32,
                           fontWeight: FontWeight.bold,
                           shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
                         ),

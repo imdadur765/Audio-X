@@ -8,7 +8,7 @@
     <application
         android:label="Audio X"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/launcher_icon"
         android:enableOnBackInvokedCallback="false">
         <activity
             android:name=".MainActivity"

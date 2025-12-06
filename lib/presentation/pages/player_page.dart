@@ -606,13 +606,13 @@ class _PlayerControls extends StatelessWidget {
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: Container(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 50),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // Progress Bar
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical : 5),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
               child: Column(
                 children: [
                   SliderTheme(

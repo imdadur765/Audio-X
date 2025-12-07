@@ -211,6 +211,42 @@ app.get('/api/artist/:name', async (req, res) => {
   }
 });
 
+
+// Get Track Info (Credits, Wiki)
+app.get('/api/track', async (req, res) => {
+  try {
+    const { artist, track } = req.query;
+
+    if (!artist || !track) {
+      return res.status(400).json({ error: 'Artist and track parameters are required' });
+    }
+
+    if (!LASTFM_API_KEY) {
+      return res.status(503).json({ error: 'Last.fm API key not configured' });
+    }
+
+    const response = await axios.get(LASTFM_BASE_URL, {
+      params: {
+        method: 'track.getInfo',
+        artist: artist,
+        track: track,
+        api_key: LASTFM_API_KEY,
+        format: 'json'
+      }
+    });
+
+    if (response.data.track) {
+      res.json(response.data.track);
+    } else {
+      res.status(404).json({ error: 'Track not found' });
+    }
+
+  } catch (error) {
+    console.error('Error fetching track info:', error.message);
+    res.status(500).json({ error: 'Failed to fetch track info' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

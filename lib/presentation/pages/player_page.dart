@@ -80,7 +80,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
       // Scroll hint animation to show page is scrollable
       Future.delayed(Duration(milliseconds: 500), () {
         if (mounted && _mainScrollController.hasClients) {
-          _mainScrollController.animateTo(50, duration: Duration(milliseconds: 400), curve: Curves.easeOut).then((_) {
+          _mainScrollController.animateTo(120, duration: Duration(milliseconds: 400), curve: Curves.easeOut).then((_) {
             Future.delayed(Duration(milliseconds: 200), () {
               if (mounted && _mainScrollController.hasClients) {
                 _mainScrollController.animateTo(0, duration: Duration(milliseconds: 400), curve: Curves.easeOut);
@@ -1060,11 +1060,8 @@ class _AboutArtistSection extends StatelessWidget {
             const SizedBox(height: 12),
             GestureDetector(
               onTap: () {
-                // Navigate to full artist details properly?
-                // For now, simpler to just show snackbar or implement navigation if requested
-                // User said "dekho mere pass artist detail page hain... sab yaha use hoga"
-                // Ideally we navigate:
-                // Navigator.of(context).push(...)
+                // Navigate to Artist Details Page
+                context.pushNamed('artist_details', pathParameters: {'name': artist.name});
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1098,6 +1095,11 @@ class _CreditsSection extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: accentColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: textColor.withOpacity(0.1), width: 1),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

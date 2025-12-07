@@ -285,20 +285,22 @@ class _LyricsViewState extends State<LyricsView> with SingleTickerProviderStateM
     return Stack(
       children: [
         // Lyrics List
-        ListView.builder(
-          controller: _scrollController,
-          padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
-          physics: const ClampingScrollPhysics(),
-          itemCount: widget.lyrics.lines.length,
-          itemBuilder: (context, index) {
-            return _buildLyricLine(index);
-          },
+        Positioned.fill(
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.only(top: 120, bottom: 60, left: 20, right: 20),
+            physics: const ClampingScrollPhysics(),
+            itemCount: widget.lyrics.lines.length,
+            itemBuilder: (context, index) {
+              return _buildLyricLine(index);
+            },
+          ),
         ),
 
         // Sync Offset Adjustment (Top)
         if (widget.onOffsetChanged != null)
           Positioned(
-            top: 12,
+            top: 24,
             left: 20,
             right: 20,
             child: ClipRRect(

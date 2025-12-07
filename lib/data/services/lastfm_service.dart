@@ -3,11 +3,10 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LastFmService {
-  // Replace with a valid API Key
-  final String _baseUrl = 'http://10.0.2.2:3000/api/track'; // Android emulator localhost
+  final String _baseUrl = 'https://audio-x.onrender.com/api/spotify/trackinfo';
 
   Future<Map<String, dynamic>?> getTrackInfo(String artist, String track) async {
-    final cacheKey = 'lastfm_track_${artist.toLowerCase()}_${track.toLowerCase()}';
+    final cacheKey = 'track_credits_${artist.toLowerCase()}_${track.toLowerCase()}';
 
     // Check Cache
     final prefs = await SharedPreferences.getInstance();
@@ -19,28 +18,27 @@ class LastFmService {
     }
 
     try {
-      final url = Uri.parse('$_baseUrl?artist=$artist&track=$track');
+      final url = Uri.parse('$_baseUrl?artist=${Uri.encodeComponent(artist)}&track=${Uri.encodeComponent(track)}');
+      print('Fetching credits from: $url');
+
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        print('Credits response: $data');
 
-        // Cache cacheable data
-        if (data['wiki'] != null || data['writer'] != null || data['album'] != null) {
-          await prefs.setString(cacheKey, response.body);
-          // Backend returns the 'track' object directly, so wrap it to match expectations if needed
-          // But our backend returns res.json(response.data.track) which IS the track object.
-          // The UI expects nested data potentially? Let's check.
-          // Client code: trackInfo['track']['wiki'] -> implies it expects { track: { ... } } structure.
-          // BUT my backend returns `response.data.track` directly.
-          // So the structure will be { name: ..., wiki: ..., ... }
-          // I should probably wrap it here to minimize client changes or update client.
-          // Let's wrap it to maintain { track: ... } structure for now to break less code.
-          return {'track': data};
-        }
+        // Cache the result
+        await prefs.setString(cacheKey, response.body);
+
+        // Wrap in 'track' structure for compatibility
+        return {'track': data};
+      } else if (response.statusCode == 429) {
+        print('Rate limit hit, using cache if available');
+      } else {
+        print('Error: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      print('Error fetching Last.fm track info: $e');
+      print('Error fetching track credits: $e');
     }
     return null;
   }

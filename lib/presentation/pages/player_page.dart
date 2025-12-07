@@ -1078,9 +1078,9 @@ class _CreditsSection extends StatelessWidget {
           const SizedBox(height: 16),
           buildCreditRow('Performed by', song.artist),
           const SizedBox(height: 12),
-          buildCreditRow('Written by', song.artist),
+          buildCreditRow('Written by', _getWriter()),
           const SizedBox(height: 12),
-          buildCreditRow('Produced by', 'Unknown'),
+          buildCreditRow('Produced by', _getProducer()),
           if (trackInfo != null && trackInfo!['track'] != null && trackInfo!['track']['wiki'] != null) ...[
             const SizedBox(height: 20),
             Text(
@@ -1098,6 +1098,38 @@ class _CreditsSection extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _getWriter() {
+    // Extract writer from Spotify trackInfo
+    if (trackInfo != null && trackInfo!['track'] != null) {
+      final track = trackInfo!['track'];
+      // Spotify response has 'writer' field
+      if (track['writer'] != null && track['writer'] is String) {
+        return track['writer'];
+      }
+      // Fallback to artist field
+      if (track['artist'] != null && track['artist'] is String) {
+        return track['artist'];
+      }
+    }
+    return song.artist;
+  }
+
+  String _getProducer() {
+    // Extract producer from Spotify trackInfo
+    if (trackInfo != null && trackInfo!['track'] != null) {
+      final track = trackInfo!['track'];
+      // Spotify response has 'producer' or 'label' field
+      if (track['producer'] != null && track['producer'] is String && track['producer'] != 'Unknown') {
+        return track['producer'];
+      }
+      // Fallback to label
+      if (track['label'] != null && track['label'] is String && track['label'] != 'Unknown') {
+        return track['label'];
+      }
+    }
+    return 'Unknown';
   }
 
   String stripHtml(String html) {

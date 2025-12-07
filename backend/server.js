@@ -23,6 +23,10 @@ app.use(express.json());
 let spotifyToken = null;
 let tokenExpiry = 0;
 
+// Track credits cache to prevent 429 rate limits
+const trackCreditsCache = new Map();
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
 // Get Spotify Access Token
 async function getSpotifyToken() {
   if (spotifyToken && Date.now() < tokenExpiry) {
@@ -246,6 +250,83 @@ app.get('/api/track', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch track info' });
   }
 });
+
+// Get Spotify Track Credits (with aggressive caching to avoid 429)
+app.get('/api/spotify/trackinfo', async (req, res) => {
+  try {
+    const { artist, track } = req.query;
+
+    if (!artist || !track) {
+      return res.status(400).json({ error: 'Artist and track parameters are required' });
+    }
+
+    // Check cache first
+    const cacheKey = `${artist.toLowerCase()}_${track.toLowerCase()}`;
+    const cached = trackCreditsCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+      return res.json(cached.data);
+    }
+
+    const token = await getSpotifyToken();
+
+    // Search for track
+    const searchResponse = await axios.get(`${SPOTIFY_API_URL}/search`, {
+      params: {
+        q: `artist:${artist} track:${track}`,
+        type: 'track',
+        limit: 1
+      },
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!searchResponse.data.tracks.items.length) {
+      return res.status(404).json({ error: 'Track not found' });
+    }
+
+    const trackData = searchResponse.data.tracks.items[0];
+    const albumId = trackData.album.id;
+
+    // Get album details for additional info
+    const albumResponse = await axios.get(`${SPOTIFY_API_URL}/albums/${albumId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    // Extract credits
+    const credits = {
+      title: trackData.name,
+      artist: trackData.artists.map(a => a.name).join(', '),
+      album: trackData.album.name,
+      releaseDate: trackData.album.release_date,
+      popularity: trackData.popularity,
+      label: albumResponse.data.label || 'Unknown',
+      copyrights: albumResponse.data.copyrights || [],
+      performers: trackData.artists.map(a => a.name),
+      writer: trackData.artists[0]?.name || artist,
+      producer: albumResponse.data.label || 'Unknown'
+    };
+
+    // Cache the result
+    trackCreditsCache.set(cacheKey, {
+      data: credits,
+      timestamp: Date.now()
+    });
+
+    res.json(credits);
+
+  } catch (error) {
+    console.error('Error fetching Spotify track info:', error.message);
+    if (error.response?.status === 429) {
+      res.status(429).json({ error: 'Rate limit exceeded, please try again later' });
+    } else {
+      res.status(500).json({ error: 'Failed to fetch track info from Spotify' });
+    }
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

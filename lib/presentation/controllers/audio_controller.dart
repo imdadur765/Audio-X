@@ -323,8 +323,8 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     final directory = await getApplicationDocumentsDirectory();
     final iTunesService = ITunesService();
 
-    // Process in batches to prevent overwhelming the system
-    const batchSize = 10;
+    // Increased batch size for faster parallel processing
+    const batchSize = 20; // Increased from 10 to 20
 
     for (int i = 0; i < _songs.length; i += batchSize) {
       final batch = _songs.skip(i).take(batchSize).toList();
@@ -334,14 +334,14 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
         batch.map((song) => _processSongArtwork(song, directory, iTunesService)),
         eagerError: false, // Continue even if some fail
       ).timeout(
-        Duration(seconds: 30), // Batch timeout
+        Duration(seconds: 60), // Increased timeout for larger batch
         onTimeout: () {
           return [];
         },
       );
 
-      // Small delay between batches to prevent ANR
-      await Future.delayed(Duration(milliseconds: 100));
+      // Reduced delay between batches
+      await Future.delayed(Duration(milliseconds: 50));
 
       // Notify listeners after each batch for progressive updates
       notifyListeners();
@@ -350,59 +350,72 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _processSongArtwork(Song song, Directory directory, ITunesService iTunesService) async {
     try {
-      // 1. Check/Fetch iTunes Artwork (Priority)
-      final safeName = '${song.artist}_${song.album}'.replaceAll(RegExp(r'[^\w\s]+'), '').trim();
-      final itunesPath = '${directory.path}/itunes_$safeName.jpg';
-      final itunesFile = File(itunesPath);
-
-      // A. Check if already cached from iTunes
-      if (await itunesFile.exists()) {
-        if (song.localArtworkPath != itunesPath) {
-          song.localArtworkPath = itunesPath;
-          await song.save();
-        }
-        return; // We have the best version, skip
-      }
-
-      // B. Try to fetch from iTunes (if online)
-      try {
-        final query = '${song.artist} ${song.album}';
-        final artworkUrl = await ITunesService.fetchArtwork(query, retries: 1);
-
-        if (artworkUrl != null) {
-          final response = await http.get(Uri.parse(artworkUrl)).timeout(Duration(seconds: 10));
-          if (response.statusCode == 200) {
-            await itunesFile.writeAsBytes(response.bodyBytes);
-            song.localArtworkPath = itunesPath;
-            await song.save();
-            return; // Success, skip fallback
-          }
-        }
-      } catch (e) {
-        // Network error or iTunes failure, proceed to fallback silently
-      }
-
-      // 2. Fallback: Local MediaStore Artwork
-      if (song.localArtworkPath == null && song.artworkUri != null) {
+      // PRIORITY 1: MediaStore Artwork (Instant, Local)
+      if (song.artworkUri != null) {
         final uriParts = song.artworkUri!.split('/');
         final albumId = uriParts.last;
         final path = '${directory.path}/album_$albumId.jpg';
         final file = File(path);
 
         if (await file.exists()) {
-          song.localArtworkPath = path;
-          await song.save();
-        } else {
-          final bytes = await _audioHandler.getAlbumArt(albumId);
-          if (bytes != null) {
-            await file.writeAsBytes(bytes);
+          // Use existing cached MediaStore artwork
+          if (song.localArtworkPath != path) {
             song.localArtworkPath = path;
             await song.save();
           }
+        } else {
+          // Extract MediaStore artwork
+          try {
+            final bytes = await _audioHandler.getAlbumArt(albumId);
+            if (bytes != null) {
+              await file.writeAsBytes(bytes);
+              song.localArtworkPath = path;
+              await song.save();
+            }
+          } catch (e) {
+            print('MediaStore extraction failed: $e');
+          }
+        }
+      }
+
+      // PRIORITY 2: iTunes Artwork (Background Upgrade to Higher Quality)
+      // Only attempt if we don't already have iTunes artwork cached
+      final safeName = '${song.artist}_${song.album}'.replaceAll(RegExp(r'[^\w\s]+'), '').trim();
+      final itunesPath = '${directory.path}/itunes_$safeName.jpg';
+      final itunesFile = File(itunesPath);
+
+      if (!await itunesFile.exists()) {
+        // Try to fetch from iTunes (if online) - with better error handling
+        try {
+          final query = '${song.artist} ${song.album}';
+          final artworkUrl = await ITunesService.fetchArtwork(query, retries: 1);
+
+          if (artworkUrl != null) {
+            final response = await http
+                .get(Uri.parse(artworkUrl))
+                .timeout(Duration(seconds: 10), onTimeout: () => throw TimeoutException('iTunes fetch timeout'));
+
+            if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+              await itunesFile.writeAsBytes(response.bodyBytes);
+              // Upgrade to iTunes artwork
+              song.localArtworkPath = itunesPath;
+              await song.save();
+            }
+          }
+        } catch (e) {
+          // iTunes failed, but we already have MediaStore fallback, so just log and continue
+          print('iTunes upgrade skipped: $e');
+        }
+      } else {
+        // iTunes artwork already exists, use it (highest quality)
+        if (song.localArtworkPath != itunesPath) {
+          song.localArtworkPath = itunesPath;
+          await song.save();
         }
       }
     } catch (e) {
-      // Silently continue on error to not spam logs
+      // Silently continue on error
+      print('Artwork processing error: $e');
     }
   }
 

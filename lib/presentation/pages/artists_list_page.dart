@@ -38,6 +38,11 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
     _initConnectivity();
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen(_updateConnectionStatus);
     _scrollController.addListener(_onScroll);
+
+    // Pre-load artist data in batches for faster rendering
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _preloadArtistData();
+    });
   }
 
   void _onScroll() {
@@ -73,6 +78,36 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
   }
 
   bool get _isOnline => _connectivityResult != ConnectivityResult.none;
+
+  Future<void> _preloadArtistData() async {
+    final controller = Provider.of<AudioController>(context, listen: false);
+    final allArtists = controller.songs.map((s) => s.artist).toSet().toList();
+
+    const batchSize = 15; // Process 15 artists in parallel
+
+    for (int i = 0; i < allArtists.length; i += batchSize) {
+      final batch = allArtists.skip(i).take(batchSize).toList();
+
+      // Load batch in parallel
+      await Future.wait(
+        batch.map((artistName) {
+          if (!_artistFutures.containsKey(artistName)) {
+            _artistFutures[artistName] = _artistService.getArtistInfo(artistName);
+          }
+          return _artistFutures[artistName]!;
+        }),
+        eagerError: false,
+      ).timeout(Duration(seconds: 30), onTimeout: () => []);
+
+      // Update UI after each batch
+      if (mounted) {
+        setState(() {});
+      }
+
+      // Small delay to prevent overwhelming the network
+      await Future.delayed(Duration(milliseconds: 100));
+    }
+  }
 
   @override
   void dispose() {
@@ -369,7 +404,7 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
         delegate: SliverChildBuilderDelegate(
           (context, index) {
             final artistName = artists[index];
-            _artistFutures.putIfAbsent(artistName, () => _artistService.getArtistInfo(artistName));
+            // Future is pre-loaded in _preloadArtistData, just use it
             return RepaintBoundary(key: ValueKey('artist_$artistName'), child: _buildArtistCard(artistName));
           },
           childCount: artists.length,
@@ -386,7 +421,7 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
         delegate: SliverChildBuilderDelegate(
           (context, index) {
             final artistName = artists[index];
-            _artistFutures.putIfAbsent(artistName, () => _artistService.getArtistInfo(artistName));
+            // Future is pre-loaded in _preloadArtistData, just use it
             return RepaintBoundary(key: ValueKey('artist_list_$artistName'), child: _buildArtistListTile(artistName));
           },
           childCount: artists.length,

@@ -10,6 +10,7 @@ import '../controllers/audio_controller.dart';
 import '../widgets/lyrics_view.dart';
 import 'equalizer_page.dart';
 import '../widgets/add_to_playlist_sheet.dart';
+import '../../core/utils/color_utils.dart';
 
 class PlayerPage extends StatefulWidget {
   final Song song;
@@ -82,18 +83,27 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
     try {
       final palette = await PaletteGenerator.fromImageProvider(
         FileImage(File(artworkPath)),
-        maximumColorCount: 6, // Further reduced for speed
-        timeout: const Duration(milliseconds: 300), // Timeout to prevent blocking
+        maximumColorCount: 6,
+        timeout: const Duration(milliseconds: 300),
       );
 
       if (mounted) {
-        final color = palette.dominantColor?.color ?? palette.vibrantColor?.color ?? Colors.deepPurple;
-        _globalPaletteCache[songId] = color; // Cache globally
-        setState(() => _accentColor = color);
+        // Vibrant > LightVibrant > DarkVibrant > Fallback
+        Color extracted =
+            palette.vibrantColor?.color ??
+            palette.lightVibrantColor?.color ??
+            palette.darkVibrantColor?.color ??
+            const Color(0xFF9B51E0);
+
+        // Safety Net and Contrast Check
+        extracted = ColorUtils.getSafeAccentColor(extracted);
+
+        _globalPaletteCache[songId] = extracted;
+        setState(() => _accentColor = extracted);
       }
     } catch (e) {
       // Fallback on any error or timeout
-      if (mounted) setState(() => _accentColor = Colors.deepPurple);
+      if (mounted) setState(() => _accentColor = const Color(0xFF9B51E0));
     }
   }
 
@@ -217,26 +227,34 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
           });
         }
 
-        final accentColor = _accentColor ?? Colors.deepPurple;
+        final accentColor = _accentColor ?? const Color(0xFF9B51E0);
+        final uiColors = ColorUtils.getUiColors(accentColor);
+        final textColor = uiColors.textColor;
+        final buttonColor = uiColors.backgroundColor;
+        final isDark = uiColors.isDark;
 
         return Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: isDark ? Colors.black : Colors.white,
           body: Dismissible(
             key: const Key('player_dismiss'),
             direction: DismissDirection.down,
             onDismissed: (_) => Navigator.of(context).pop(),
             child: Stack(
               children: [
-                // Background - lightweight initially, blur added after first frame
+                // Background
                 _showBlur
-                    ? _CachedBlurBackground(artworkPath: currentSong.localArtworkPath, accentColor: accentColor)
+                    ? _CachedBlurBackground(
+                        artworkPath: currentSong.localArtworkPath,
+                        accentColor: accentColor,
+                        isDark: isDark,
+                      )
                     : _SimpleGradientBackground(accentColor: accentColor),
 
                 // Content
                 SafeArea(
                   child: Column(
                     children: [
-                      _buildAppBar(context, accentColor),
+                      _buildAppBar(context, accentColor, textColor, buttonColor),
                       Expanded(
                         child: _showLyrics && _lyrics != null
                             ? Container(
@@ -244,7 +262,10 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                                   gradient: LinearGradient(
                                     begin: Alignment.topCenter,
                                     end: Alignment.bottomCenter,
-                                    colors: [Colors.white.withOpacity(0.9), accentColor.withOpacity(0.1)],
+                                    colors: [
+                                      (isDark ? Colors.black : Colors.white).withOpacity(0.9),
+                                      accentColor.withOpacity(0.1),
+                                    ],
                                   ),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
@@ -264,10 +285,16 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                                 currentSong: currentSong,
                                 heroTag: widget.heroTag,
                                 accentColor: accentColor,
+                                textColor: textColor,
                               ),
                       ),
-                      // Player controls in separate widget to minimize rebuilds
-                      _PlayerControls(controller: controller, accentColor: accentColor),
+                      // Player controls
+                      _PlayerControls(
+                        controller: controller,
+                        accentColor: accentColor,
+                        textColor: textColor,
+                        buttonColor: buttonColor,
+                      ),
                     ],
                   ),
                 ),
@@ -279,7 +306,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildAppBar(BuildContext context, Color accentColor) {
+  Widget _buildAppBar(BuildContext context, Color accentColor, Color textColor, Color buttonColor) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -290,8 +317,8 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
             child: Container(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), borderRadius: BorderRadius.circular(12)),
-              child: Center(child: Image.asset('assets/images/down.png', width: 20, height: 20, color: Colors.black87)),
+              decoration: BoxDecoration(color: buttonColor, borderRadius: BorderRadius.circular(12)),
+              child: Center(child: Image.asset('assets/images/down.png', width: 20, height: 20, color: textColor)),
             ),
           ),
           Column(
@@ -301,9 +328,9 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                 style: TextStyle(color: accentColor, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2),
               ),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Your Library',
-                style: TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.bold),
+                style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -321,16 +348,13 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                     width: 40,
                     height: 40,
                     margin: const EdgeInsets.only(right: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    decoration: BoxDecoration(color: buttonColor, borderRadius: BorderRadius.circular(12)),
                     child: Center(
                       child: Image.asset(
                         _showLyrics ? 'assets/images/album.png' : 'assets/images/lyrics.png',
                         width: 20,
                         height: 20,
-                        color: Colors.black87,
+                        color: textColor,
                       ),
                     ),
                   ),
@@ -338,12 +362,9 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
               Container(
                 width: 40,
                 height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                decoration: BoxDecoration(color: buttonColor, borderRadius: BorderRadius.circular(12)),
                 child: PopupMenuButton<String>(
-                  icon: Image.asset('assets/images/more.png', width: 20, height: 20, color: Colors.black87),
+                  icon: Image.asset('assets/images/more.png', width: 20, height: 20, color: textColor),
                   onSelected: (value) async {
                     switch (value) {
                       case 'upload':
@@ -405,8 +426,9 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
 class _CachedBlurBackground extends StatelessWidget {
   final String? artworkPath;
   final Color accentColor;
+  final bool isDark;
 
-  const _CachedBlurBackground({required this.artworkPath, required this.accentColor});
+  const _CachedBlurBackground({required this.artworkPath, required this.accentColor, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -420,7 +442,11 @@ class _CachedBlurBackground extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [accentColor.withOpacity(0.1), Colors.white, accentColor.withOpacity(0.05)],
+                  colors: [
+                    accentColor.withOpacity(0.1),
+                    isDark ? Colors.black : Colors.white,
+                    accentColor.withOpacity(0.05),
+                  ],
                 ),
               ),
             ),
@@ -431,14 +457,14 @@ class _CachedBlurBackground extends StatelessWidget {
               child: Image.file(
                 File(artworkPath!),
                 fit: BoxFit.cover,
-                cacheWidth: 400, // Cache scaled down version for better performance
+                cacheWidth: 400,
                 errorBuilder: (_, __, ___) => const SizedBox.shrink(),
               ),
             ),
           Positioned.fill(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-              child: Container(color: Colors.white.withOpacity(0.5)),
+              child: Container(color: isDark ? Colors.black.withOpacity(0.3) : Colors.white.withOpacity(0.5)),
             ),
           ),
         ],
@@ -452,8 +478,14 @@ class _AlbumArtSection extends StatelessWidget {
   final Song currentSong;
   final String? heroTag;
   final Color accentColor;
+  final Color textColor;
 
-  const _AlbumArtSection({required this.currentSong, required this.heroTag, required this.accentColor});
+  const _AlbumArtSection({
+    required this.currentSong,
+    required this.heroTag,
+    required this.accentColor,
+    required this.textColor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -484,11 +516,7 @@ class _AlbumArtSection extends StatelessWidget {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(20),
                       child: currentSong.localArtworkPath != null
-                          ? Image.file(
-                              File(currentSong.localArtworkPath!),
-                              fit: BoxFit.cover,
-                              cacheWidth: 600, // Cache optimized size
-                            )
+                          ? Image.file(File(currentSong.localArtworkPath!), fit: BoxFit.cover, cacheWidth: 600)
                           : Container(
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
@@ -520,8 +548,8 @@ class _AlbumArtSection extends StatelessWidget {
                     Flexible(
                       child: Text(
                         currentSong.title,
-                        style: const TextStyle(
-                          color: Colors.black87,
+                        style: TextStyle(
+                          color: textColor,
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5,
@@ -543,7 +571,7 @@ class _AlbumArtSection extends StatelessWidget {
                           'assets/images/favorite.png',
                           width: 24,
                           height: 24,
-                          color: currentSong.isFavorite ? Colors.pink : const Color.fromARGB(255, 0, 0, 0),
+                          color: currentSong.isFavorite ? Colors.pink : textColor,
                         ),
                       ),
                     ),
@@ -559,12 +587,7 @@ class _AlbumArtSection extends StatelessWidget {
                       },
                       child: Container(
                         padding: const EdgeInsets.all(8),
-                        child: Image.asset(
-                          'assets/images/create.png',
-                          width: 24,
-                          height: 24,
-                          color: const Color.fromARGB(255, 0, 0, 0),
-                        ),
+                        child: Image.asset('assets/images/create.png', width: 24, height: 24, color: textColor),
                       ),
                     ),
                   ],
@@ -580,7 +603,7 @@ class _AlbumArtSection extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   currentSong.album,
-                  style: TextStyle(color: const Color.fromARGB(255, 2, 2, 2), fontSize: 14),
+                  style: TextStyle(color: textColor.withOpacity(0.7), fontSize: 14),
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -599,8 +622,15 @@ class _AlbumArtSection extends StatelessWidget {
 class _PlayerControls extends StatelessWidget {
   final AudioController controller;
   final Color accentColor;
+  final Color textColor;
+  final Color buttonColor;
 
-  const _PlayerControls({required this.controller, required this.accentColor});
+  const _PlayerControls({
+    required this.controller,
+    required this.accentColor,
+    required this.textColor,
+    required this.buttonColor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -621,7 +651,7 @@ class _PlayerControls extends StatelessWidget {
                       thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5, elevation: 2, pressedElevation: 4),
                       overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
                       activeTrackColor: accentColor,
-                      inactiveTrackColor: accentColor.withOpacity(0.2),
+                      inactiveTrackColor: accentColor.withOpacity(0.3),
                       thumbColor: accentColor,
                       overlayColor: accentColor.withOpacity(0.1),
                     ),
@@ -646,7 +676,7 @@ class _PlayerControls extends StatelessWidget {
                         Text(
                           _formatDuration(controller.position),
                           style: TextStyle(
-                            color: accentColor.withOpacity(0.8),
+                            color: textColor.withOpacity(0.8),
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
@@ -654,7 +684,7 @@ class _PlayerControls extends StatelessWidget {
                         Text(
                           _formatDuration(controller.duration),
                           style: TextStyle(
-                            color: accentColor.withOpacity(0.8),
+                            color: textColor.withOpacity(0.8),
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
@@ -676,6 +706,8 @@ class _PlayerControls extends StatelessWidget {
                   onTap: controller.toggleShuffle,
                   size: 18,
                   accentColor: accentColor,
+                  iconColor: textColor,
+                  backgroundColor: buttonColor,
                   containerSize: 40,
                 ),
                 _ControlButton(
@@ -683,6 +715,8 @@ class _PlayerControls extends StatelessWidget {
                   size: 24,
                   onTap: controller.previous,
                   accentColor: accentColor,
+                  iconColor: textColor,
+                  backgroundColor: buttonColor,
                   containerSize: 40,
                 ),
                 _PlayButton(controller: controller, accentColor: accentColor),
@@ -691,6 +725,8 @@ class _PlayerControls extends StatelessWidget {
                   size: 24,
                   onTap: controller.next,
                   accentColor: accentColor,
+                  iconColor: textColor,
+                  backgroundColor: buttonColor,
                   containerSize: 40,
                 ),
                 _ControlButton(
@@ -699,6 +735,8 @@ class _PlayerControls extends StatelessWidget {
                   onTap: controller.toggleRepeat,
                   size: 18,
                   accentColor: accentColor,
+                  iconColor: textColor,
+                  backgroundColor: buttonColor,
                   containerSize: 40,
                 ),
               ],
@@ -728,6 +766,8 @@ class _ControlButton extends StatelessWidget {
   final bool isActive;
   final VoidCallback onTap;
   final Color accentColor;
+  final Color iconColor;
+  final Color backgroundColor;
 
   const _ControlButton({
     required this.imagePath,
@@ -736,6 +776,8 @@ class _ControlButton extends StatelessWidget {
     this.isActive = false,
     required this.onTap,
     required this.accentColor,
+    required this.iconColor,
+    required this.backgroundColor,
   });
 
   @override
@@ -746,11 +788,11 @@ class _ControlButton extends StatelessWidget {
         width: containerSize,
         height: containerSize,
         decoration: BoxDecoration(
-          color: isActive ? accentColor.withOpacity(0.2) : Colors.white.withOpacity(0.5),
+          color: isActive ? accentColor.withOpacity(0.2) : backgroundColor,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Center(
-          child: Image.asset(imagePath, width: size, height: size, color: isActive ? accentColor : Colors.black87),
+          child: Image.asset(imagePath, width: size, height: size, color: isActive ? accentColor : iconColor),
         ),
       ),
     );

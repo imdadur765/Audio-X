@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../data/services/artist_service.dart';
-import '../../data/services/itunes_service.dart';
 import 'package:hive/hive.dart';
 
 class ProfilePage extends StatefulWidget {

@@ -552,7 +552,11 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
   void _playSong(int index) {
     final song = widget.songs[index];
     final controller = Provider.of<AudioController>(context, listen: false);
-    controller.playSong(song);
+
+    // Only play if it's a NEW song. If it's the SAME song, just open player.
+    if (controller.currentSong?.id != song.id) {
+      controller.playSongList(widget.songs, index);
+    }
     context.pushNamed('player', extra: {'song': song, 'heroTag': 'album_song_${song.id}'});
   }
 

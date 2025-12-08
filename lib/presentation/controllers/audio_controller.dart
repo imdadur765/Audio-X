@@ -10,6 +10,8 @@ import '../../data/services/itunes_service.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:palette_generator/palette_generator.dart';
+import '../../core/utils/color_utils.dart';
 
 class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   final AudioHandler _audioHandler = AudioHandler();
@@ -25,6 +27,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   double _volume = 1.0;
   double _speed = 1.0;
   bool _hasCountedPlay = false; // Track if current song play has been counted
+  Color _accentColor = Colors.deepPurple;
 
   List<Song> get songs => _songs;
   List<Song> get queue => _queue;
@@ -36,6 +39,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   int get repeatMode => _repeatMode;
   double get volume => _volume;
   double get speed => _speed;
+  Color get accentColor => _accentColor;
   List<Song> get allSongs => _songs; // Access to all songs for playlists
 
   AudioController() {
@@ -114,6 +118,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
           _duration = Duration(milliseconds: playingSong.duration);
           // Save new state immediately
           await _saveState();
+          _updatePalette(playingSong.localArtworkPath);
         }
       }
 
@@ -251,6 +256,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       _currentSong = song;
       _duration = Duration(milliseconds: song.duration);
       _position = Duration(milliseconds: lastPosition);
+      _updatePalette(song.localArtworkPath);
 
       // Prepare player in paused state
       final index = _songs.indexOf(song);
@@ -419,12 +425,35 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _updatePalette(String? artworkPath) async {
+    if (artworkPath == null || !File(artworkPath).existsSync()) {
+      _accentColor = Colors.deepPurple;
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final palette = await PaletteGenerator.fromImageProvider(FileImage(File(artworkPath)), maximumColorCount: 20);
+
+      // Vibrant > LightVibrant > DarkVibrant > Fallback (Matches PlayerPage)
+      Color extracted =
+          palette.vibrantColor?.color ??
+          palette.lightVibrantColor?.color ??
+          palette.darkVibrantColor?.color ??
+          const Color(0xFF9B51E0); // Default purple
+
+      // Apply safety check (too dark/gray fallback)
+      _accentColor = ColorUtils.getSafeAccentColor(extracted);
+    } catch (e) {
+      print('Error generating palette: $e');
+      _accentColor = Colors.deepPurple;
+    }
+    notifyListeners();
+  }
+
   Future<void> playSong(Song song) async {
     final index = _songs.indexOf(song);
     if (index != -1) {
-      // playing from main list updates queue to main list
-      _queue = List.from(_songs);
-
       final songMaps = _queue
           .map(
             (s) => {
@@ -443,6 +472,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       _hasCountedPlay = false; // Reset for new song
       _duration = Duration(milliseconds: song.duration);
       _startProgressTimer();
+      _updatePalette(song.localArtworkPath);
       notifyListeners();
     }
   }
@@ -480,6 +510,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     _hasCountedPlay = false; // Reset for new song
     _duration = Duration(milliseconds: _currentSong!.duration);
     _startProgressTimer();
+    _updatePalette(_currentSong!.localArtworkPath);
     notifyListeners();
   }
 
@@ -519,6 +550,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       _hasCountedPlay = false; // Reset for new song
       _duration = Duration(milliseconds: _currentSong!.duration);
       _position = Duration.zero;
+      _updatePalette(_currentSong!.localArtworkPath);
     }
 
     await _saveState();
@@ -539,6 +571,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       _hasCountedPlay = false; // Reset for new song
       _duration = Duration(milliseconds: _currentSong!.duration);
       _position = Duration.zero;
+      _updatePalette(_currentSong!.localArtworkPath);
     }
 
     await _saveState();

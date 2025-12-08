@@ -6,6 +6,8 @@ import 'package:shimmer/shimmer.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../data/models/artist_model.dart';
 import '../../data/services/artist_service.dart';
+import 'dart:ui';
+import '../widgets/glass_background.dart';
 import '../controllers/audio_controller.dart';
 
 enum SortOrder { aToZ, zToA }
@@ -144,26 +146,34 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
     final allArtists = controller.songs.map((s) => s.artist).toSet().toList();
     final artists = _getSortedAndFilteredArtists(allArtists);
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: CustomScrollView(
-        controller: _scrollController,
-        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-        slivers: [
-          _buildHeader(),
-          if (artists.isEmpty)
-            SliverFillRemaining(
-              child: Center(
-                child: Text(_searchController.text.isNotEmpty ? "No artists found" : "No artists available"),
-              ),
-            )
-          else if (_viewMode == ViewMode.grid)
-            _buildGridView(artists)
-          else
-            _buildListView(artists),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
-      ),
+    final currentSong = controller.currentSong;
+
+    return Stack(
+      children: [
+        GlassBackground(artworkPath: currentSong?.localArtworkPath),
+
+        Scaffold(
+          backgroundColor: Colors.transparent,
+          body: CustomScrollView(
+            controller: _scrollController,
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+            slivers: [
+              _buildHeader(),
+              if (artists.isEmpty)
+                SliverFillRemaining(
+                  child: Center(
+                    child: Text(_searchController.text.isNotEmpty ? "No artists found" : "No artists available"),
+                  ),
+                )
+              else if (_viewMode == ViewMode.grid)
+                _buildGridView(artists)
+              else
+                _buildListView(artists),
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -174,44 +184,52 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
       expandedHeight: 220,
       floating: false,
       pinned: true,
-      backgroundColor: Colors.white,
-      elevation: opacity * 4,
-      shadowColor: Colors.black.withValues(alpha: 0.1),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      shadowColor: Colors.transparent,
       actions: [
         // View toggle buttons - in app bar
         Container(
           margin: const EdgeInsets.only(right: 8),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: opacity),
+            color: Colors.white.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
-            boxShadow: opacity > 0.5
-                ? [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 2))]
-                : [],
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
           ),
-          child: Row(
-            children: [
-              _buildViewButton(
-                imagePath: 'assets/images/girdview.png',
-                isSelected: _viewMode == ViewMode.grid,
-                onTap: () => setState(() => _viewMode = ViewMode.grid),
-                isCompact: opacity > 0.5,
-              ),
-              _buildViewButton(
-                imagePath: 'assets/images/listview.png',
-                isSelected: _viewMode == ViewMode.list,
-                onTap: () => setState(() => _viewMode = ViewMode.list),
-                isCompact: opacity > 0.5,
-              ),
-            ],
+          child: Consumer<AudioController>(
+            builder: (context, controller, child) {
+              return Row(
+                children: [
+                  _buildViewButton(
+                    imagePath: 'assets/images/girdview.png',
+                    isSelected: _viewMode == ViewMode.grid,
+                    onTap: () => setState(() => _viewMode = ViewMode.grid),
+                    isCompact: false,
+                    accentColor: controller.accentColor,
+                  ),
+                  _buildViewButton(
+                    imagePath: 'assets/images/listview.png',
+                    isSelected: _viewMode == ViewMode.list,
+                    onTap: () => setState(() => _viewMode = ViewMode.list),
+                    isCompact: false,
+                    accentColor: controller.accentColor,
+                  ),
+                ],
+              );
+            },
           ),
         ),
         // Sort button
         PopupMenuButton<SortOrder>(
-          icon: Image.asset(
-            'assets/images/sort.png',
-            width: 24,
-            height: 24,
-            color: opacity > 0.5 ? Colors.deepPurple : Colors.white,
+          icon: Consumer<AudioController>(
+            builder: (context, controller, _) {
+              return Image.asset(
+                'assets/images/sort.png',
+                width: 24,
+                height: 24,
+                color: controller.accentColor, // Dynamic color
+              );
+            },
           ),
           onSelected: (order) {
             setState(() {
@@ -235,7 +253,7 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
             children: [
               const Text(
                 'Artists',
-                style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
               ),
               const SizedBox(width: 8),
               _buildConnectivityBadge(compact: true),
@@ -244,85 +262,107 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
         ),
         background: Container(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.lightBlue.shade400, Colors.cyan.shade300],
-            ),
+            color: Colors.black.withOpacity(0.2), // Base dark glass
           ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Row(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.1))),
+                    ),
+                  ),
+                ),
+              ),
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Image.asset(
+                              'assets/images/artist_open.png',
+                              width: 28,
+                              height: 28,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Text(
+                            'Artists',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          _buildConnectivityBadge(compact: false),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text('Your music collection', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                      const SizedBox(height: 16),
+                      // Search bar in gradient
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        height: 48,
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: Colors.white.withOpacity(0.3)),
                         ),
-                        child: Image.asset('assets/images/artist_open.png', width: 28, height: 28, color: Colors.white),
-                      ),
-                      const SizedBox(width: 16),
-                      const Text(
-                        'Artists',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
+                        child: TextField(
+                          controller: _searchController,
+                          style: const TextStyle(fontSize: 15, color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'Search artists...',
+                            hintStyle: const TextStyle(color: Colors.white60),
+                            prefixIcon: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Image.asset(
+                                'assets/images/search.png',
+                                width: 20,
+                                height: 20,
+                                color: Colors.white70,
+                              ),
+                            ),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                                    onPressed: () {
+                                      setState(() {
+                                        _searchController.clear();
+                                      });
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                          ),
+                          onChanged: (value) {
+                            setState(() {});
+                          },
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      _buildConnectivityBadge(compact: false),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  const Text('Your music collection', style: TextStyle(color: Colors.white70, fontSize: 16)),
-                  const SizedBox(height: 16),
-                  // Search bar in gradient
-                  Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      style: const TextStyle(fontSize: 15, color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Search artists...',
-                        hintStyle: const TextStyle(color: Colors.white60),
-                        prefixIcon: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Image.asset('assets/images/search.png', width: 20, height: 20, color: Colors.white70),
-                        ),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
-                                onPressed: () {
-                                  setState(() {
-                                    _searchController.clear();
-                                  });
-                                },
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                      ),
-                      onChanged: (value) {
-                        setState(() {});
-                      },
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -334,16 +374,16 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
       return Container(
         width: 8,
         height: 8,
-        decoration: BoxDecoration(color: _isOnline ? Colors.green : Colors.red, shape: BoxShape.circle),
+        decoration: BoxDecoration(color: _isOnline ? Colors.greenAccent : Colors.redAccent, shape: BoxShape.circle),
       );
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
+        color: Colors.white.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+        border: Border.all(color: Colors.white.withOpacity(0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -368,25 +408,17 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
     required bool isSelected,
     required VoidCallback onTap,
     required bool isCompact,
+    required Color accentColor,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isSelected
-              ? (isCompact ? Colors.deepPurple.shade50 : Colors.white.withValues(alpha: 0.3))
-              : Colors.transparent,
+          color: isSelected ? accentColor.withOpacity(0.3) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Image.asset(
-          imagePath,
-          width: 20,
-          height: 20,
-          color: isCompact
-              ? (isSelected ? Colors.deepPurple : Colors.grey[600])
-              : (isSelected ? Colors.white : Colors.white60),
-        ),
+        child: Image.asset(imagePath, width: 20, height: 20, color: isSelected ? accentColor : Colors.white60),
       ),
     );
   }
@@ -464,11 +496,9 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
           },
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.black.withOpacity(0.2), // Glass style
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 5)),
-              ],
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
@@ -492,11 +522,7 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.2),
-                          Colors.black.withValues(alpha: 0.8),
-                        ],
+                        colors: [Colors.transparent, Colors.black.withOpacity(0.2), Colors.black.withOpacity(0.8)],
                         stops: const [0.5, 0.7, 1.0],
                       ),
                     ),
@@ -526,7 +552,7 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
+                              color: Colors.white.withOpacity(0.8),
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
@@ -560,11 +586,9 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Colors.black.withOpacity(0.2), // Glass style
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2)),
-            ],
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

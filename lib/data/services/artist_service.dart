@@ -67,63 +67,87 @@ class ArtistService {
         // If bio needed but not cached, fetch it
         if (fetchBio && (cachedArtist.biography == null || cachedArtist.biography!.isEmpty)) {
           // Continue to fetch
+        }
+        // RETRY FIX: If we have a cached artist but NO IMAGE, try to fetch again (don't stick with placeholder for 7 days)
+        else if (cachedArtist.imageUrl == null || cachedArtist.imageUrl!.isEmpty) {
+          // Continue to fetch
         } else {
           return cachedArtist;
         }
       }
     }
 
-    // 2. Fetch from Backend
-    try {
-      final response = await http.get(Uri.parse('$_baseUrl/$searchName'));
+    // 2. Fetch from Backend with Retry
+    int attempts = 0;
+    while (attempts < 2) {
+      try {
+        final response = await http.get(Uri.parse('$_baseUrl/$searchName'));
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['artist'] != null) {
-          final artistData = data['artist'];
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data['artist'] != null) {
+            final artistData = data['artist'];
+            final imageUrl = artistData['image'];
 
-          String? imageUrl = artistData['image'];
-          List<String> tags = [];
-          if (artistData['tags'] != null && artistData['tags'] is List) {
-            tags = (artistData['tags'] as List).map<String>((t) => t.toString()).toList();
+            // If we got valid data but NO image, and it's our first attempt, try once more
+            if ((imageUrl == null || imageUrl.toString().isEmpty) && attempts == 0) {
+              attempts++;
+              await Future.delayed(const Duration(milliseconds: 800));
+              continue; // Retry
+            }
+
+            List<String> tags = [];
+            if (artistData['tags'] != null && artistData['tags'] is List) {
+              tags = (artistData['tags'] as List).map<String>((t) => t.toString()).toList();
+            }
+
+            String? bio = artistData['biography'];
+            int followers = artistData['followers'] ?? 0;
+            int popularity = artistData['popularity'] ?? 0;
+
+            List<Map<String, String>> similarArtists = [];
+            if (artistData['similarArtists'] != null) {
+              similarArtists = (artistData['similarArtists'] as List).map<Map<String, String>>((item) {
+                return {'name': item['name']?.toString() ?? '', 'image': item['image']?.toString() ?? ''};
+              }).toList();
+            }
+
+            List<Map<String, String>> topAlbums = [];
+            if (artistData['topAlbums'] != null) {
+              topAlbums = (artistData['topAlbums'] as List).map<Map<String, String>>((item) {
+                return {'name': item['name']?.toString() ?? '', 'image': item['image']?.toString() ?? ''};
+              }).toList();
+            }
+
+            final artist = Artist(
+              name: artistData['name'] ?? artistName,
+              biography: bio,
+              imageUrl: imageUrl,
+              tags: tags,
+              lastUpdated: DateTime.now(),
+              followers: followers,
+              popularity: popularity,
+              similarArtists: similarArtists,
+              topAlbums: topAlbums,
+            );
+
+            await box.put(normalizedName, artist);
+            return artist;
           }
-
-          String? bio = artistData['biography'];
-          int followers = artistData['followers'] ?? 0;
-          int popularity = artistData['popularity'] ?? 0;
-
-          List<Map<String, String>> similarArtists = [];
-          if (artistData['similarArtists'] != null) {
-            similarArtists = (artistData['similarArtists'] as List).map<Map<String, String>>((item) {
-              return {'name': item['name']?.toString() ?? '', 'image': item['image']?.toString() ?? ''};
-            }).toList();
-          }
-
-          List<Map<String, String>> topAlbums = [];
-          if (artistData['topAlbums'] != null) {
-            topAlbums = (artistData['topAlbums'] as List).map<Map<String, String>>((item) {
-              return {'name': item['name']?.toString() ?? '', 'image': item['image']?.toString() ?? ''};
-            }).toList();
-          }
-
-          final artist = Artist(
-            name: artistData['name'] ?? artistName,
-            biography: bio,
-            imageUrl: imageUrl,
-            tags: tags,
-            lastUpdated: DateTime.now(),
-            followers: followers,
-            popularity: popularity,
-            similarArtists: similarArtists,
-            topAlbums: topAlbums,
-          );
-
-          await box.put(normalizedName, artist);
-          return artist;
+        } else if (response.statusCode == 429) {
+          // Rate limited
+          attempts++;
+          await Future.delayed(const Duration(seconds: 2));
+          continue;
         }
+      } catch (e) {
+        print('Error fetching artist info for $artistName (Attempt ${attempts + 1}): $e');
       }
-    } catch (e) {
-      // Error handling
+
+      attempts++;
+      if (attempts < 2) {
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
     }
 
     // 3. Fallback

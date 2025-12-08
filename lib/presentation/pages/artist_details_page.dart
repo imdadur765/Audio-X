@@ -574,8 +574,6 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
     );
   }
 
-
-
   Widget _buildActionButtons(List<Song> songs) {
     return SliverToBoxAdapter(
       child: Padding(
@@ -686,7 +684,6 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
       ),
     );
   }
-
 
   Widget _buildSongsList(List<Song> songs) {
     return Consumer<AudioController>(

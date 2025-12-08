@@ -49,6 +49,9 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
 
   final ScrollController _mainScrollController = ScrollController();
 
+  // Swipe animation
+  double _swipeOffset = 0.0;
+
   @override
   void initState() {
     super.initState();
@@ -316,134 +319,149 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
 
                 // Content
                 SafeArea(
-                  child: GestureDetector(
-                    onHorizontalDragEnd: (details) {
-                      if (details.primaryVelocity != null) {
-                        if (details.primaryVelocity! > 500) {
-                          // Swipe right → Previous song
-                          controller.previous();
-                          HapticFeedback.mediumImpact();
-                        } else if (details.primaryVelocity! < -500) {
-                          // Swipe left → Next song
-                          controller.next();
-                          HapticFeedback.mediumImpact();
+                  child: AnimatedContainer(
+                    duration: Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    transform: Matrix4.translationValues(_swipeOffset, 0, 0),
+                    child: GestureDetector(
+                      onHorizontalDragUpdate: (details) {
+                        setState(() {
+                          _swipeOffset += details.delta.dx * 0.5; // Scale down movement
+                          _swipeOffset = _swipeOffset.clamp(-50.0, 50.0); // Limit offset
+                        });
+                      },
+                      onHorizontalDragEnd: (details) {
+                        if (details.primaryVelocity != null) {
+                          if (details.primaryVelocity! > 500) {
+                            // Swipe right → Previous song
+                            controller.previous();
+                            HapticFeedback.mediumImpact();
+                          } else if (details.primaryVelocity! < -500) {
+                            // Swipe left → Next song
+                            controller.next();
+                            HapticFeedback.mediumImpact();
+                          }
                         }
-                      }
-                    },
-                    child: CustomScrollView(
-                      controller: _mainScrollController,
-                      slivers: [
-                        // Sticky header for "Now Playing"
-                        SliverPersistentHeader(
-                          pinned: true,
-                          delegate: _StickyAppBarDelegate(
-                            minHeight: 70,
-                            maxHeight: 70,
-                            child: buildAppBar(context, accentColor, textColor, buttonColor),
+                        // Reset offset
+                        setState(() {
+                          _swipeOffset = 0.0;
+                        });
+                      },
+                      child: CustomScrollView(
+                        controller: _mainScrollController,
+                        slivers: [
+                          // Sticky header for "Now Playing"
+                          SliverPersistentHeader(
+                            pinned: true,
+                            delegate: _StickyAppBarDelegate(
+                              minHeight: 70,
+                              maxHeight: 70,
+                              child: buildAppBar(context, accentColor, textColor, buttonColor),
+                            ),
                           ),
-                        ),
 
-                        // Main Player Section (Full Screen Height minus header)
-                        SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: Column(
-                            children: [
-                              Expanded(
-                                child: _showLyrics && _lyrics != null
-                                    ? Container(
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.bottomCenter,
-                                            colors: [
-                                              Colors.black.withOpacity(0.9), // Always dark for white lyrics
-                                              accentColor.withOpacity(0.4),
-                                            ],
+                          // Main Player Section (Full Screen Height minus header)
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Column(
+                              children: [
+                                Expanded(
+                                  child: _showLyrics && _lyrics != null
+                                      ? Container(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                Colors.black.withOpacity(0.9), // Always dark for white lyrics
+                                                accentColor.withOpacity(0.4),
+                                              ],
+                                            ),
+                                            borderRadius: BorderRadius.circular(20),
                                           ),
-                                          borderRadius: BorderRadius.circular(20),
+                                          margin: const EdgeInsets.all(16),
+                                          child: LyricsView(
+                                            lyrics: _lyrics!,
+                                            currentPosition: controller.position,
+                                            onSeek: (position) => controller.seek(position),
+                                            onOffsetChanged: (newOffset) {
+                                              setState(() {
+                                                _lyrics = _lyrics!.copyWith(syncOffset: newOffset);
+                                              });
+                                            },
+                                          ),
+                                        )
+                                      : _AlbumArtSection(
+                                          currentSong: currentSong,
+                                          heroTag: widget.heroTag,
+                                          accentColor: accentColor,
+                                          textColor: textColor,
                                         ),
-                                        margin: const EdgeInsets.all(16),
-                                        child: LyricsView(
-                                          lyrics: _lyrics!,
-                                          currentPosition: controller.position,
-                                          onSeek: (position) => controller.seek(position),
-                                          onOffsetChanged: (newOffset) {
-                                            setState(() {
-                                              _lyrics = _lyrics!.copyWith(syncOffset: newOffset);
-                                            });
-                                          },
-                                        ),
-                                      )
-                                    : _AlbumArtSection(
-                                        currentSong: currentSong,
-                                        heroTag: widget.heroTag,
+                                ),
+                                // Player controls
+                                _PlayerControls(
+                                  controller: controller,
+                                  accentColor: accentColor,
+                                  textColor: textColor,
+                                  buttonColor: buttonColor,
+                                  bottomPadding: 50.0,
+                                ),
+
+                                // Arrow hint to scroll down
+                                if (!_showLyrics) ...[
+                                  // Lyrics Card
+                                  if (_lyrics != null)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      child: _LyricsCard(
+                                        lyrics: _lyrics!,
+                                        currentPosition: controller.position,
                                         accentColor: accentColor,
                                         textColor: textColor,
+                                        onTap: () {
+                                          _mainScrollController.animateTo(
+                                            0,
+                                            duration: const Duration(milliseconds: 300),
+                                            curve: Curves.easeInOut,
+                                          );
+                                          setState(() {
+                                            _showLyrics = true;
+                                          });
+                                        },
                                       ),
-                              ),
-                              // Player controls
-                              _PlayerControls(
-                                controller: controller,
-                                accentColor: accentColor,
-                                textColor: textColor,
-                                buttonColor: buttonColor,
-                                bottomPadding: 50.0,
-                              ),
-
-                              // Arrow hint to scroll down
-                              if (!_showLyrics) ...[
-                                // Lyrics Card
-                                if (_lyrics != null)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                    child: _LyricsCard(
-                                      lyrics: _lyrics!,
-                                      currentPosition: controller.position,
-                                      accentColor: accentColor,
-                                      textColor: textColor,
-                                      onTap: () {
-                                        _mainScrollController.animateTo(
-                                          0,
-                                          duration: const Duration(milliseconds: 300),
-                                          curve: Curves.easeInOut,
-                                        );
-                                        setState(() {
-                                          _showLyrics = true;
-                                        });
-                                      },
                                     ),
-                                  ),
-                                const SizedBox(height: 8),
-                                Icon(Icons.keyboard_arrow_down_rounded, color: textColor.withOpacity(0.5)),
+                                  const SizedBox(height: 8),
+                                  Icon(Icons.keyboard_arrow_down_rounded, color: textColor.withOpacity(0.5)),
+                                ],
                               ],
-                            ],
-                          ),
-                        ),
-
-                        // About Artist Section
-                        if (_artist != null && !_showLyrics)
-                          SliverToBoxAdapter(
-                            child: _AboutArtistSection(
-                              artist: _artist!,
-                              textColor: textColor,
-                              accentColor: accentColor,
-                              buttonColor: buttonColor,
                             ),
                           ),
 
-                        // Credits Section
-                        if (!_showLyrics)
-                          SliverToBoxAdapter(
-                            child: _CreditsSection(
-                              song: currentSong,
-                              trackInfo: _trackInfo,
-                              textColor: textColor,
-                              accentColor: accentColor,
+                          // About Artist Section
+                          if (_artist != null && !_showLyrics)
+                            SliverToBoxAdapter(
+                              child: _AboutArtistSection(
+                                artist: _artist!,
+                                textColor: textColor,
+                                accentColor: accentColor,
+                                buttonColor: buttonColor,
+                              ),
                             ),
-                          ),
 
-                        const SliverToBoxAdapter(child: SizedBox(height: 80)),
-                      ],
+                          // Credits Section
+                          if (!_showLyrics)
+                            SliverToBoxAdapter(
+                              child: _CreditsSection(
+                                song: currentSong,
+                                trackInfo: _trackInfo,
+                                textColor: textColor,
+                                accentColor: accentColor,
+                              ),
+                            ),
+
+                          const SliverToBoxAdapter(child: SizedBox(height: 80)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -1041,9 +1059,13 @@ class _AboutArtistSection extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              Text(
-                artist.name,
-                style: TextStyle(color: textColor, fontSize: 20, fontWeight: FontWeight.bold),
+              Flexible(
+                child: Text(
+                  artist.name,
+                  style: TextStyle(color: textColor, fontSize: 20, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               const SizedBox(width: 8),
               Icon(Icons.verified, color: Colors.blue, size: 20),
@@ -1172,10 +1194,24 @@ class _CreditsSection extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(role, style: TextStyle(color: textColor.withOpacity(0.7), fontSize: 14)),
-        Text(
-          name,
-          style: TextStyle(color: textColor, fontWeight: FontWeight.w600, fontSize: 14),
+        Flexible(
+          flex: 2,
+          child: Text(
+            role,
+            style: TextStyle(color: textColor.withOpacity(0.7), fontSize: 14),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          flex: 3,
+          child: Text(
+            name,
+            style: TextStyle(color: textColor, fontWeight: FontWeight.w600, fontSize: 14),
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
+          ),
         ),
       ],
     );

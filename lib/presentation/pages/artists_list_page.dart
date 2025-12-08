@@ -83,7 +83,7 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
     final controller = Provider.of<AudioController>(context, listen: false);
     final allArtists = controller.songs.map((s) => s.artist).toSet().toList();
 
-    const batchSize = 15; // Process 15 artists in parallel
+    const batchSize = 25; // Adjusted to 25 to balance speed and reliability (prevent 429s)
 
     for (int i = 0; i < allArtists.length; i += batchSize) {
       final batch = allArtists.skip(i).take(batchSize).toList();
@@ -104,8 +104,8 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
         setState(() {});
       }
 
-      // Small delay to prevent overwhelming the network
-      await Future.delayed(Duration(milliseconds: 100));
+      // Removed delay to maximize throughput
+      // await Future.delayed(Duration(milliseconds: 100));
     }
   }
 
@@ -432,6 +432,11 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
   }
 
   Widget _buildArtistCard(String artistName) {
+    // Lazy load if not already loading (Fix for missing shimmer)
+    if (!_artistFutures.containsKey(artistName)) {
+      _artistFutures[artistName] = _artistService.getArtistInfo(artistName);
+    }
+
     return FutureBuilder<Artist?>(
       future: _artistFutures[artistName],
       builder: (context, snapshot) {
@@ -444,8 +449,18 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
         }
 
         return GestureDetector(
-          onTap: () {
-            context.pushNamed('artist_details', pathParameters: {'name': artistName}, extra: 'artist_list_$artistName');
+          onTap: () async {
+            await context.pushNamed(
+              'artist_details',
+              pathParameters: {'name': artistName},
+              extra: 'artist_list_$artistName',
+            );
+            // Refresh artist data when returning (in case image was loaded in details page)
+            if (mounted) {
+              setState(() {
+                _artistFutures.remove(artistName);
+              });
+            }
           },
           child: Container(
             decoration: BoxDecoration(
@@ -530,6 +545,11 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
   }
 
   Widget _buildArtistListTile(String artistName) {
+    // Lazy load if not already loading (Fix for missing shimmer)
+    if (!_artistFutures.containsKey(artistName)) {
+      _artistFutures[artistName] = _artistService.getArtistInfo(artistName);
+    }
+
     return FutureBuilder<Artist?>(
       future: _artistFutures[artistName],
       builder: (context, snapshot) {
@@ -576,12 +596,18 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                   ),
             trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-            onTap: () {
-              context.pushNamed(
+            onTap: () async {
+              await context.pushNamed(
                 'artist_details',
                 pathParameters: {'name': artistName},
                 extra: 'artist_list_$artistName',
               );
+              // Refresh artist data when returning
+              if (mounted) {
+                setState(() {
+                  _artistFutures.remove(artistName);
+                });
+              }
             },
           ),
         );

@@ -321,7 +321,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _cacheArtwork() async {
     // Run in background to prevent ANR
     final directory = await getApplicationDocumentsDirectory();
-    final iTunesService = ITunesService();
+    // ITunesService is static, no need to instantiate
 
     // Increased batch size for faster parallel processing
     const batchSize = 20; // Increased from 10 to 20
@@ -331,7 +331,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
 
       // Process batch songs in parallel
       await Future.wait(
-        batch.map((song) => _processSongArtwork(song, directory, iTunesService)),
+        batch.map((song) => _processSongArtwork(song, directory)),
         eagerError: false, // Continue even if some fail
       ).timeout(
         Duration(seconds: 60), // Increased timeout for larger batch
@@ -348,7 +348,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _processSongArtwork(Song song, Directory directory, ITunesService iTunesService) async {
+  Future<void> _processSongArtwork(Song song, Directory directory) async {
     try {
       // PRIORITY 1: MediaStore Artwork (Instant, Local)
       if (song.artworkUri != null) {

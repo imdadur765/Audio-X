@@ -7,6 +7,7 @@ import '../controllers/audio_controller.dart';
 import '../widgets/hybrid_song_artwork.dart';
 import '../widgets/glass_button.dart';
 import '../widgets/more_options_button.dart';
+import '../widgets/glass_background.dart';
 
 class RecentlyPlayedPage extends StatefulWidget {
   final List<Song> songs;
@@ -41,26 +42,40 @@ class _RecentlyPlayedPageState extends State<RecentlyPlayedPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: CustomScrollView(
-        controller: _scrollController,
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          _buildAppBar(),
-          SliverPadding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 100), sliver: _buildSongList()),
-        ],
-      ),
-    );
+    return Consumer<AudioController>(builder: (context, controller, child) {
+      final artworkPath = controller.currentSong?.localArtworkPath;
+      final accentColor = controller.accentColor;
+
+      return Scaffold(
+        extendBody: true,
+        body: Stack(
+          children: [
+            GlassBackground(
+              artworkPath: artworkPath,
+              accentColor: accentColor,
+              isDark: true,
+            ),
+            CustomScrollView(
+              controller: _scrollController,
+              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+              slivers: [
+                _buildAppBar(accentColor),
+                SliverPadding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 100), sliver: _buildSongList(accentColor)),
+              ],
+            ),
+          ],
+        ),
+      );
+    });
   }
 
-  Widget _buildAppBar() {
-    final opacity = (_scrollOffset / 200).clamp(0.0, 1.0);
+  Widget _buildAppBar(Color accentColor) {
+    final isScrolled = _scrollOffset > 100;
 
     return SliverAppBar(
       expandedHeight: 280,
       pinned: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: isScrolled ? Colors.black.withOpacity(0.4) : Colors.transparent,
       elevation: 0,
       leading: Center(
         child: GlassButton(
@@ -71,46 +86,29 @@ class _RecentlyPlayedPageState extends State<RecentlyPlayedPage> {
           accentColor: Colors.white,
         ),
       ),
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Gradient Background
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.blueGrey.shade400, Colors.blueGrey.shade700],
-                ),
+      flexibleSpace: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: isScrolled ? 20 : 0, sigmaY: isScrolled ? 20 : 0),
+          child: FlexibleSpaceBar(
+            title: AnimatedOpacity(
+              opacity: isScrolled ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: const Text(
+                'Recently Played',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
             ),
-
-            // Pattern/Decoration
-            Positioned(
-              right: -50,
-              top: -50,
-              child: Image.asset(
-                'assets/images/recently_played.png',
-                width: 250,
-                height: 250,
-                color: Colors.white.withOpacity(0.1),
-              ),
-            ),
-
-            // Content
-            SafeArea(
+            background: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Icon
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: accentColor.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Image.asset(
@@ -144,6 +142,7 @@ class _RecentlyPlayedPageState extends State<RecentlyPlayedPage> {
                             icon: 'assets/images/play.png',
                             onTap: _playAll,
                             isPrimary: true,
+                            accentColor: accentColor,
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -153,6 +152,7 @@ class _RecentlyPlayedPageState extends State<RecentlyPlayedPage> {
                             icon: 'assets/images/shuffle.png',
                             onTap: _shuffleAll,
                             isPrimary: false,
+                            accentColor: accentColor,
                           ),
                         ),
                       ],
@@ -161,14 +161,6 @@ class _RecentlyPlayedPageState extends State<RecentlyPlayedPage> {
                 ),
               ),
             ),
-          ],
-        ),
-        title: AnimatedOpacity(
-          opacity: opacity,
-          duration: const Duration(milliseconds: 200),
-          child: const Text(
-            'Recently Played',
-            style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
           ),
         ),
       ),
@@ -180,6 +172,7 @@ class _RecentlyPlayedPageState extends State<RecentlyPlayedPage> {
     required String icon,
     required VoidCallback onTap,
     required bool isPrimary,
+    required Color accentColor,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -190,18 +183,19 @@ class _RecentlyPlayedPageState extends State<RecentlyPlayedPage> {
           child: Container(
             height: 50,
             decoration: BoxDecoration(
-              color: isPrimary ? Colors.white : Colors.white.withOpacity(0.2),
+              color: isPrimary ? accentColor : Colors.white.withOpacity(0.1),
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset(icon, width: 20, height: 20, color: isPrimary ? Colors.blueGrey : Colors.white),
+                Image.asset(icon, width: 22, height: 22, color: Colors.white),
                 const SizedBox(width: 8),
                 Text(
                   text,
-                  style: TextStyle(
-                    color: isPrimary ? Colors.blueGrey : Colors.white,
+                  style: const TextStyle(
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -214,16 +208,16 @@ class _RecentlyPlayedPageState extends State<RecentlyPlayedPage> {
     );
   }
 
-  Widget _buildSongList() {
+  Widget _buildSongList(Color accentColor) {
     return SliverList(
       delegate: SliverChildBuilderDelegate((context, index) {
         final song = widget.songs[index];
-        return _buildSongTile(song, index);
+        return _buildSongTile(song, index, accentColor);
       }, childCount: widget.songs.length),
     );
   }
 
-  Widget _buildSongTile(Song song, int index) {
+  Widget _buildSongTile(Song song, int index, Color accentColor) {
     return Consumer<AudioController>(
       builder: (context, audioController, child) {
         final isPlaying = audioController.currentSong?.id == song.id && audioController.isPlaying;
@@ -231,9 +225,9 @@ class _RecentlyPlayedPageState extends State<RecentlyPlayedPage> {
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
-            color: isPlaying ? Colors.blueGrey.withOpacity(0.1) : Colors.white,
+            color: isPlaying ? accentColor.withOpacity(0.2) : Colors.white.withOpacity(0.05),
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -246,11 +240,11 @@ class _RecentlyPlayedPageState extends State<RecentlyPlayedPage> {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: Colors.blueGrey.withOpacity(0.6),
+                      color: Colors.black.withOpacity(0.4),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
-                      child: Image.asset('assets/images/equalizer.png', width: 24, height: 24, color: Colors.white),
+                      child: Image.asset('assets/images/equalizer.png', width: 24, height: 24, color: accentColor),
                     ),
                   ),
               ],
@@ -261,7 +255,7 @@ class _RecentlyPlayedPageState extends State<RecentlyPlayedPage> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontWeight: isPlaying ? FontWeight.bold : FontWeight.w600,
-                color: isPlaying ? Colors.blueGrey : Colors.black87,
+                color: isPlaying ? accentColor : Colors.white,
                 fontSize: 16,
               ),
             ),
@@ -273,10 +267,10 @@ class _RecentlyPlayedPageState extends State<RecentlyPlayedPage> {
                   song.artist,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                  style: TextStyle(color: Colors.white60, fontSize: 13),
                 ),
                 const SizedBox(height: 2),
-                Text(_formatDuration(song.duration), style: TextStyle(color: Colors.grey.shade400, fontSize: 11)),
+                Text(_formatDuration(song.duration), style: TextStyle(color: Colors.white38, fontSize: 11)),
               ],
             ),
             trailing: MoreOptionsButton(
@@ -286,7 +280,7 @@ class _RecentlyPlayedPageState extends State<RecentlyPlayedPage> {
                   'assets/images/favorite.png',
                   width: 24,
                   height: 24,
-                  color: song.isFavorite ? Colors.red : Colors.grey.shade400,
+                  color: song.isFavorite ? Colors.red : Colors.white38,
                 ),
                 onPressed: () => audioController.toggleFavorite(song),
               ),

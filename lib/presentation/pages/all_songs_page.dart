@@ -7,6 +7,7 @@ import '../../data/models/song_model.dart';
 import '../controllers/audio_controller.dart';
 import '../widgets/hybrid_song_artwork.dart';
 import '../widgets/more_options_button.dart';
+import '../widgets/glass_background.dart';
 
 enum SortOrder { aToZ, zToA, dateAdded, duration }
 
@@ -26,7 +27,6 @@ class _AllSongsPageState extends State<AllSongsPage> {
   String _searchQuery = '';
   SortOrder _sortOrder = SortOrder.aToZ;
   double _scrollOffset = 0;
-  double _lastScrollOffset = 0;
   bool _isLoading = true;
 
   @override
@@ -44,13 +44,9 @@ class _AllSongsPageState extends State<AllSongsPage> {
   }
 
   void _onScroll() {
-    final currentOffset = _scrollController.offset;
-    if ((currentOffset - _lastScrollOffset).abs() > 10) {
-      setState(() {
-        _scrollOffset = currentOffset;
-        _lastScrollOffset = currentOffset;
-      });
-    }
+    setState(() {
+      _scrollOffset = _scrollController.offset;
+    });
   }
 
   @override
@@ -81,8 +77,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
         filteredSongs.sort((a, b) => b.title.toLowerCase().compareTo(a.title.toLowerCase()));
         break;
       case SortOrder.dateAdded:
-        // Assuming higher ID means newer, or use a proper date field if available
-        filteredSongs.sort((a, b) => b.id.compareTo(a.id));
+        filteredSongs.sort((a, b) => b.dateAdded.compareTo(a.dateAdded));
         break;
       case SortOrder.duration:
         filteredSongs.sort((a, b) => b.duration.compareTo(a.duration));
@@ -105,209 +100,241 @@ class _AllSongsPageState extends State<AllSongsPage> {
   Widget build(BuildContext context) {
     final filteredSongs = _getFilteredAndSortedSongs();
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50], // Consistent with Albums/Artists
-      body: CustomScrollView(
-        controller: _scrollController,
-        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-        slivers: [
-          _buildHeader(),
+    return Consumer<AudioController>(builder: (context, controller, child) {
+      final artworkPath = controller.currentSong?.localArtworkPath;
+      final accentColor = controller.accentColor;
 
-          if (_isLoading)
-            _buildShimmerList()
-          else if (filteredSongs.isEmpty)
-            SliverFillRemaining(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset('assets/images/song.png', width: 64, height: 64, color: Colors.grey.shade300),
-                    const SizedBox(height: 16),
-                    Text(
-                      _searchQuery.isNotEmpty ? 'No songs found' : 'No music available',
-                      style: TextStyle(fontSize: 18, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+      return Scaffold(
+        extendBody: true,
+        body: Stack(
+          children: [
+            GlassBackground(
+              artworkPath: artworkPath,
+              accentColor: accentColor,
+              isDark: true,
+            ),
+            CustomScrollView(
+              controller: _scrollController,
+              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+              slivers: [
+                _buildHeader(accentColor),
+
+                if (_isLoading)
+                  _buildShimmerList()
+                else if (filteredSongs.isEmpty)
+                  SliverFillRemaining(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.05),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Image.asset('assets/images/song.png', width: 64, height: 64, color: Colors.white38),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _searchQuery.isNotEmpty ? 'No songs found' : 'No music available',
+                            style: const TextStyle(fontSize: 18, color: Colors.white70, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
-              ),
-            )
-          else
-            _buildSongList(filteredSongs),
+                  )
+                else
+                  _buildSongList(filteredSongs, accentColor),
 
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
-      ),
-    );
+                const SliverToBoxAdapter(child: SizedBox(height: 100)),
+              ],
+            ),
+          ],
+        ),
+      );
+    });
   }
 
-  Widget _buildHeader() {
-    final opacity = (_scrollOffset / 150).clamp(0.0, 1.0);
+  Widget _buildHeader(Color accentColor) {
+    final isScrolled = _scrollOffset > 100;
     final totalDuration = _formatTotalDuration(widget.songs);
 
     return SliverAppBar(
-      expandedHeight: 280, // Taller header for stats/actions
+      expandedHeight: 280,
       floating: false,
       pinned: true,
-      backgroundColor: Colors.white,
-      elevation: opacity * 4,
-      shadowColor: Colors.black.withOpacity(0.1),
+      backgroundColor: isScrolled ? Colors.black.withOpacity(0.4) : Colors.transparent,
+      elevation: 0,
+      iconTheme: const IconThemeData(color: Colors.white),
       actions: [
         // Sort Button
-        PopupMenuButton<SortOrder>(
-          icon: Image.asset(
-            'assets/images/sort.png',
-            width: 24,
-            height: 24,
-            color: opacity > 0.5 ? Colors.teal : Colors.white,
+        Container(
+          margin: const EdgeInsets.only(right: 16),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
           ),
-          onSelected: (order) => setState(() => _sortOrder = order),
-          itemBuilder: (context) => [
-            const PopupMenuItem(value: SortOrder.aToZ, child: Text('A to Z')),
-            const PopupMenuItem(value: SortOrder.zToA, child: Text('Z to A')),
-            const PopupMenuItem(value: SortOrder.dateAdded, child: Text('Recently Added')),
-            const PopupMenuItem(value: SortOrder.duration, child: Text('Duration')),
-          ],
-        ),
-        const SizedBox(width: 8),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        title: AnimatedOpacity(
-          opacity: opacity,
-          duration: const Duration(milliseconds: 200),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'All Songs',
-                style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: Colors.teal.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                child: Text(
-                  '${widget.songs.length}',
-                  style: const TextStyle(color: Colors.teal, fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-              ),
+          child: PopupMenuButton<SortOrder>(
+            icon: Image.asset(
+              'assets/images/sort.png',
+              width: 20,
+              height: 20,
+              color: Colors.white,
+            ),
+            onSelected: (order) => setState(() => _sortOrder = order),
+            color: const Color(0xFF1E1E1E),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: SortOrder.aToZ, child: Text('A to Z', style: TextStyle(color: Colors.white))),
+              const PopupMenuItem(value: SortOrder.zToA, child: Text('Z to A', style: TextStyle(color: Colors.white))),
+              const PopupMenuItem(
+                  value: SortOrder.dateAdded, child: Text('Recently Added', style: TextStyle(color: Colors.white))),
+              const PopupMenuItem(
+                  value: SortOrder.duration, child: Text('Duration', style: TextStyle(color: Colors.white))),
             ],
           ),
         ),
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.teal.shade500, Colors.teal.shade800], // distinct color for Songs
-            ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
+      ],
+      flexibleSpace: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: isScrolled ? 20 : 0, sigmaY: isScrolled ? 20 : 0),
+          child: FlexibleSpaceBar(
+            title: AnimatedOpacity(
+              opacity: isScrolled ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 200),
+               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Image.asset('assets/images/song.png', width: 28, height: 28, color: Colors.white),
-                      ),
-                      const SizedBox(width: 16),
-                      const Text(
-                        'All Songs',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
-                        ),
-                      ),
-                    ],
+                  const Text(
+                    'All Songs',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${widget.songs.length} tracks • $totalDuration',
-                    style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Search Bar
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.white.withOpacity(0.3)),
-                          ),
-                          child: TextField(
-                            controller: _searchController,
-                            style: const TextStyle(fontSize: 15, color: Colors.white),
-                            decoration: InputDecoration(
-                              hintText: 'Search collection...',
-                              hintStyle: const TextStyle(color: Colors.white60),
-                              prefixIcon: Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Image.asset(
-                                  'assets/images/search.png',
-                                  width: 20,
-                                  height: 20,
-                                  color: Colors.white70,
-                                ),
-                              ),
-                              suffixIcon: _searchQuery.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
-                                      onPressed: () {
-                                        setState(() {
-                                          _searchController.clear();
-                                          _searchQuery = '';
-                                        });
-                                      },
-                                    )
-                                  : null,
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                            ),
-                            onChanged: (value) => setState(() => _searchQuery = value),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Action Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildHeaderActionButton(
-                          text: 'Play All',
-                          icon: 'assets/images/play.png',
-                          onTap: _playAll,
-                          isPrimary: true,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildHeaderActionButton(
-                          text: 'Shuffle',
-                          icon: 'assets/images/shuffle.png',
-                          onTap: _shuffleAll,
-                          isPrimary: false,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                        color: accentColor.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                    child: Text(
+                      '${widget.songs.length}',
+                      style: TextStyle(color: accentColor, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ],
+              ),
+            ),
+            background: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: accentColor.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child:
+                              Image.asset('assets/images/song.png', width: 28, height: 28, color: Colors.white),
+                        ),
+                        const SizedBox(width: 16),
+                        const Text(
+                          'All Songs',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${widget.songs.length} tracks • $totalDuration',
+                      style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Search Bar
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.white.withOpacity(0.1)),
+                            ),
+                            child: TextField(
+                              controller: _searchController,
+                              style: const TextStyle(fontSize: 15, color: Colors.white),
+                              decoration: InputDecoration(
+                                hintText: 'Search collection...',
+                                hintStyle: const TextStyle(color: Colors.white38),
+                                prefixIcon: Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Image.asset(
+                                    'assets/images/search.png',
+                                    width: 20,
+                                    height: 20,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                                suffixIcon: _searchQuery.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                                        onPressed: () {
+                                          setState(() {
+                                            _searchController.clear();
+                                            _searchQuery = '';
+                                          });
+                                        },
+                                      )
+                                    : null,
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                              ),
+                              onChanged: (value) => setState(() => _searchQuery = value),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Action Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildHeaderActionButton(
+                            text: 'Play All',
+                            icon: 'assets/images/play.png',
+                            onTap: _playAll,
+                            isPrimary: true,
+                            accentColor: accentColor,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildHeaderActionButton(
+                            text: 'Shuffle',
+                            icon: 'assets/images/shuffle.png',
+                            onTap: _shuffleAll,
+                            isPrimary: false,
+                            accentColor: accentColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -321,6 +348,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
     required String icon,
     required VoidCallback onTap,
     required bool isPrimary,
+    required Color accentColor,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -331,19 +359,19 @@ class _AllSongsPageState extends State<AllSongsPage> {
           child: Container(
             height: 44,
             decoration: BoxDecoration(
-              color: isPrimary ? Colors.white : Colors.white.withOpacity(0.15),
+              color: isPrimary ? accentColor : Colors.white.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
-              border: isPrimary ? null : Border.all(color: Colors.white.withOpacity(0.3)),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset(icon, width: 20, height: 20, color: isPrimary ? Colors.teal.shade800 : Colors.white),
+                Image.asset(icon, width: 20, height: 20, color: Colors.white),
                 const SizedBox(width: 8),
                 Text(
                   text,
-                  style: TextStyle(
-                    color: isPrimary ? Colors.teal.shade800 : Colors.white,
+                  style: const TextStyle(
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -356,14 +384,14 @@ class _AllSongsPageState extends State<AllSongsPage> {
     );
   }
 
-  Widget _buildSongList(List<Song> songs) {
+  Widget _buildSongList(List<Song> songs, Color accentColor) {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
             final song = songs[index];
-            return RepaintBoundary(child: _buildSongTile(song, index));
+            return RepaintBoundary(child: _buildSongTile(song, index, accentColor));
           },
           childCount: songs.length,
           addAutomaticKeepAlives: true,
@@ -372,7 +400,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
     );
   }
 
-  Widget _buildSongTile(Song song, int index) {
+  Widget _buildSongTile(Song song, int index, Color accentColor) {
     return Consumer<AudioController>(
       builder: (context, audioController, child) {
         final isPlaying = audioController.currentSong?.id == song.id && audioController.isPlaying;
@@ -381,10 +409,9 @@ class _AllSongsPageState extends State<AllSongsPage> {
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
-            color: isCurrent ? Colors.teal.withOpacity(0.08) : Colors.white,
+            color: isCurrent ? accentColor.withOpacity(0.2) : Colors.white.withOpacity(0.05),
             borderRadius: BorderRadius.circular(16),
-            border: isCurrent ? Border.all(color: Colors.teal.withOpacity(0.2)) : null,
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2))],
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -401,7 +428,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Center(
-                      child: Image.asset('assets/images/equalizer.png', width: 24, height: 24, color: Colors.white),
+                      child: Image.asset('assets/images/equalizer.png', width: 24, height: 24, color: accentColor),
                     ),
                   )
                 else if (isCurrent)
@@ -424,7 +451,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w600,
-                color: isCurrent ? Colors.teal.shade800 : Colors.black87,
+                color: isCurrent ? accentColor : Colors.white,
                 fontSize: 15,
               ),
             ),
@@ -435,14 +462,14 @@ class _AllSongsPageState extends State<AllSongsPage> {
                     song.artist,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                    style: TextStyle(color: Colors.white60, fontSize: 13),
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                  child: Text('•', style: TextStyle(color: Colors.grey.shade400, fontSize: 10)),
+                  child: Text('•', style: TextStyle(color: Colors.white38, fontSize: 10)),
                 ),
-                Text(_formatDuration(song.duration), style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                Text(_formatDuration(song.duration), style: TextStyle(color: Colors.white38, fontSize: 12)),
               ],
             ),
             trailing: MoreOptionsButton(
@@ -452,7 +479,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
                   'assets/images/favorite.png',
                   width: 20,
                   height: 20,
-                  color: song.isFavorite ? Colors.red : Colors.grey.shade300,
+                  color: song.isFavorite ? Colors.red : Colors.white38,
                 ),
                 onPressed: () => audioController.toggleFavorite(song),
               ),
@@ -469,18 +496,20 @@ class _AllSongsPageState extends State<AllSongsPage> {
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
           return Shimmer.fromColors(
-            baseColor: Colors.grey.shade300,
-            highlightColor: Colors.grey.shade100,
+            baseColor: Colors.white.withOpacity(0.1),
+            highlightColor: Colors.white.withOpacity(0.05),
             child: Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+              decoration:
+                  BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(16)),
               child: Row(
                 children: [
                   Container(
                     width: 52,
                     height: 52,
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
+                    decoration:
+                        BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -490,13 +519,15 @@ class _AllSongsPageState extends State<AllSongsPage> {
                         Container(
                           height: 14,
                           width: 140,
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+                          decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
                         ),
                         const SizedBox(height: 6),
                         Container(
                           height: 12,
                           width: 80,
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+                          decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
                         ),
                       ],
                     ),

@@ -1,10 +1,12 @@
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_x/data/models/song_model.dart';
 import 'package:audio_x/presentation/controllers/audio_controller.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
+import '../widgets/glass_background.dart';
 
 enum ViewMode { grid, list }
 
@@ -24,7 +26,6 @@ class _AlbumsPageState extends State<AlbumsPage> {
   ViewMode _viewMode = ViewMode.grid;
   SortOrder _sortOrder = SortOrder.aToZ;
   double _scrollOffset = 0;
-  double _lastScrollOffset = 0;
   bool _isLoading = true;
 
   @override
@@ -42,14 +43,9 @@ class _AlbumsPageState extends State<AlbumsPage> {
   }
 
   void _onScroll() {
-    // Throttle scroll updates - only update if difference > 10 pixels
-    final currentOffset = _scrollController.offset;
-    if ((currentOffset - _lastScrollOffset).abs() > 10) {
-      setState(() {
-        _scrollOffset = currentOffset;
-        _lastScrollOffset = currentOffset;
-      });
-    }
+    setState(() {
+      _scrollOffset = _scrollController.offset;
+    });
   }
 
   @override
@@ -111,235 +107,290 @@ class _AlbumsPageState extends State<AlbumsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: CustomScrollView(
-        controller: _scrollController,
-        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-        slivers: [
-          _buildHeader(),
-          // Albums Grid
-          Consumer<AudioController>(
-            builder: (context, controller, child) {
-              if (_isLoading) {
-                return SliverPadding(
-                  padding: const EdgeInsets.all(16),
-                  sliver: _viewMode == ViewMode.grid ? _buildGridShimmer() : _buildListShimmer(),
-                );
-              }
+    return Consumer<AudioController>(
+      builder: (context, controller, child) {
+        // Use current song for background or fallback
+        final artworkPath = controller.currentSong?.localArtworkPath;
+        final accentColor = controller.accentColor;
 
-              if (controller.songs.isEmpty) {
-                return SliverFillRemaining(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(color: Colors.deepPurple.shade50, shape: BoxShape.circle),
-                          child: Image.asset(
-                            'assets/images/album.png',
-                            width: 50,
-                            height: 50,
-                            color: Colors.deepPurple.shade300,
-                          ),
+        return Scaffold(
+          extendBody: true,
+          body: Stack(
+            children: [
+              // Shared Glass Background
+              GlassBackground(
+                artworkPath: artworkPath,
+                accentColor: accentColor,
+                isDark: true, // Force dark mode for premium look
+              ),
+
+              // Content
+              CustomScrollView(
+                controller: _scrollController,
+                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                slivers: [
+                  _buildHeader(accentColor),
+                  // Albums Grid
+                  if (_isLoading)
+                    SliverPadding(
+                      padding: const EdgeInsets.all(16),
+                      sliver: _viewMode == ViewMode.grid ? _buildGridShimmer() : _buildListShimmer(),
+                    )
+                  else if (controller.songs.isEmpty)
+                    SliverFillRemaining(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 120,
+                              height: 120,
+                              decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
+                              child: Image.asset(
+                                'assets/images/album.png',
+                                width: 50,
+                                height: 50,
+                                color: Colors.white.withOpacity(0.5),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            const Text(
+                              'No Albums Found',
+                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Add some music to see your albums',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.white70, fontSize: 14),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          'No Albums Found',
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Add some music to see your albums',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey, fontSize: 14),
-                        ),
-                      ],
+                      ),
+                    )
+                  else
+                    Builder(
+                      builder: (context) {
+                        final albumsMap = _groupByAlbums(controller.songs);
+                        final albums = _filterAndSortAlbums(albumsMap);
+
+                        if (albums.isEmpty) {
+                          return SliverFillRemaining(
+                            child: Center(
+                              child: Text('No results found', style: TextStyle(fontSize: 16, color: Colors.white70)),
+                            ),
+                          );
+                        }
+
+                        return SliverPadding(
+                          padding: const EdgeInsets.all(16),
+                          sliver: _viewMode == ViewMode.grid ? _buildGridView(albums) : _buildListView(albums),
+                        );
+                      },
                     ),
-                  ),
-                );
-              }
-
-              final albumsMap = _groupByAlbums(controller.songs);
-              final albums = _filterAndSortAlbums(albumsMap);
-
-              if (albums.isEmpty) {
-                return SliverFillRemaining(
-                  child: Center(
-                    child: Text('No results found', style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
-                  ),
-                );
-              }
-
-              return SliverPadding(
-                padding: const EdgeInsets.all(16),
-                sliver: _viewMode == ViewMode.grid ? _buildGridView(albums) : _buildListView(albums),
-              );
-            },
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                ],
+              ),
+            ],
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildHeader() {
-    final opacity = (_scrollOffset / 100).clamp(0.0, 1.0);
+  Widget _buildHeader(Color accentColor) {
+    // Calculate opacity for blur effect on scroll
+    final isScrolled = _scrollOffset > 100;
 
     return SliverAppBar(
       expandedHeight: 220,
       floating: false,
       pinned: true,
-      backgroundColor: Colors.white,
-      elevation: opacity * 4,
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      actions: [
-        // View toggle buttons
-        Container(
-          margin: const EdgeInsets.only(right: 16),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: opacity),
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: opacity > 0.5
-                ? [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 2))]
-                : [],
-          ),
-          child: Row(
-            children: [
-              _buildViewButton(
-                imagePath: 'assets/images/girdview.png',
-                isSelected: _viewMode == ViewMode.grid,
-                onTap: () => setState(() => _viewMode = ViewMode.grid),
-                isCompact: opacity > 0.5,
+      backgroundColor: isScrolled ? Colors.black.withOpacity(0.4) : Colors.transparent,
+      elevation: 0,
+      flexibleSpace: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: isScrolled ? 20 : 0, sigmaY: isScrolled ? 20 : 0),
+          child: FlexibleSpaceBar(
+            title: AnimatedOpacity(
+              opacity: isScrolled ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: const Text(
+                'Albums',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
               ),
-              _buildViewButton(
-                imagePath: 'assets/images/listview.png',
-                isSelected: _viewMode == ViewMode.list,
-                onTap: () => setState(() => _viewMode = ViewMode.list),
-                isCompact: opacity > 0.5,
-              ),
-            ],
-          ),
-        ),
-        // Sort button
-        PopupMenuButton<SortOrder>(
-          icon: Image.asset(
-            'assets/images/sort.png',
-            width: 24,
-            height: 24,
-            color: opacity > 0.5 ? Colors.deepPurple : Colors.white,
-          ),
-          onSelected: (order) {
-            setState(() {
-              _sortOrder = order;
-            });
-          },
-          offset: const Offset(0, 40),
-          itemBuilder: (context) => [
-            const PopupMenuItem(value: SortOrder.aToZ, child: Text('A to Z')),
-            const PopupMenuItem(value: SortOrder.zToA, child: Text('Z to A')),
-            const PopupMenuItem(value: SortOrder.recentlyAdded, child: Text('Recently Added')),
-            const PopupMenuItem(value: SortOrder.mostPlayed, child: Text('Most Songs')),
-          ],
-        ),
-        const SizedBox(width: 8),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        title: AnimatedOpacity(
-          opacity: opacity,
-          duration: const Duration(milliseconds: 200),
-          child: const Text(
-            'Albums',
-            style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
-          ),
-        ),
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.indigo.shade600, Colors.blue.shade600],
             ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(16),
+            background: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: accentColor.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Image.asset('assets/images/album.png', width: 28, height: 28, color: Colors.white),
+                            ),
+                            const SizedBox(width: 16),
+                            const Text(
+                              'Albums',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
+                              ),
+                            ),
+                          ],
                         ),
-                        child: Image.asset('assets/images/album.png', width: 28, height: 28, color: Colors.white),
-                      ),
-                      const SizedBox(width: 16),
-                      const Text(
-                        'Albums',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
+                        // View Toggle Buttons
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.white.withOpacity(0.1)),
+                          ),
+                          child: Row(
+                            children: [
+                              _buildViewButton(
+                                imagePath: 'assets/images/girdview.png',
+                                isSelected: _viewMode == ViewMode.grid,
+                                onTap: () => setState(() => _viewMode = ViewMode.grid),
+                                accentColor: accentColor,
+                              ),
+                              _buildViewButton(
+                                imagePath: 'assets/images/listview.png',
+                                isSelected: _viewMode == ViewMode.list,
+                                onTap: () => setState(() => _viewMode = ViewMode.list),
+                                accentColor: accentColor,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('Your music collection', style: TextStyle(color: Colors.white70, fontSize: 16)),
-                  const SizedBox(height: 16),
-                  // Search bar in gradient
-                  Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                      ],
                     ),
-                    child: TextField(
-                      controller: _searchController,
-                      style: const TextStyle(fontSize: 15, color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Search albums...',
-                        hintStyle: const TextStyle(color: Colors.white60),
-                        prefixIcon: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Image.asset('assets/images/search.png', width: 20, height: 20, color: Colors.white70),
-                        ),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
-                                onPressed: () {
+
+                    const SizedBox(height: 8),
+                    const Text('Your music collection', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                    const SizedBox(height: 16),
+                    // Search bar in glass
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.white.withOpacity(0.1)),
+                            ),
+                            child: Theme(
+                              data: Theme.of(context).copyWith(
+                                textSelectionTheme: TextSelectionThemeData(
+                                  cursorColor: accentColor,
+                                  selectionColor: accentColor.withOpacity(0.4),
+                                  selectionHandleColor: accentColor,
+                                ),
+                              ),
+                              child: TextField(
+                                controller: _searchController,
+                                style: const TextStyle(fontSize: 15, color: Colors.white),
+                                decoration: InputDecoration(
+                                  hintText: 'Search albums...',
+                                  hintStyle: const TextStyle(color: Colors.white38),
+                                  prefixIcon: Padding(
+                                    padding: const EdgeInsets.all(12.0),
+                                    child: Image.asset(
+                                      'assets/images/search.png',
+                                      width: 20,
+                                      height: 20,
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                  suffixIcon: _searchQuery.isNotEmpty
+                                      ? IconButton(
+                                          icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                                          onPressed: () {
+                                            setState(() {
+                                              _searchController.clear();
+                                              _searchQuery = '';
+                                            });
+                                          },
+                                        )
+                                      : null,
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                ),
+                                onChanged: (value) {
                                   setState(() {
-                                    _searchController.clear();
-                                    _searchQuery = '';
+                                    _searchQuery = value;
                                   });
                                 },
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                      ),
-                      onChanged: (value) {
-                        setState(() {
-                          _searchQuery = value;
-                        });
-                      },
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Sort button
+                        PopupMenuButton<SortOrder>(
+                          icon: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.white.withOpacity(0.1)),
+                            ),
+                            child: Image.asset(
+                              'assets/images/sort.png',
+                              width: 24,
+                              height: 24,
+                              color: accentColor, // Updated to dynamic color
+                            ),
+                          ),
+                          onSelected: (order) {
+                            setState(() {
+                              _sortOrder = order;
+                            });
+                          },
+                          color: const Color(0xFF1E1E1E),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                          ),
+                          offset: const Offset(0, 40),
+                          itemBuilder: (context) => [
+                            _buildPopupItem(SortOrder.aToZ, 'A to Z'),
+                            _buildPopupItem(SortOrder.zToA, 'Z to A'),
+                            _buildPopupItem(SortOrder.recentlyAdded, 'Recently Added'),
+                            _buildPopupItem(SortOrder.mostPlayed, 'Most Songs'),
+                          ],
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  PopupMenuItem<SortOrder> _buildPopupItem(SortOrder value, String text) {
+    return PopupMenuItem(
+      value: value,
+      child: Text(text, style: const TextStyle(color: Colors.white)),
     );
   }
 
@@ -352,11 +403,9 @@ class _AlbumsPageState extends State<AlbumsPage> {
       onTap: () => _navigateToAlbumDetails(context, albumName, songs, heroTag: 'album_grid_$albumName'),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 5)),
-          ],
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,7 +413,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
             // Album Art
             Expanded(
               child: Container(
-                decoration: BoxDecoration(borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+                decoration: const BoxDecoration(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                   child: Stack(
@@ -378,13 +427,14 @@ class _AlbumsPageState extends State<AlbumsPage> {
                         )
                       else
                         _buildPlaceholderArt(),
-                      // Subtle gradient overlay
+
+                      // Gradient overlay
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.1)],
+                            colors: [Colors.transparent, Colors.black.withOpacity(0.3)],
                           ),
                         ),
                       ),
@@ -401,14 +451,14 @@ class _AlbumsPageState extends State<AlbumsPage> {
                 children: [
                   Text(
                     albumName,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87),
-                    maxLines: 2,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${songs.length} ${songs.length == 1 ? 'song' : 'songs'}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    style: TextStyle(fontSize: 12, color: Colors.white60),
                   ),
                 ],
               ),
@@ -421,20 +471,9 @@ class _AlbumsPageState extends State<AlbumsPage> {
 
   Widget _buildPlaceholderArt() {
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Colors.deepPurple.shade300, Colors.purple.shade400],
-        ),
-      ),
+      decoration: BoxDecoration(color: Colors.white.withOpacity(0.1)),
       child: Center(
-        child: Image.asset(
-          'assets/images/album.png',
-          width: 48,
-          height: 48,
-          color: Colors.white.withValues(alpha: 0.7),
-        ),
+        child: Image.asset('assets/images/album.png', width: 48, height: 48, color: Colors.white.withOpacity(0.3)),
       ),
     );
   }
@@ -443,26 +482,17 @@ class _AlbumsPageState extends State<AlbumsPage> {
     required String imagePath,
     required bool isSelected,
     required VoidCallback onTap,
-    required bool isCompact,
+    required Color accentColor,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isSelected
-              ? (isCompact ? Colors.deepPurple.shade50 : Colors.white.withValues(alpha: 0.3))
-              : Colors.transparent,
+          color: isSelected ? accentColor.withOpacity(0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Image.asset(
-          imagePath,
-          width: 20,
-          height: 20,
-          color: isCompact
-              ? (isSelected ? Colors.deepPurple : Colors.grey[600])
-              : (isSelected ? Colors.white : Colors.white60),
-        ),
+        child: Image.asset(imagePath, width: 20, height: 20, color: isSelected ? accentColor : Colors.white60),
       ),
     );
   }
@@ -512,9 +542,9 @@ class _AlbumsPageState extends State<AlbumsPage> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2))],
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -527,35 +557,22 @@ class _AlbumsPageState extends State<AlbumsPage> {
                 ? Image.file(
                     File(firstSong.localArtworkPath!),
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _buildPlaceholderAvatar(),
+                    errorBuilder: (_, __, ___) => _buildPlaceholderArt(),
                   )
-                : _buildPlaceholderAvatar(),
+                : _buildPlaceholderArt(),
           ),
         ),
-        title: Text(albumName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+        title: Text(
+          albumName,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.white),
+        ),
         subtitle: Text(
           '${songs.length} ${songs.length == 1 ? 'song' : 'songs'}',
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+          style: TextStyle(color: Colors.white60, fontSize: 13),
         ),
-        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white38),
         onTap: () => _navigateToAlbumDetails(context, albumName, songs, heroTag: 'album_list_$albumName'),
       ),
-    );
-  }
-
-  Widget _buildPlaceholderAvatar() {
-    return Container(
-      width: 56,
-      height: 56,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Colors.deepPurple.shade300, Colors.purple.shade400],
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Image.asset('assets/images/album.png', width: 28, height: 28, color: Colors.white54),
     );
   }
 
@@ -569,8 +586,8 @@ class _AlbumsPageState extends State<AlbumsPage> {
       ),
       delegate: SliverChildBuilderDelegate((context, index) {
         return Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
-          highlightColor: Colors.grey.shade100,
+          baseColor: Colors.white.withOpacity(0.1),
+          highlightColor: Colors.white.withOpacity(0.05),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -601,8 +618,8 @@ class _AlbumsPageState extends State<AlbumsPage> {
     return SliverList(
       delegate: SliverChildBuilderDelegate((context, index) {
         return Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
-          highlightColor: Colors.grey.shade100,
+          baseColor: Colors.white.withOpacity(0.1),
+          highlightColor: Colors.white.withOpacity(0.05),
           child: Container(
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.all(8),

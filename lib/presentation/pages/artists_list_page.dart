@@ -178,194 +178,211 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
   }
 
   Widget _buildHeader() {
-    final opacity = (_scrollOffset / 100).clamp(0.0, 1.0);
+    final isScrolled = _scrollOffset > 100;
 
-    return SliverAppBar(
-      expandedHeight: 220,
-      floating: false,
-      pinned: true,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      shadowColor: Colors.transparent,
-      actions: [
-        // View toggle buttons - in app bar
-        Container(
-          margin: const EdgeInsets.only(right: 8),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-          ),
-          child: Consumer<AudioController>(
-            builder: (context, controller, child) {
-              return Row(
-                children: [
-                  _buildViewButton(
-                    imagePath: 'assets/images/girdview.png',
-                    isSelected: _viewMode == ViewMode.grid,
-                    onTap: () => setState(() => _viewMode = ViewMode.grid),
-                    isCompact: false,
-                    accentColor: controller.accentColor,
+    return Consumer<AudioController>(
+      builder: (context, controller, child) {
+        final accentColor = controller.accentColor;
+
+        return SliverAppBar(
+          expandedHeight: 220,
+          floating: false,
+          pinned: true,
+          backgroundColor: isScrolled ? Colors.black.withOpacity(0.4) : Colors.transparent,
+          elevation: 0,
+          flexibleSpace: ClipRRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: isScrolled ? 20 : 0, sigmaY: isScrolled ? 20 : 0),
+              child: FlexibleSpaceBar(
+                title: AnimatedOpacity(
+                  opacity: isScrolled ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: const Text(
+                    'Artists',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
                   ),
-                  _buildViewButton(
-                    imagePath: 'assets/images/listview.png',
-                    isSelected: _viewMode == ViewMode.list,
-                    onTap: () => setState(() => _viewMode = ViewMode.list),
-                    isCompact: false,
-                    accentColor: controller.accentColor,
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-        // Sort button
-        PopupMenuButton<SortOrder>(
-          icon: Consumer<AudioController>(
-            builder: (context, controller, _) {
-              return Image.asset(
-                'assets/images/sort.png',
-                width: 24,
-                height: 24,
-                color: controller.accentColor, // Dynamic color
-              );
-            },
-          ),
-          onSelected: (order) {
-            setState(() {
-              _sortOrder = order;
-            });
-          },
-          offset: const Offset(0, 40),
-          itemBuilder: (context) => [
-            const PopupMenuItem(value: SortOrder.aToZ, child: Text('A to Z')),
-            const PopupMenuItem(value: SortOrder.zToA, child: Text('Z to A')),
-          ],
-        ),
-        const SizedBox(width: 8),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        title: AnimatedOpacity(
-          opacity: opacity,
-          duration: const Duration(milliseconds: 200),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Artists',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-              const SizedBox(width: 8),
-              _buildConnectivityBadge(compact: true),
-            ],
-          ),
-        ),
-        background: Container(
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.2), // Base dark glass
-          ),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              ClipRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
-                      border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.1))),
+                ),
+                background: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: accentColor.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Image.asset(
+                                    'assets/images/artist_open.png',
+                                    width: 28,
+                                    height: 28,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                const Text(
+                                  'Artists',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            // View Toggle Buttons
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                              ),
+                              child: Row(
+                                children: [
+                                  _buildViewButton(
+                                    imagePath: 'assets/images/girdview.png',
+                                    isSelected: _viewMode == ViewMode.grid,
+                                    onTap: () => setState(() => _viewMode = ViewMode.grid),
+                                    isCompact: false,
+                                    accentColor: accentColor,
+                                  ),
+                                  _buildViewButton(
+                                    imagePath: 'assets/images/listview.png',
+                                    isSelected: _viewMode == ViewMode.list,
+                                    onTap: () => setState(() => _viewMode = ViewMode.list),
+                                    isCompact: false,
+                                    accentColor: accentColor,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Text('Your music collection', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                            const SizedBox(width: 8),
+                            _buildConnectivityBadge(compact: true),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Search bar in glass
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                ),
+                                child: Theme(
+                                  data: Theme.of(context).copyWith(
+                                    textSelectionTheme: TextSelectionThemeData(
+                                      cursorColor: accentColor,
+                                      selectionColor: accentColor.withOpacity(0.4),
+                                      selectionHandleColor: accentColor,
+                                    ),
+                                  ),
+                                  child: TextField(
+                                    controller: _searchController,
+                                    style: const TextStyle(fontSize: 15, color: Colors.white),
+                                    decoration: InputDecoration(
+                                      hintText: 'Search artists...',
+                                      hintStyle: const TextStyle(color: Colors.white38),
+                                      prefixIcon: Padding(
+                                        padding: const EdgeInsets.all(12.0),
+                                        child: Image.asset(
+                                          'assets/images/search.png',
+                                          width: 20,
+                                          height: 20,
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                      suffixIcon: _searchController.text.isNotEmpty
+                                          ? IconButton(
+                                              icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                                              onPressed: () {
+                                                setState(() {
+                                                  _searchController.clear();
+                                                });
+                                              },
+                                            )
+                                          : null,
+                                      border: InputBorder.none,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                    ),
+                                    onChanged: (value) {
+                                      setState(() {});
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Sort button
+                            PopupMenuButton<SortOrder>(
+                              icon: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                ),
+                                child: Image.asset(
+                                  'assets/images/sort.png',
+                                  width: 24,
+                                  height: 24,
+                                  color: accentColor, // Updated to use dynamic accent color
+                                ),
+                              ),
+                              onSelected: (order) {
+                                setState(() {
+                                  _sortOrder = order;
+                                });
+                              },
+                              color: const Color(0xFF1E1E1E),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                              ),
+                              offset: const Offset(0, 40),
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(
+                                  value: SortOrder.aToZ,
+                                  child: Text('A to Z', style: TextStyle(color: Colors.white)),
+                                ),
+                                const PopupMenuItem(
+                                  value: SortOrder.zToA,
+                                  child: Text('Z to A', style: TextStyle(color: Colors.white)),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Image.asset(
-                              'assets/images/artist_open.png',
-                              width: 28,
-                              height: 28,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          const Text(
-                            'Artists',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          _buildConnectivityBadge(compact: false),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      const Text('Your music collection', style: TextStyle(color: Colors.white70, fontSize: 16)),
-                      const SizedBox(height: 16),
-                      // Search bar in gradient
-                      Container(
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: Colors.white.withOpacity(0.3)),
-                        ),
-                        child: TextField(
-                          controller: _searchController,
-                          style: const TextStyle(fontSize: 15, color: Colors.white),
-                          decoration: InputDecoration(
-                            hintText: 'Search artists...',
-                            hintStyle: const TextStyle(color: Colors.white60),
-                            prefixIcon: Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: Image.asset(
-                                'assets/images/search.png',
-                                width: 20,
-                                height: 20,
-                                color: Colors.white70,
-                              ),
-                            ),
-                            suffixIcon: _searchController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
-                                    onPressed: () {
-                                      setState(() {
-                                        _searchController.clear();
-                                      });
-                                    },
-                                  )
-                                : null,
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                          ),
-                          onChanged: (value) {
-                            setState(() {});
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

@@ -9,7 +9,6 @@ import '../../data/models/song_model.dart';
 import '../../data/services/artist_service.dart';
 import '../controllers/audio_controller.dart';
 import 'player_page.dart';
-import '../widgets/glass_button.dart';
 import '../widgets/add_to_playlist_sheet.dart';
 import '../widgets/glass_background.dart';
 import '../../core/utils/color_utils.dart';
@@ -49,13 +48,13 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Provider.of<AudioController>(context, listen: false);
-
+    final controller = Provider.of<AudioController>(context);
     final currentSong = controller.currentSong;
+    final accentColor = controller.accentColor;
 
     return Stack(
       children: [
-        if (currentSong != null) GlassBackground(artworkPath: currentSong.localArtworkPath),
+        GlassBackground(artworkPath: currentSong?.localArtworkPath),
         Scaffold(
           backgroundColor: Colors.transparent,
           body: FutureBuilder<Artist?>(
@@ -77,8 +76,8 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
               return CustomScrollView(
                 controller: _scrollController,
                 slivers: [
-                  _buildAppBar(artist),
-                  _buildArtistHeader(artist),
+                  _buildAppBar(artist, accentColor),
+
                   _buildStatsSection(artist, artistSongs),
                   _buildActionButtons(artistSongs),
                   _buildSongsList(artistSongs),
@@ -137,24 +136,23 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
     );
   }
 
-  Widget _buildAppBar(Artist artist) {
+  Widget _buildAppBar(Artist artist, Color accentColor) {
+    // Check if scrolled enough to be considered "collapsed" or "pinned"
+    // expandedHeight (350) - kToolbarHeight
+    final isScrolled = _scrollController.hasClients && _scrollController.offset > (350 - kToolbarHeight - 20);
+
     return SliverAppBar(
       expandedHeight: 350,
       pinned: true,
       floating: false,
-      backgroundColor: Colors.transparent,
+      backgroundColor: isScrolled ? Colors.black.withValues(alpha: 0.4) : Colors.transparent,
       elevation: 0,
       shadowColor: Colors.transparent,
       systemOverlayStyle: SystemUiOverlayStyle.light,
-      leading: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: GlassButton(
-          imagePath: 'assets/images/back.png',
-          onTap: () => Navigator.of(context).pop(),
-          size: 24,
-          containerSize: 40,
-          iconColor: Colors.white,
-        ),
+      iconTheme: const IconThemeData(color: Colors.white),
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+        onPressed: () => Navigator.of(context).pop(),
       ),
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
@@ -164,58 +162,99 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
           final t = (350.0 - top) / calcHeight;
           final opacity = t.clamp(0.0, 1.0);
 
-          return ClipRect(
-            child: FlexibleSpaceBar(
-              collapseMode: CollapseMode.pin,
-              title: AnimatedOpacity(
-                opacity: opacity,
-                duration: const Duration(milliseconds: 100),
-                child: Text(
-                  artist.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
-                ),
-              ),
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // 1. Image Layer
-                  if (artist.imageUrl != null)
-                    Image.network(
-                      artist.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildPlaceholderImage(),
-                    )
-                  else
-                    _buildPlaceholderImage(),
-
-                  // 2. Gradient Overlay for readability
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
-                        stops: const [0.6, 1.0],
-                      ),
-                    ),
+          return ClipRRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: isScrolled ? 20 : 0, sigmaY: isScrolled ? 20 : 0),
+              child: FlexibleSpaceBar(
+                collapseMode: CollapseMode.pin,
+                title: AnimatedOpacity(
+                  opacity: isScrolled ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Text(
+                    artist.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
                   ),
+                ),
+                background: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // 1. Image Layer - Fades relative to scroll position?
+                    // Actually, AllSongsPage doesn't fade content out, it just blurs over it.
+                    // But for Artist Details, we often want the image to persist but get covered.
+                    // Following "AllSongsPage" structure simplified:
+                    if (artist.imageUrl != null)
+                      Image.network(
+                        artist.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _buildPlaceholderImage(),
+                      )
+                    else
+                      _buildPlaceholderImage(),
 
-                  // 3. Glass Blur Layer (Dynamic based on collapse)
-                  if (opacity > 0.0)
-                    Positioned.fill(
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 30 * opacity, sigmaY: 30 * opacity),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.96 * opacity),
-                            border: Border(
-                              bottom: BorderSide(color: Colors.white.withOpacity(0.15 * opacity), width: 1),
-                            ),
-                          ),
+                    // Gradient for text readability
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
+                          stops: const [0.6, 1.0],
                         ),
                       ),
                     ),
-                ],
+
+                    // Big Text Content (Name + Verified) - Fades out on scroll
+                    Positioned(
+                      bottom: 16,
+                      left: 24,
+                      right: 24,
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 100),
+                        opacity: opacity, // Use standard opacity logic (1.0 when expanded)
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              artist.name,
+                              style: const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black45)],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            // Verified Badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: Colors.green.withValues(alpha: 0.4)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.verified_rounded, size: 16, color: Colors.greenAccent),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Verified Artist',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.greenAccent,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -242,7 +281,7 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
             child: Container(
               width: 200,
               height: 200,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.1)),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.1)),
             ),
           ),
           Positioned(
@@ -251,7 +290,7 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
             child: Container(
               width: 150,
               height: 150,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.05)),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.05)),
             ),
           ),
           Center(
@@ -262,9 +301,9 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                   width: 120,
                   height: 120,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
                   ),
                   child: Image.asset('assets/images/artist_open.png', width: 60, height: 60, color: Colors.white54),
                 ),
@@ -273,45 +312,6 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildArtistHeader(Artist artist) {
-    return SliverToBoxAdapter(
-      child: Container(
-        color: Colors.transparent,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              artist.name,
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            const SizedBox(height: 8),
-            // Verified Badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.green.withOpacity(0.3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.verified_rounded, size: 16, color: Colors.green.shade600),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Verified Artist',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.green.shade300),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

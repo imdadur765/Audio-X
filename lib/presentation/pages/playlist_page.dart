@@ -1,10 +1,12 @@
 import 'dart:ui';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/playlist_model.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/playlist_service.dart';
 import '../controllers/audio_controller.dart';
+import '../widgets/glass_background.dart';
 
 enum SortOrder { aToZ, zToA, newest, oldest }
 
@@ -27,7 +29,6 @@ class _PlaylistPageState extends State<PlaylistPage> {
   ViewMode _viewMode = ViewMode.grid;
   SortOrder _sortOrder = SortOrder.newest;
   double _scrollOffset = 0;
-  double _lastScrollOffset = 0;
 
   @override
   void initState() {
@@ -46,13 +47,9 @@ class _PlaylistPageState extends State<PlaylistPage> {
   }
 
   void _onScroll() {
-    final currentOffset = _scrollController.offset;
-    if ((currentOffset - _lastScrollOffset).abs() > 10) {
-      setState(() {
-        _scrollOffset = currentOffset;
-        _lastScrollOffset = currentOffset;
-      });
-    }
+    setState(() {
+      _scrollOffset = _scrollController.offset;
+    });
   }
 
   Future<void> _loadPlaylists() async {
@@ -124,90 +121,104 @@ class _PlaylistPageState extends State<PlaylistPage> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
-          return AlertDialog(
-            backgroundColor: Colors.white.withOpacity(0.95),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            title: const Text(
-              'Create Playlist',
-              style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: nameController,
-                  style: const TextStyle(color: Colors.black87),
-                  decoration: InputDecoration(
-                    hintText: 'Playlist Name',
-                    hintStyle: TextStyle(color: Colors.grey.shade400),
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  ),
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: AlertDialog(
+                backgroundColor: Colors.white.withOpacity(0.1),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  side: BorderSide(color: Colors.white.withOpacity(0.1)),
                 ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Choose Icon',
-                  style: TextStyle(color: Colors.black54, fontSize: 13, fontWeight: FontWeight.w600),
+                title: const Text(
+                  'Create Playlist',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 250, // Increased height
-                  width: double.maxFinite,
-                  child: GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4, // Reduced count
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 1,
-                    ),
-                    itemCount: icons.length,
-                    itemBuilder: (context, index) {
-                      final iconName = icons[index];
-                      final isSelected = selectedIcon == iconName;
-                      return GestureDetector(
-                        onTap: () => setState(() => selectedIcon = iconName),
-                        child: Container(
-                          padding: const EdgeInsets.all(12), // Slightly more padding
-                          decoration: BoxDecoration(
-                            color: isSelected ? Colors.deepPurple.withOpacity(0.1) : Colors.grey.shade500,
-                            borderRadius: BorderRadius.circular(12),
-                            border: isSelected ? Border.all(color: Colors.deepPurple, width: 2) : null,
-                          ),
-                          child: Image.asset(
-                            'assets/images/$iconName',
-                            color: isSelected ? Colors.deepPurple : Colors.grey.shade600,
-                          ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Playlist Name',
+                        hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                        filled: true,
+                        fillColor: Colors.white.withOpacity(0.1),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
                         ),
-                      );
-                    },
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Choose Icon',
+                      style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 250, // Increased height
+                      width: double.maxFinite,
+                      child: GridView.builder(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 4, // Reduced count
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 1,
+                        ),
+                        itemCount: icons.length,
+                        itemBuilder: (context, index) {
+                          final iconName = icons[index];
+                          final isSelected = selectedIcon == iconName;
+                          return GestureDetector(
+                            onTap: () => setState(() => selectedIcon = iconName),
+                            child: Container(
+                              padding: const EdgeInsets.all(12), // Slightly more padding
+                              decoration: BoxDecoration(
+                                color: isSelected ? Colors.deepPurple.withOpacity(0.4) : Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: isSelected
+                                    ? Border.all(color: Colors.deepPurple, width: 2)
+                                    : Border.all(color: Colors.white.withOpacity(0.05)),
+                              ),
+                              child: Image.asset(
+                                'assets/images/$iconName',
+                                color: isSelected ? Colors.white : Colors.white60,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
                   ),
-                ),
-              ],
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (nameController.text.isNotEmpty) {
+                        await _playlistService.createPlaylist(nameController.text, iconEmoji: selectedIcon);
+                        Navigator.pop(context);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: const Text('Create'),
+                  ),
+                ],
+              ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  if (nameController.text.isNotEmpty) {
-                    await _playlistService.createPlaylist(nameController.text, iconEmoji: selectedIcon);
-                    Navigator.pop(context);
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: const Text('Create'),
-              ),
-            ],
           );
         },
       ),
@@ -218,186 +229,248 @@ class _PlaylistPageState extends State<PlaylistPage> {
   Widget build(BuildContext context) {
     final playlists = _getFilteredAndSortedPlaylists();
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: CustomScrollView(
-        controller: _scrollController,
-        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-        slivers: [
-          _buildHeader(),
-          if (_isLoading)
-            const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
-          else if (playlists.isEmpty)
-            SliverFillRemaining(child: _buildEmptyState())
-          else
-            SliverPadding(
-              key: ValueKey(_viewMode),
-              padding: const EdgeInsets.all(16),
-              sliver: _viewMode == ViewMode.grid ? _buildGridView(playlists) : _buildListView(playlists),
+    return Consumer<AudioController>(
+      builder: (context, controller, child) {
+        // Use current song for background or fallback
+        final artworkPath = controller.currentSong?.localArtworkPath;
+        final accentColor = controller.accentColor;
+
+        return Scaffold(
+          extendBody: true,
+          body: Stack(
+            children: [
+              // Shared Glass Background
+              GlassBackground(
+                artworkPath: artworkPath,
+                accentColor: accentColor,
+                isDark: true, // Force dark mode for premium look
+              ),
+
+              CustomScrollView(
+                controller: _scrollController,
+                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                slivers: [
+                  _buildHeader(accentColor),
+                  if (_isLoading)
+                    const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
+                  else if (playlists.isEmpty)
+                    SliverFillRemaining(child: _buildEmptyState())
+                  else
+                    SliverPadding(
+                      key: ValueKey(_viewMode),
+                      padding: const EdgeInsets.all(16),
+                      sliver: _viewMode == ViewMode.grid ? _buildGridView(playlists) : _buildListView(playlists),
+                    ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                ],
+              ),
+            ],
+          ),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () => _showCreatePlaylistDialog(context),
+            backgroundColor: accentColor,
+            elevation: 4,
+            icon: Image.asset('assets/images/create.png', width: 24, height: 24, color: Colors.white),
+            label: const Text(
+              'Create',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showCreatePlaylistDialog(context),
-        backgroundColor: Colors.deepPurple,
-        icon: Image.asset('assets/images/create.png', width: 24, height: 24, color: Colors.white),
-        label: const Text(
-          'Create',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(Color accentColor) {
     final opacity = (_scrollOffset / 100).clamp(0.0, 1.0);
+    final isScrolled = _scrollOffset > 100;
 
     return SliverAppBar(
       expandedHeight: 220,
       floating: false,
       pinned: true,
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-      elevation: opacity * 4,
-      shadowColor: const Color.fromARGB(255, 8, 8, 8).withOpacity(0.1),
-      actions: [
-        // View toggle buttons
-        Container(
-          margin: const EdgeInsets.only(right: 16),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(opacity),
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: opacity > 0.5
-                ? [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))]
-                : [],
-          ),
-          child: Row(
-            children: [
-              _buildViewButton(
-                imagePath: 'assets/images/girdview.png',
-                isSelected: _viewMode == ViewMode.grid,
-                onTap: () => setState(() => _viewMode = ViewMode.grid),
-                isCompact: opacity > 0.5,
+      backgroundColor: isScrolled ? Colors.black.withOpacity(0.4) : Colors.transparent,
+      elevation: 0,
+      flexibleSpace: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: isScrolled ? 20 : 0, sigmaY: isScrolled ? 20 : 0),
+          child: FlexibleSpaceBar(
+            title: AnimatedOpacity(
+              opacity: isScrolled ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: const Text(
+                'Playlists',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
               ),
-              _buildViewButton(
-                imagePath: 'assets/images/listview.png',
-                isSelected: _viewMode == ViewMode.list,
-                onTap: () => setState(() => _viewMode = ViewMode.list),
-                isCompact: opacity > 0.5,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        // Sort button
-        PopupMenuButton<SortOrder>(
-          onSelected: (order) => setState(() => _sortOrder = order),
-          offset: const Offset(0, 40),
-          itemBuilder: (context) => [
-            const PopupMenuItem(value: SortOrder.newest, child: Text('Newest First')),
-            const PopupMenuItem(value: SortOrder.oldest, child: Text('Oldest First')),
-            const PopupMenuItem(value: SortOrder.aToZ, child: Text('A to Z')),
-            const PopupMenuItem(value: SortOrder.zToA, child: Text('Z to A')),
-          ],
-          child: _buildViewButton(
-            imagePath: 'assets/images/sort.png',
-            isSelected: false,
-            onTap: () {}, // Handled by PopupMenuButton
-            isCompact: opacity > 0.5,
-          ),
-        ),
-        const SizedBox(width: 16),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        title: AnimatedOpacity(
-          opacity: opacity,
-          duration: const Duration(milliseconds: 200),
-          child: const Text(
-            'Playlists',
-            style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
-          ),
-        ),
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.orange.shade600, Colors.deepOrange.shade500],
             ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(16),
+            background: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: accentColor.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Image.asset(
+                                'assets/images/playlist_open.png',
+                                width: 28,
+                                height: 28,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            const Text(
+                              'Playlists',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
+                              ),
+                            ),
+                          ],
                         ),
-                        child: Image.asset(
-                          'assets/images/playlist_open.png',
-                          width: 28,
-                          height: 28,
-                          color: Colors.white,
+                        // View toggle buttons
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.white.withOpacity(0.1)),
+                          ),
+                          child: Row(
+                            children: [
+                              _buildViewButton(
+                                imagePath: 'assets/images/girdview.png',
+                                isSelected: _viewMode == ViewMode.grid,
+                                onTap: () => setState(() => _viewMode = ViewMode.grid),
+                                accentColor: accentColor,
+                              ),
+                              _buildViewButton(
+                                imagePath: 'assets/images/listview.png',
+                                isSelected: _viewMode == ViewMode.list,
+                                onTap: () => setState(() => _viewMode = ViewMode.list),
+                                accentColor: accentColor,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      const Text(
-                        'Playlists',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('Your custom collections', style: TextStyle(color: Colors.white70, fontSize: 16)),
-                  const SizedBox(height: 16),
-                  // Search bar
-                  Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.white.withOpacity(0.3)),
+                      ],
                     ),
-                    child: TextField(
-                      controller: _searchController,
-                      style: const TextStyle(fontSize: 15, color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Search playlists...',
-                        hintStyle: const TextStyle(color: Colors.white60),
-                        prefixIcon: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Image.asset('assets/images/search.png', color: Colors.white70, width: 20, height: 20),
-                        ),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: Image.asset(
-                                  'assets/images/home_close.png',
-                                  color: Colors.white70,
-                                  width: 20,
-                                  height: 20,
+
+                    const SizedBox(height: 8),
+                    const Text('Your custom collections', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                    const SizedBox(height: 16),
+                    // Search bar
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.white.withOpacity(0.1)),
+                            ),
+                            child: Theme(
+                              data: Theme.of(context).copyWith(
+                                textSelectionTheme: TextSelectionThemeData(
+                                  cursorColor: accentColor,
+                                  selectionColor: accentColor.withOpacity(0.4),
+                                  selectionHandleColor: accentColor,
                                 ),
-                                onPressed: () => setState(() => _searchController.clear()),
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                      ),
-                      onChanged: (value) => setState(() {}),
+                              ),
+                              child: TextField(
+                                controller: _searchController,
+                                style: const TextStyle(fontSize: 15, color: Colors.white),
+                                decoration: InputDecoration(
+                                  hintText: 'Search playlists...',
+                                  hintStyle: const TextStyle(color: Colors.white38),
+                                  prefixIcon: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Image.asset(
+                                      'assets/images/search.png',
+                                      color: Colors.white70,
+                                      width: 20,
+                                      height: 20,
+                                    ),
+                                  ),
+                                  suffixIcon: _searchController.text.isNotEmpty
+                                      ? IconButton(
+                                          icon: Image.asset(
+                                            'assets/images/home_close.png',
+                                            color: Colors.white70,
+                                            width: 20,
+                                            height: 20,
+                                          ),
+                                          onPressed: () => setState(() => _searchController.clear()),
+                                        )
+                                      : null,
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                ),
+                                onChanged: (value) => setState(() {}),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Sort button
+                        PopupMenuButton<SortOrder>(
+                          onSelected: (order) => setState(() => _sortOrder = order),
+                          offset: const Offset(0, 40),
+                          color: const Color(0xFF1E1E1E),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                          ),
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: SortOrder.newest,
+                              child: Text('Newest First', style: TextStyle(color: Colors.white)),
+                            ),
+                            const PopupMenuItem(
+                              value: SortOrder.oldest,
+                              child: Text('Oldest First', style: TextStyle(color: Colors.white)),
+                            ),
+                            const PopupMenuItem(
+                              value: SortOrder.aToZ,
+                              child: Text('A to Z', style: TextStyle(color: Colors.white)),
+                            ),
+                            const PopupMenuItem(
+                              value: SortOrder.zToA,
+                              child: Text('Z to A', style: TextStyle(color: Colors.white)),
+                            ),
+                          ],
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.white.withOpacity(0.1)),
+                            ),
+                            child: Image.asset(
+                              'assets/images/sort.png',
+                              width: 24,
+                              height: 24,
+                              color: accentColor, // Dynamic color
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -469,9 +542,9 @@ class _PlaylistPageState extends State<PlaylistPage> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))],
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -484,7 +557,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: gradientColors,
+                    colors: gradientColors.map((c) => c.withOpacity(0.8)).toList(),
                   ),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                 ),
@@ -499,14 +572,14 @@ class _PlaylistPageState extends State<PlaylistPage> {
                 children: [
                   Text(
                     playlist.name,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${playlist.songCount} songs • $durationText',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    style: TextStyle(fontSize: 12, color: Colors.white60),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -533,9 +606,9 @@ class _PlaylistPageState extends State<PlaylistPage> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))],
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -543,17 +616,24 @@ class _PlaylistPageState extends State<PlaylistPage> {
           width: 56,
           height: 56,
           decoration: BoxDecoration(
-            gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: gradientColors),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: gradientColors.map((c) => c.withOpacity(0.8)).toList(),
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Center(child: _buildPlaylistIcon(playlist, size: 24)),
         ),
-        title: Text(playlist.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+        title: Text(
+          playlist.name,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.white),
+        ),
         subtitle: Text(
           '${playlist.songCount} songs • $durationText',
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+          style: TextStyle(color: Colors.white60, fontSize: 13),
         ),
-        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white38),
         onTap: () {
           if (playlist.id == 'auto_recently_added') {
             context.pushNamed('recently_added', extra: songs);
@@ -608,24 +688,24 @@ class _PlaylistPageState extends State<PlaylistPage> {
           Container(
             width: 120,
             height: 120,
-            decoration: BoxDecoration(color: Colors.deepPurple.shade50, shape: BoxShape.circle),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
             child: Image.asset(
               'assets/images/playlist_open.png',
               width: 50,
               height: 50,
-              color: Colors.deepPurple.shade300,
+              color: Colors.white.withOpacity(0.5),
             ),
           ),
           const SizedBox(height: 20),
           const Text(
             'No Playlists Found',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
           ),
           const SizedBox(height: 8),
           const Text(
             'Create your first playlist to get started',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey, fontSize: 14),
+            style: TextStyle(color: Colors.white70, fontSize: 14),
           ),
         ],
       ),
@@ -636,26 +716,17 @@ class _PlaylistPageState extends State<PlaylistPage> {
     required String imagePath,
     required bool isSelected,
     required VoidCallback onTap,
-    required bool isCompact,
+    required Color accentColor,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isSelected
-              ? (isCompact ? Colors.deepPurple.shade50 : Colors.white.withOpacity(0.3))
-              : Colors.transparent,
+          color: isSelected ? accentColor.withOpacity(0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Image.asset(
-          imagePath,
-          width: 20,
-          height: 20,
-          color: isCompact
-              ? (isSelected ? Colors.deepPurple : Colors.grey[600])
-              : (isSelected ? Colors.white : Colors.white60),
-        ),
+        child: Image.asset(imagePath, width: 20, height: 20, color: isSelected ? accentColor : Colors.white60),
       ),
     );
   }

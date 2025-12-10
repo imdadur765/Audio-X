@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../data/services/artist_service.dart';
+import 'dart:ui';
 import '../../data/services/auth_service.dart';
 import '../../services/cloud_sync_service.dart';
 import '../../services/playlist_service.dart';
 import '../controllers/audio_controller.dart';
-import 'package:hive/hive.dart';
+import '../widgets/glass_background.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -16,9 +17,9 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  late TextEditingController _nameController;
   final AuthService _authService = AuthService();
   final CloudSyncService _cloudSync = CloudSyncService();
+  final ScrollController _scrollController = ScrollController();
   bool _isLoading = false;
   bool _isSyncing = false;
   DateTime? _lastSyncTime;
@@ -26,9 +27,8 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: _authService.userName);
     _loadLastSyncTime();
-    // Listen for background sync updates
+    _scrollController.addListener(() => setState(() {}));
     CloudSyncService.lastSyncNotifier.addListener(_onSyncUpdate);
   }
 
@@ -39,19 +39,17 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadLastSyncTime() async {
-    // First check local notifier (for current session syncs)
     if (CloudSyncService.lastSyncNotifier.value != null) {
       setState(() => _lastSyncTime = CloudSyncService.lastSyncNotifier.value);
       return;
     }
-    // Then try to load from Firestore (for past syncs)
     final time = await _cloudSync.getLastSyncTime();
     if (mounted) setState(() => _lastSyncTime = time);
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _scrollController.dispose();
     CloudSyncService.lastSyncNotifier.removeListener(_onSyncUpdate);
     super.dispose();
   }
@@ -60,15 +58,9 @@ class _ProfilePageState extends State<ProfilePage> {
     setState(() => _isLoading = true);
     final user = await _authService.signInWithGoogle();
     if (mounted) {
-      setState(() {
-        _isLoading = false;
-        if (user != null) {
-          _nameController.text = user.displayName ?? 'Music Lover';
-        }
-      });
+      setState(() => _isLoading = false);
       if (user != null) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Welcome, ${user.displayName}!')));
-        // Trigger sync after login
         _handleSync();
       }
     }
@@ -80,7 +72,6 @@ class _ProfilePageState extends State<ProfilePage> {
     if (mounted) {
       setState(() {
         _isLoading = false;
-        _nameController.text = 'Music Lover';
         _lastSyncTime = null;
       });
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Signed out successfully')));
@@ -89,19 +80,14 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _handleSync() async {
     if (!_authService.isLoggedIn) return;
-
     setState(() => _isSyncing = true);
 
     final audioController = Provider.of<AudioController>(context, listen: false);
     final playlistService = PlaylistService();
 
     final success = await _cloudSync.syncOnLogin(
-      onFavoritesDownloaded: (favoriteIds) async {
-        await audioController.applyCloudFavorites(favoriteIds);
-      },
-      onPlaylistsDownloaded: (playlists) async {
-        await playlistService.mergeCloudPlaylists(playlists);
-      },
+      onFavoritesDownloaded: (ids) => audioController.applyCloudFavorites(ids),
+      onPlaylistsDownloaded: (pls) => playlistService.mergeCloudPlaylists(pls),
     );
 
     if (mounted) {
@@ -126,241 +112,343 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     final isLoggedIn = _authService.isLoggedIn;
     final photoUrl = _authService.userPhotoUrl;
+    final audioController = Provider.of<AudioController>(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        leading: IconButton(
-          icon: Image.asset('assets/images/back.png', width: 24, height: 24),
-          onPressed: () => Navigator.of(context).pop(),
+    // Calculate stats
+    final totalPlays = audioController.allSongs.fold<int>(0, (sum, s) => sum + s.playCount);
+    final avgDuration = audioController.allSongs.isEmpty
+        ? 0
+        : audioController.allSongs.fold<int>(0, (sum, s) => sum + s.duration) ~/ audioController.allSongs.length;
+    final hoursListened = (totalPlays * avgDuration) / 3600000;
+
+    // Check if scrolled for blur effect
+    final isScrolled = _scrollController.hasClients && _scrollController.offset > 10;
+
+    return Stack(
+      children: [
+        // Glass Background (matching other pages)
+        GlassBackground(
+          artworkPath: audioController.currentSong?.localArtworkPath,
+          accentColor: audioController.accentColor,
         ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Profile Avatar
-            Stack(
-              alignment: Alignment.bottomRight,
-              children: [
-                CircleAvatar(
-                  radius: 50,
-                  backgroundColor: Colors.grey[800],
-                  backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-                  child: photoUrl == null ? const Icon(Icons.person, size: 50, color: Colors.white54) : null,
+
+        Scaffold(
+          backgroundColor: Colors.transparent,
+          body: CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              // SliverAppBar with blur effect
+              SliverAppBar(
+                pinned: true,
+                floating: false,
+                backgroundColor: isScrolled ? Colors.black.withOpacity(0.4) : Colors.transparent,
+                elevation: 0,
+                systemOverlayStyle: SystemUiOverlayStyle.light,
+                leading: IconButton(
+                  icon: Image.asset('assets/images/back.png', width: 24, height: 24, color: Colors.white),
+                  onPressed: () => context.pop(),
                 ),
-                if (isLoggedIn)
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
-                    child: const Icon(Icons.check, size: 16, color: Colors.white),
+                title: const Text(
+                  'Profile',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.settings_outlined, color: Colors.white),
+                    onPressed: () => context.push('/settings'),
                   ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // User Name / Email
-            Text(_authService.userName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            if (isLoggedIn && _authService.currentUser?.email != null)
-              Text(_authService.currentUser!.email!, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-            const SizedBox(height: 20),
-
-            // Google Sign-In / Sign-Out Button
-            if (_isLoading)
-              const CircularProgressIndicator()
-            else if (!isLoggedIn)
-              _buildSignInButton()
-            else
-              _buildSignOutButton(),
-
-            const SizedBox(height: 30),
-
-            // Name Edit Section (only if logged in)
-            if (isLoggedIn) ...[
-              TextField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Display Name',
-                  border: OutlineInputBorder(),
-                  hintText: 'Enter your name',
+                ],
+                flexibleSpace: ClipRRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: isScrolled ? 20 : 0, sigmaY: isScrolled ? 20 : 0),
+                    child: Container(color: Colors.transparent),
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
-            ],
 
-            // Cloud Sync Section (only if logged in)
-            if (isLoggedIn) ...[
-              const SizedBox(
-                width: double.infinity,
-                child: Text('Cloud Sync', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.shade200),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.cloud_done, color: Colors.blue.shade600),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Favorites & Playlists', style: TextStyle(fontWeight: FontWeight.bold)),
-                              Text(
-                                'Last synced: ${_getLastSyncText()}',
-                                style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        ),
-                        _isSyncing
-                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                            : IconButton(
-                                icon: Icon(Icons.sync, color: Colors.blue.shade600),
-                                onPressed: _handleSync,
-                                tooltip: 'Sync Now',
-                              ),
+              // Content
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      // Profile Card
+                      _buildProfileCard(isLoggedIn, photoUrl),
+
+                      const SizedBox(height: 24),
+
+                      // Sign In / Out Button
+                      if (_isLoading)
+                        const Center(child: CircularProgressIndicator())
+                      else if (!isLoggedIn)
+                        _buildGoogleSignInButton()
+                      else
+                        _buildSignOutButton(),
+
+                      const SizedBox(height: 24),
+
+                      // Listening Stats Section
+                      _buildSectionTitle('Your Stats'),
+                      const SizedBox(height: 12),
+
+                      _buildStatsCard(
+                        totalPlays: totalPlays,
+                        hoursListened: hoursListened,
+                        totalSongs: audioController.allSongs.length,
+                        favorites: audioController.allSongs.where((s) => s.isFavorite).length,
+                      ),
+
+                      // Cloud Sync Section (only if logged in)
+                      if (isLoggedIn) ...[
+                        const SizedBox(height: 24),
+                        _buildSectionTitle('Cloud Sync'),
+                        const SizedBox(height: 12),
+                        _buildCloudSyncCard(),
                       ],
-                    ),
-                  ],
+
+                      const SizedBox(height: 100),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
             ],
+          ),
+        ),
+      ],
+    );
+  }
 
-            // Settings Section
-            const SizedBox(
-              width: double.infinity,
-              child: Text('Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            ),
-            const SizedBox(height: 10),
+  Widget _buildSectionTitle(String title) {
+    return SizedBox(
+      width: double.infinity,
+      child: Text(
+        title,
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+      ),
+    );
+  }
 
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8)),
-                child: Icon(Icons.delete_outline, color: Colors.red.shade600),
-              ),
-              title: const Text('Clear Metadata Cache'),
-              subtitle: const Text('Fix missing images or incorrect info'),
-              onTap: _showClearCacheDialog,
-              trailing: const Icon(Icons.chevron_right),
-              contentPadding: EdgeInsets.zero,
-            ),
-
-            const SizedBox(height: 30),
-
-            // Save Button
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  Widget _buildProfileCard(bool isLoggedIn, String? photoUrl) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: Column(
+        children: [
+          // Avatar
+          Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 3),
+                  boxShadow: [BoxShadow(color: Colors.deepPurple.withOpacity(0.3), blurRadius: 20, spreadRadius: 2)],
                 ),
-                onPressed: () async {
-                  if (isLoggedIn) {
-                    await _authService.updateUserName(_nameController.text);
-                  }
-                  // Return the name to the caller via go_router pop
-                  if (mounted) context.pop(_nameController.text);
-                },
-                child: const Text('Save Profile', style: TextStyle(fontSize: 16)),
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Colors.grey.shade800,
+                  backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                  child: photoUrl == null
+                      ? Image.asset('assets/images/profile.png', width: 50, height: 50, color: Colors.white54)
+                      : null,
+                ),
               ),
-            ),
-          ],
-        ),
+              if (isLoggedIn)
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.black, width: 2),
+                  ),
+                  child: const Icon(Icons.check, size: 14, color: Colors.white),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Name
+          Text(
+            _authService.userName,
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          if (isLoggedIn && _authService.currentUser?.email != null)
+            Text(_authService.currentUser!.email!, style: TextStyle(color: Colors.grey.shade400, fontSize: 14)),
+        ],
       ),
     );
   }
 
-  Widget _buildSignInButton() {
-    return SizedBox(
+  Widget _buildStatsCard({
+    required int totalPlays,
+    required double hoursListened,
+    required int totalSongs,
+    required int favorites,
+  }) {
+    return Container(
       width: double.infinity,
-      height: 50,
-      child: OutlinedButton.icon(
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Colors.grey),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        icon: Image.asset(
-          'assets/images/google_logo.png', // Add this asset
-          width: 24,
-          height: 24,
-          errorBuilder: (context, error, stackTrace) => const Icon(Icons.account_circle, size: 24),
-        ),
-        label: const Text('Sign in with Google', style: TextStyle(fontSize: 16)),
-        onPressed: _handleGoogleSignIn,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
-    );
-  }
-
-  Widget _buildSignOutButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: OutlinedButton.icon(
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(color: Colors.red.shade300),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        icon: Icon(Icons.logout, color: Colors.red.shade600),
-        label: Text('Sign Out', style: TextStyle(fontSize: 16, color: Colors.red.shade600)),
-        onPressed: _handleSignOut,
-      ),
-    );
-  }
-
-  void _showClearCacheDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear Cache'),
-        content: const Text(
-          'This will delete all downloaded artist images and details. They will be fetched again when you view them.\n\nUseful if you see missing images.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _performClearCache();
-            },
-            child: const Text('Clear', style: TextStyle(color: Colors.red)),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatItem('assets/images/most_played.png', '$totalPlays', 'Songs Played', Colors.pink),
+              ),
+              Container(width: 1, height: 50, color: Colors.white.withOpacity(0.1)),
+              Expanded(
+                child: _buildStatItem(
+                  'assets/images/duration.png',
+                  hoursListened.toStringAsFixed(1),
+                  'Hours',
+                  Colors.orange,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(height: 1, color: Colors.white.withOpacity(0.1)),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(child: _buildStatItem('assets/images/song.png', '$totalSongs', 'Total Songs', Colors.blue)),
+              Container(width: 1, height: 50, color: Colors.white.withOpacity(0.1)),
+              Expanded(child: _buildStatItem('assets/images/favorite.png', '$favorites', 'Favorites', Colors.red)),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Future<void> _performClearCache() async {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    try {
-      // Clear Artists Cache
-      final artistService = ArtistService();
-      await artistService.clearCache();
+  Widget _buildStatItem(String iconPath, String value, String label, Color color) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+          child: Image.asset(iconPath, width: 22, height: 22, color: color),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          value,
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
+        ),
+        Text(label, style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+      ],
+    );
+  }
 
-      // Clear iTunes/Album Cache (Optional, manual box opening)
-      if (Hive.isBoxOpen('album_info_cache')) {
-        await Hive.box('album_info_cache').clear();
-      }
+  Widget _buildCloudSyncCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: Colors.blue.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Icons.cloud_done, color: Colors.blue, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Favorites & Playlists',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                ),
+                Text('Last synced: ${_getLastSyncText()}', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+              ],
+            ),
+          ),
+          _isSyncing
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.blue),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.sync, color: Colors.blue),
+                  onPressed: _handleSync,
+                ),
+        ],
+      ),
+    );
+  }
 
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('Cache cleared successfully! Restart app to refresh.')),
-      );
-    } catch (e) {
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error clearing cache: $e')));
-    }
+  Widget _buildGoogleSignInButton() {
+    return Container(
+      width: double.infinity,
+      height: 54,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _handleGoogleSignIn,
+          borderRadius: BorderRadius.circular(14),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset('assets/images/google.png', width: 24, height: 24),
+              const SizedBox(width: 12),
+              const Text(
+                'Sign in with Google',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSignOutButton() {
+    return Container(
+      width: double.infinity,
+      height: 54,
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.red.withOpacity(0.3)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _handleSignOut,
+          borderRadius: BorderRadius.circular(14),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.logout, color: Colors.red.shade400, size: 22),
+              const SizedBox(width: 12),
+              Text(
+                'Sign Out',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.red.shade400),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -21,6 +21,7 @@ import '../presentation/pages/all_songs_page.dart';
 import '../presentation/pages/recently_played_page.dart';
 import '../presentation/pages/playlist_details_page.dart';
 import '../presentation/pages/profile_page.dart';
+import '../presentation/pages/settings_page.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/home',
@@ -262,6 +263,7 @@ final GoRouter appRouter = GoRouter(
       },
     ),
     GoRoute(path: '/profile', name: 'profile', builder: (context, state) => const ProfilePage()),
+    GoRoute(path: '/settings', name: 'settings', builder: (context, state) => const SettingsPage()),
     GoRoute(path: '/equalizer', name: 'equalizer', builder: (context, state) => const EqualizerPage()),
     GoRoute(path: '/search', name: 'search', builder: (context, state) => const SearchPage()),
     GoRoute(

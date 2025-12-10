@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../data/models/playlist_model.dart';
 import '../../services/playlist_service.dart';
@@ -196,109 +197,120 @@ class _AddToPlaylistSheetState extends State<AddToPlaylistSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.85),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Add to Playlist',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                IconButton(
-                  onPressed: () => _showCreatePlaylistDialog(context),
-                  icon: Image.asset(
-                    'assets/images/create.png',
-                    width: 28,
-                    height: 28,
-                    color: Colors.deepPurple.shade200,
-                  ),
-                  tooltip: 'Create New',
-                ),
-              ],
-            ),
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.7),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
           ),
-          const SizedBox(height: 16),
-          if (_isLoading)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: CircularProgressIndicator(color: Colors.deepPurple),
-              ),
-            )
-          else if (_playlists.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Image.asset('assets/images/playlist_open.png', width: 48, height: 48, color: Colors.white24),
-                    const SizedBox(height: 16),
-                    Text('No playlists yet', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
-                    TextButton(onPressed: () => _showCreatePlaylistDialog(context), child: const Text('Create one')),
+                    const Text(
+                      'Add to Playlist',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    IconButton(
+                      onPressed: () => _showCreatePlaylistDialog(context),
+                      icon: Image.asset(
+                        'assets/images/create.png',
+                        width: 28,
+                        height: 28,
+                        color: Colors.deepPurple.shade200,
+                      ),
+                      tooltip: 'Create New',
+                    ),
                   ],
                 ),
               ),
-            )
-          else
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _playlists.length,
-                itemBuilder: (context, index) {
-                  final playlist = _playlists[index];
-                  // For multiple songs, "alreadyIn" is complex. We'll show "Add" generally.
+              const SizedBox(height: 16),
+              if (_isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: CircularProgressIndicator(color: Colors.deepPurple),
+                  ),
+                )
+              else if (_playlists.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      children: [
+                        Image.asset('assets/images/playlist_open.png', width: 48, height: 48, color: Colors.white24),
+                        const SizedBox(height: 16),
+                        Text('No playlists yet', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
+                        TextButton(
+                          onPressed: () => _showCreatePlaylistDialog(context),
+                          child: const Text('Create one'),
+                        ),
+                        const SizedBox(height: 120), // Add padding for empty state too
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.only(bottom: 120), // Bottom padding for MiniPlayer
+                    itemCount: _playlists.length,
+                    itemBuilder: (context, index) {
+                      final playlist = _playlists[index];
+                      // For multiple songs, "alreadyIn" is complex. We'll show "Add" generally.
 
-                  final allIn = widget.songs.every((s) => playlist.songIds.contains(s.id));
+                      final allIn = widget.songs.every((s) => playlist.songIds.contains(s.id));
 
-                  return ListTile(
-                    leading: Container(
-                      width: 48,
-                      height: 48,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: playlist.iconEmoji.endsWith('.png')
-                            ? Image.asset(
-                                'assets/images/${playlist.iconEmoji}',
-                                width: 24,
-                                height: 24,
-                                color: Colors.deepPurple.shade200,
-                              )
-                            : Text(playlist.iconEmoji, style: const TextStyle(fontSize: 24)),
-                      ),
-                    ),
-                    title: Text(
-                      playlist.name,
-                      style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
-                    ),
-                    subtitle: Text(
-                      '${playlist.songIds.length} songs',
-                      style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.5)),
-                    ),
-                    trailing: allIn
-                        ? const Icon(Icons.check_circle_rounded, color: Colors.green)
-                        : Image.asset('assets/images/create.png', width: 24, height: 24, color: Colors.white70),
-                    onTap: allIn ? null : () => _addToPlaylist(playlist),
-                  );
-                },
-              ),
-            ),
-        ],
+                      return ListTile(
+                        leading: Container(
+                          width: 48,
+                          height: 48,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: playlist.iconEmoji.endsWith('.png')
+                                ? Image.asset(
+                                    'assets/images/${playlist.iconEmoji}',
+                                    width: 24,
+                                    height: 24,
+                                    color: Colors.deepPurple.shade200,
+                                  )
+                                : Text(playlist.iconEmoji, style: const TextStyle(fontSize: 24)),
+                          ),
+                        ),
+                        title: Text(
+                          playlist.name,
+                          style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+                        ),
+                        subtitle: Text(
+                          '${playlist.songIds.length} songs',
+                          style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.5)),
+                        ),
+                        trailing: allIn
+                            ? const Icon(Icons.check_circle_rounded, color: Colors.green)
+                            : Image.asset('assets/images/create.png', width: 24, height: 24, color: Colors.white70),
+                        onTap: allIn ? null : () => _addToPlaylist(playlist),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

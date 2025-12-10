@@ -151,7 +151,7 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
       systemOverlayStyle: SystemUiOverlayStyle.light,
       iconTheme: const IconThemeData(color: Colors.white),
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+        icon: Image.asset('assets/images/back.png', width: 24, height: 24, color: Colors.white),
         onPressed: () => Navigator.of(context).pop(),
       ),
       flexibleSpace: LayoutBuilder(
@@ -210,7 +210,7 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                       right: 24,
                       child: AnimatedOpacity(
                         duration: const Duration(milliseconds: 100),
-                        opacity: opacity, // Use standard opacity logic (1.0 when expanded)
+                        opacity: 1.0 - opacity, // Fades out as we scroll up
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,

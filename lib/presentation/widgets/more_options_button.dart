@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/song_model.dart';
@@ -28,79 +29,94 @@ class MoreOptionsButton extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(color: Colors.deepPurple.shade50, borderRadius: BorderRadius.circular(8)),
-                    child: Image.asset('assets/images/song.png', width: 24, height: 24, color: Colors.deepPurple),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          song.title,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          song.artist,
-                          style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+      builder: (context) => ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.7),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
             ),
-            const Divider(),
-            // Options
-            ListTile(
-              leading: Image.asset('assets/images/playlist_open.png', width: 24, height: 24, color: Colors.black87),
-              title: const Text('Add to Playlist'),
-              onTap: () {
-                Navigator.pop(context); // Close this sheet
-                showModalBottomSheet(
-                  context: context,
-                  backgroundColor: Colors.transparent,
-                  builder: (context) => AddToPlaylistSheet(songs: [song]),
-                );
-              },
-            ),
-            ListTile(
-              leading: Image.asset('assets/images/info.png', width: 24, height: 24, color: Colors.black87),
-              title: const Text('Album Info'),
-              onTap: () {
-                Navigator.pop(context); // Close sheet
-                context.pushNamed(
-                  'album_info',
-                  extra: {
-                    'albumName': song.album,
-                    'artistName': song.artist,
-                    'albumArt': HybridSongArtwork(localArtworkPath: song.localArtworkPath, size: 200, borderRadius: 20),
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: HybridSongArtwork(localArtworkPath: song.localArtworkPath, size: 48, borderRadius: 8),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              song.title,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              song.artist,
+                              style: const TextStyle(color: Colors.white70, fontSize: 14),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Divider(color: Colors.white.withValues(alpha: 0.1)),
+                // Options
+                ListTile(
+                  leading: Image.asset('assets/images/playlist_open.png', width: 24, height: 24, color: Colors.white),
+                  title: const Text('Add to Playlist', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context); // Close this sheet
+                    showModalBottomSheet(
+                      context: context,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) => AddToPlaylistSheet(songs: [song]),
+                    );
                   },
-                );
-              },
+                ),
+                ListTile(
+                  leading: Image.asset('assets/images/info.png', width: 24, height: 24, color: Colors.white),
+                  title: const Text('Album Info', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context); // Close sheet
+                    context.pushNamed(
+                      'album_info',
+                      extra: {
+                        'albumName': song.album,
+                        'artistName': song.artist,
+                        'albumArt': HybridSongArtwork(
+                          localArtworkPath: song.localArtworkPath,
+                          size: 200,
+                          borderRadius: 20,
+                        ),
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 200), // Bottom padding for MiniPlayer
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

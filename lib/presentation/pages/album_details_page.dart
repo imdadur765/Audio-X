@@ -95,7 +95,7 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                 backgroundColor: opacity > 0.8 ? Colors.black.withValues(alpha: 0.4) : Colors.transparent,
                 elevation: 0,
                 leading: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                  icon: Image.asset('assets/images/back.png', width: 24, height: 24, color: Colors.white),
                   onPressed: () => Navigator.pop(context),
                 ),
                 actions: [

@@ -6,6 +6,7 @@ import '../../data/models/song_model.dart';
 import '../../services/playlist_service.dart';
 import '../controllers/audio_controller.dart';
 import '../widgets/more_options_button.dart';
+import '../widgets/glass_background.dart';
 
 class PlaylistDetailsPage extends StatefulWidget {
   final String playlistId;
@@ -30,15 +31,30 @@ class PlaylistDetailsPage extends StatefulWidget {
 class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
   final PlaylistService _playlistService = PlaylistService();
   late List<Song> _songs;
+  final ScrollController _scrollController = ScrollController();
+  double _scrollOffset = 0;
 
   @override
   void initState() {
     super.initState();
     _songs = widget.songs;
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    setState(() {
+      _scrollOffset = _scrollController.offset;
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _removeSongFromPlaylist(Song song) async {
-    if (widget.isAuto) return; // Can't modify auto playlists
+    if (widget.isAuto) return;
 
     await _playlistService.removeSongFromPlaylist(widget.playlistId, song.id);
 
@@ -59,16 +75,26 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
   }
 
   Future<void> _deletePlaylist() async {
-    if (widget.isAuto) return; // Can't delete auto playlists
+    if (widget.isAuto) return;
 
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete Playlist?'),
-        content: Text('Are you sure you want to delete "${widget.title}"? This action cannot be undone.'),
+        backgroundColor: Colors.grey.shade900,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        title: const Text('Delete Playlist?', style: TextStyle(color: Colors.white)),
+        content: Text(
+          'Are you sure you want to delete "${widget.title}"? This action cannot be undone.',
+          style: const TextStyle(color: Colors.white70),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
@@ -85,7 +111,7 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
     if (confirm == true) {
       await _playlistService.deletePlaylist(widget.playlistId);
       if (mounted) {
-        Navigator.of(context).pop(); // Go back to playlist page
+        Navigator.of(context).pop();
       }
     }
   }
@@ -93,247 +119,256 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
   @override
   Widget build(BuildContext context) {
     final audioController = Provider.of<AudioController>(context);
+    final accentColor = widget.gradientColors.isNotEmpty ? widget.gradientColors.first : audioController.accentColor;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Gradient Background
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [widget.gradientColors.first.withOpacity(0.4), Colors.white],
-                ),
-              ),
-            ),
+          // Dark Glass Background
+          GlassBackground(
+            // Using first song artwork if available, otherwise generic
+            artworkPath: _songs.isNotEmpty ? _songs.first.localArtworkPath : null,
+            accentColor: accentColor,
+            isDark: true,
           ),
 
-          // Content
-          SafeArea(
-            child: Column(
-              children: [
-                // Header
-                _buildHeader(),
-
-                // Playlist Info
-                _buildPlaylistInfo(),
-
-                // Control Buttons
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _songs.isEmpty
-                              ? null
-                              : () {
-                                  audioController.playSongList(_songs, 0);
-                                },
-                          icon: Image.asset('assets/images/play.png', width: 24, height: 24, color: Colors.white),
-                          label: const Text(
-                            'Play All',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: widget.gradientColors.first,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _songs.isEmpty
-                              ? null
-                              : () {
-                                  audioController.playSongList(_songs, 0, shuffle: true);
-                                },
-                          icon: Image.asset(
-                            'assets/images/shuffle.png',
-                            width: 18,
-                            height: 18,
-                            color: widget.gradientColors.first,
-                          ),
-                          label: Text(
-                            'Shuffle',
-                            style: TextStyle(color: widget.gradientColors.first, fontWeight: FontWeight.w700),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            side: BorderSide(color: widget.gradientColors.first, width: 2),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Songs List
-                Expanded(
-                  child: _songs.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-                          itemCount: _songs.length,
-                          itemBuilder: (context, index) {
-                            final song = _songs[index];
-                            return _buildSongTile(song, index, audioController);
-                          },
-                        ),
-                ),
-              ],
-            ),
+          CustomScrollView(
+            controller: _scrollController,
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              _buildHeader(accentColor),
+              _buildPlaylistStats(),
+              _buildControls(audioController, accentColor),
+              _buildSongsList(audioController, accentColor),
+              const SliverToBoxAdapter(child: SizedBox(height: 120)),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)],
-              ),
-              child: Center(child: Image.asset('assets/images/back.png', width: 20, height: 20, color: Colors.black87)),
+  Widget _buildHeader(Color accentColor) {
+    final opacity = (_scrollOffset / 200).clamp(0.0, 1.0);
+
+    return SliverAppBar(
+      expandedHeight: 250,
+      pinned: true,
+      backgroundColor: opacity > 0.8 ? Colors.black.withValues(alpha: 0.8) : Colors.transparent,
+      elevation: 0,
+      leading: IconButton(
+        icon: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.2), shape: BoxShape.circle),
+          child: const Icon(Icons.arrow_back, color: Colors.white),
+        ),
+        onPressed: () => Navigator.pop(context),
+      ),
+      actions: [
+        if (!widget.isAuto)
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.2), shape: BoxShape.circle),
+              child: Image.asset('assets/images/more.png', width: 24, height: 24, color: Colors.white),
+            ),
+            onPressed: _deletePlaylist, // Currently only option is delete
+          ),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        title: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: opacity,
+          child: Text(
+            widget.title,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
+        centerTitle: true,
+        background: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [accentColor.withValues(alpha: 0.6), Colors.black.withValues(alpha: 0.4), Colors.transparent],
             ),
           ),
-          if (!widget.isAuto)
-            PopupMenuButton<String>(
-              icon: Container(
-                width: 40,
-                height: 40,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 40),
+              Container(
+                width: 120,
+                height: 120,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)],
+                  gradient: LinearGradient(colors: widget.gradientColors),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(color: accentColor.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 8)),
+                  ],
                 ),
                 child: Center(
-                  child: Image.asset('assets/images/more.png', width: 20, height: 20, color: Colors.black87),
+                  child: Image.asset('assets/images/playlist_open.png', width: 60, height: 60, color: Colors.white),
                 ),
               ),
-              onSelected: (value) {
-                if (value == 'delete') {
-                  _deletePlaylist();
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Image.asset('assets/images/delete.png', width: 20, height: 20, color: Colors.red),
-                      const SizedBox(width: 12),
-                      const Text('Delete Playlist', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
+              const SizedBox(height: 16),
+              AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: 1.0 - opacity, // Fade out on scroll
+                child: Text(
+                  widget.title,
+                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
-              ],
-            ),
-        ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildPlaylistInfo() {
+  Widget _buildPlaylistStats() {
     final totalDuration = _songs.fold(Duration.zero, (sum, song) => sum + Duration(milliseconds: song.duration));
     final hours = totalDuration.inHours;
     final minutes = totalDuration.inMinutes.remainder(60);
     final durationText = hours > 0 ? '$hours hr $minutes min' : '$minutes min';
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(widget.title, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-          const SizedBox(height: 8),
-          Text(
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Center(
+          child: Text(
             '${_songs.length} songs • $durationText',
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 14, fontWeight: FontWeight.w500),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildSongTile(Song song, int index, AudioController audioController) {
-    final isPlaying = audioController.currentSong?.id == song.id && audioController.isPlaying;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: isPlaying ? widget.gradientColors.first.withOpacity(0.1) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: ListTile(
-        onTap: () {
-          audioController.playSongList(_songs, index);
-        },
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: song.localArtworkPath != null
-              ? Image.file(File(song.localArtworkPath!), width: 50, height: 50, fit: BoxFit.cover)
-              : Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [widget.gradientColors.first, widget.gradientColors.last]),
-                  ),
-                  child: Image.asset('assets/images/song.png', width: 24, height: 24, color: Colors.white),
+  Widget _buildControls(AudioController audioController, Color accentColor) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Row(
+          children: [
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _songs.isEmpty ? null : () => audioController.playSongList(_songs, 0),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
                 ),
-        ),
-        title: Text(
-          song.title,
-          style: TextStyle(
-            fontWeight: isPlaying ? FontWeight.w700 : FontWeight.w600,
-            color: isPlaying ? widget.gradientColors.first : Colors.black87,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Text(song.artist, maxLines: 1, overflow: TextOverflow.ellipsis),
-        trailing: MoreOptionsButton(
-          song: song,
-          trailing: !widget.isAuto
-              ? IconButton(
-                  icon: Image.asset('assets/images/delete.png', width: 24, height: 24, color: Colors.red),
-                  onPressed: () => _removeSongFromPlaylist(song),
-                )
-              : null,
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.play_arrow_rounded, size: 28),
+                    SizedBox(width: 8),
+                    Text('Play All', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: IconButton(
+                onPressed: _songs.isEmpty ? null : () => audioController.playSongList(_songs, 0, shuffle: true),
+                icon: Image.asset('assets/images/shuffle.png', width: 24, height: 24, color: Colors.white),
+                padding: const EdgeInsets.all(16),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset('assets/images/playlist_open.png', width: 64, height: 64, color: Colors.grey.shade400),
-          const SizedBox(height: 16),
-          Text('No songs in this playlist', style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
-        ],
-      ),
+  Widget _buildSongsList(AudioController audioController, Color accentColor) {
+    if (_songs.isEmpty) {
+      return SliverFillRemaining(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset('assets/images/playlist_open.png', width: 64, height: 64, color: Colors.white24),
+              const SizedBox(height: 16),
+              Text('No songs yet', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate((context, index) {
+        final song = _songs[index];
+        final isPlaying = audioController.currentSong?.id == song.id && audioController.isPlaying;
+
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            color: isPlaying ? accentColor.withValues(alpha: 0.1) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: isPlaying ? Border.all(color: accentColor.withValues(alpha: 0.2)) : null,
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.only(left: 8, right: 8),
+            leading: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                image: song.localArtworkPath != null
+                    ? DecorationImage(image: FileImage(File(song.localArtworkPath!)), fit: BoxFit.cover)
+                    : null,
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
+              child: song.localArtworkPath == null
+                  ? Center(child: Image.asset('assets/images/song.png', width: 24, height: 24, color: Colors.white54))
+                  : null,
+            ),
+            title: Text(
+              song.title,
+              style: TextStyle(
+                color: isPlaying ? accentColor : Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Text(
+              song.artist,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: MoreOptionsButton(
+              song: song,
+              trailing: !widget.isAuto
+                  ? IconButton(
+                      icon: Image.asset(
+                        'assets/images/delete.png',
+                        width: 20,
+                        height: 20,
+                        color: Colors.red.withValues(alpha: 0.7),
+                      ),
+                      onPressed: () => _removeSongFromPlaylist(song),
+                    )
+                  : null,
+            ),
+            onTap: () => audioController.playSongList(_songs, index),
+          ),
+        );
+      }, childCount: _songs.length),
     );
   }
 }

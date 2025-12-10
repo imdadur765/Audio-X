@@ -10,7 +10,7 @@ import '../widgets/hybrid_song_artwork.dart';
 import '../widgets/add_to_playlist_sheet.dart';
 import '../widgets/glass_button.dart';
 
-// ... (inside class)
+import '../widgets/glass_background.dart';
 
 class AlbumDetailsPage extends StatefulWidget {
   final String albumName;
@@ -26,16 +26,27 @@ class AlbumDetailsPage extends StatefulWidget {
 class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
 
+  final ScrollController _scrollController = ScrollController();
+  double _scrollOffset = 0;
+
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
     _animationController.forward();
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    setState(() {
+      _scrollOffset = _scrollController.offset;
+    });
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -63,114 +74,105 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+    // Standardize opacity logic (0 to 1 based on scroll)
+    final opacity = (_scrollOffset / 200).clamp(0.0, 1.0);
+    // Dark glass background
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: GestureDetector(
-        onVerticalDragUpdate: (details) {
-          if (details.primaryDelta! > 10) {
-            Navigator.of(context).pop();
-          }
-        },
-        child: Stack(
-          children: [
-            // Blur background with album art
-            if (_albumArtwork != null) Positioned.fill(child: _albumArtwork!),
-            Positioned.fill(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
-                child: Container(color: Colors.white.withOpacity(0.4)),
-              ),
-            ),
-            // Gradient overlay
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.white.withOpacity(0.7),
-                      Colors.deepPurple.shade50.withOpacity(0.5),
-                      Colors.deepPurple.shade100.withOpacity(0.8),
-                    ],
-                  ),
+      extendBody: true,
+      body: Stack(
+        children: [
+          // Dark Glass Background (consitent with Home/Artist)
+          GlassBackground(artworkPath: widget.songs.firstOrNull?.localArtworkPath),
+
+          CustomScrollView(
+            controller: _scrollController,
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+            slivers: [
+              SliverAppBar(
+                expandedHeight: 320,
+                pinned: true,
+                stretch: true,
+                backgroundColor: opacity > 0.8 ? Colors.black.withValues(alpha: 0.4) : Colors.transparent,
+                elevation: 0,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
                 ),
-              ),
-            ),
-            // Content
-            SafeArea(
-              child: Column(
-                children: [
-                  _buildAppBar(),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
+                actions: [
+                  IconButton(
+                    icon: Image.asset('assets/images/more.png', width: 24, height: 24, color: Colors.white),
+                    onPressed: _showOptionsMenu,
+                  ),
+                ],
+                flexibleSpace: ClipRRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: opacity * 20, sigmaY: opacity * 20),
+                    child: FlexibleSpaceBar(
+                      title: AnimatedOpacity(
+                        opacity: opacity,
+                        duration: const Duration(milliseconds: 200),
+                        child: Text(
+                          widget.albumName,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ),
+                      background: Stack(
+                        fit: StackFit.expand,
                         children: [
-                          const SizedBox(height: 20),
-                          _buildAlbumArtSection(),
-                          const SizedBox(height: 24),
-                          _buildAlbumInfo(),
-                          const SizedBox(height: 24),
-                          _buildActionButtons(),
-                          const SizedBox(height: 24),
-                          _buildTrackList(),
-                          const SizedBox(height: 100),
+                          if (_albumArtwork != null) _albumArtwork! else Container(color: Colors.deepPurple.shade900),
+
+                          // Gradient Overlay
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withValues(alpha: 0.5),
+                                  Colors.black.withValues(alpha: 0.8),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          // Content (Album Art + Info when expanded)
+                          // We can hide this when collapsed using Opacity
+                          Opacity(
+                            opacity: (1.0 - opacity * 1.5).clamp(0.0, 1.0),
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 60),
+                              child: Center(child: _buildAlbumArtSection()),
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAppBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          GlassButton(
-            imagePath: 'assets/images/back.png',
-            onTap: () => Navigator.of(context).pop(),
-            size: 24,
-            containerSize: 40,
-            accentColor: Colors.deepPurple,
-          ),
-          Column(
-            children: [
-              const Text(
-                'ALBUM',
-                style: TextStyle(
-                  color: Colors.deepPurple,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.2,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                '${widget.songs.length} Songs',
-                style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.bold),
+
+              SliverToBoxAdapter(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    _buildAlbumInfo(),
+                    const SizedBox(height: 24),
+                    _buildActionButtons(),
+                    const SizedBox(height: 24),
+                    _buildTrackList(),
+                    const SizedBox(height: 120),
+                  ],
+                ),
               ),
             ],
-          ),
-          GlassButton(
-            imagePath: 'assets/images/more.png',
-            onTap: _showOptionsMenu,
-            size: 20,
-            containerSize: 40,
-            accentColor: Colors.deepPurple,
           ),
         ],
       ),
     );
   }
+
+  // Removed _buildAppBar as it is replaced by SliverAppBar
 
   Widget _buildAlbumArtSection() {
     return Hero(
@@ -224,10 +226,11 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
           Text(
             widget.albumName,
             style: const TextStyle(
-              color: Colors.black87,
+              color: Colors.white,
               fontSize: 28,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.5,
+              shadows: [Shadow(offset: Offset(0, 2), blurRadius: 4, color: Colors.black54)],
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -241,11 +244,11 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
             child: Text(
               _artistName,
               style: TextStyle(
-                color: Colors.deepPurple.shade700,
+                color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 decoration: TextDecoration.underline,
-                decorationColor: Colors.deepPurple.shade200,
+                decorationColor: Colors.white70,
               ),
               textAlign: TextAlign.center,
               maxLines: 1,
@@ -270,18 +273,18 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.deepPurple.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Image.asset(icon, width: 16, height: 16, color: Colors.deepPurple),
+          Image.asset(icon, width: 16, height: 16, color: Colors.white70),
           const SizedBox(width: 6),
           Text(
             text,
-            style: TextStyle(color: Colors.deepPurple.shade700, fontSize: 12, fontWeight: FontWeight.w600),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -348,12 +351,12 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
           child: Container(
             height: 56,
             decoration: BoxDecoration(
-              color: isPrimary ? Colors.deepPurple.withOpacity(0.8) : Colors.white.withOpacity(0.3),
+              color: isPrimary ? Colors.deepPurple.withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: isPrimary ? Colors.transparent : Colors.deepPurple.withOpacity(0.3), width: 1),
+              border: Border.all(color: isPrimary ? Colors.transparent : Colors.white.withValues(alpha: 0.1), width: 1),
               boxShadow: [
                 BoxShadow(
-                  color: isPrimary ? Colors.deepPurple.withOpacity(0.3) : Colors.black.withOpacity(0.05),
+                  color: isPrimary ? Colors.deepPurple.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.1),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -362,7 +365,7 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset(iconPath, width: 24, height: 24, color: isPrimary ? Colors.white : Colors.deepPurple),
+                Image.asset(iconPath, width: 24, height: 24, color: Colors.white),
                 if (isPrimary) ...[
                   const SizedBox(width: 12),
                   Text(
@@ -393,7 +396,7 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
               padding: EdgeInsets.symmetric(horizontal: 24),
               child: Text(
                 'Tracks',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
               ),
             ),
             const SizedBox(height: 12),
@@ -406,10 +409,12 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isCurrentlyPlaying ? Colors.deepPurple.withOpacity(0.1) : Colors.white.withOpacity(0.7),
+                  color: isCurrentlyPlaying
+                      ? Colors.deepPurple.withValues(alpha: 0.3)
+                      : Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: isCurrentlyPlaying ? Colors.deepPurple.withOpacity(0.3) : Colors.transparent,
+                    color: isCurrentlyPlaying ? Colors.deepPurple.withValues(alpha: 0.5) : Colors.transparent,
                     width: 1.5,
                   ),
                 ),
@@ -432,7 +437,7 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                                   width: 48,
                                   height: 48,
                                   decoration: BoxDecoration(
-                                    color: Colors.deepPurple.withOpacity(0.8),
+                                    color: Colors.deepPurple.withValues(alpha: 0.8),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Center(
@@ -449,7 +454,7 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                                   width: 48,
                                   height: 48,
                                   decoration: BoxDecoration(
-                                    color: Colors.deepPurple.withOpacity(0.7),
+                                    color: Colors.deepPurple.withValues(alpha: 0.7),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Center(
@@ -494,7 +499,7 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    color: isCurrentlyPlaying ? Colors.deepPurple : Colors.black87,
+                                    color: isCurrentlyPlaying ? Colors.deepPurple.shade100 : Colors.white,
                                     fontWeight: isCurrentlyPlaying ? FontWeight.w700 : FontWeight.w600,
                                     fontSize: 15,
                                   ),
@@ -505,7 +510,7 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    color: isCurrentlyPlaying ? Colors.deepPurple.shade600 : Colors.grey.shade600,
+                                    color: isCurrentlyPlaying ? Colors.deepPurple.shade200 : Colors.white70,
                                     fontSize: 13,
                                   ),
                                 ),
@@ -516,7 +521,7 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                           Text(
                             _formatDuration(song.duration),
                             style: TextStyle(
-                              color: isCurrentlyPlaying ? Colors.deepPurple : Colors.grey.shade600,
+                              color: isCurrentlyPlaying ? Colors.deepPurple.shade100 : Colors.white70,
                               fontWeight: isCurrentlyPlaying ? FontWeight.w700 : FontWeight.w500,
                               fontSize: 13,
                             ),
@@ -582,124 +587,135 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+      builder: (context) => ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.85),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
             ),
-            const SizedBox(height: 24),
-            // Header with Album Art
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.deepPurple.withOpacity(0.2),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child:
-                          _albumArtwork ??
-                          Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [Colors.deepPurple.shade300, Colors.purple.shade400],
-                              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Header with Album Art
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
-                            child: Image.asset('assets/images/album.png', width: 28, height: 28, color: Colors.white54),
-                          ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.albumName,
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _artistName,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.deepPurple.shade700,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child:
+                              _albumArtwork ??
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [Colors.deepPurple.shade700, Colors.purple.shade900],
+                                  ),
+                                ),
+                                child: Image.asset(
+                                  'assets/images/album.png',
+                                  width: 28,
+                                  height: 28,
+                                  color: Colors.white54,
+                                ),
+                              ),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.albumName,
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _artistName,
+                              style: TextStyle(fontSize: 14, color: Colors.white70, fontWeight: FontWeight.w600),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Divider(height: 1),
-            // Options
-            _buildOptionTile(
-              iconPath: 'assets/images/playlist_open.png',
-              title: 'Add to Playlist',
-              onTap: () {
-                Navigator.pop(context);
-                _addToPlaylist();
-              },
-            ),
-            _buildOptionTile(
-              iconPath: 'assets/images/share.png',
-              title: 'Share Album',
-              onTap: () async {
-                Navigator.pop(context);
-                final firstSong = widget.songs.firstOrNull;
-                final path = firstSong?.localArtworkPath;
-                final text =
-                    '🎵 Check out this album on Audio X!\n\nAlbum: ${widget.albumName}\nArtist: $_artistName\n\n#AudioX #Music';
+                ),
+                const SizedBox(height: 24),
+                Divider(height: 1, color: Colors.white.withValues(alpha: 0.1)),
+                // Options
+                _buildOptionTile(
+                  iconPath: 'assets/images/playlist_open.png',
+                  title: 'Add to Playlist',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _addToPlaylist();
+                  },
+                ),
+                _buildOptionTile(
+                  iconPath: 'assets/images/share.png',
+                  title: 'Share Album',
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final firstSong = widget.songs.firstOrNull;
+                    final path = firstSong?.localArtworkPath;
+                    final text =
+                        '🎵 Check out this album on Audio X!\n\nAlbum: ${widget.albumName}\nArtist: $_artistName\n\n#AudioX #Music';
 
-                if (path != null && File(path).existsSync()) {
-                  await Share.shareXFiles([XFile(path)], text: text);
-                } else {
-                  await Share.share(text);
-                }
-              },
+                    if (path != null && File(path).existsSync()) {
+                      await Share.shareXFiles([XFile(path)], text: text);
+                    } else {
+                      await Share.share(text);
+                    }
+                  },
+                ),
+                _buildOptionTile(
+                  iconPath: 'assets/images/info.png',
+                  title: 'Album Info',
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.pushNamed(
+                      'album_info',
+                      extra: {'albumName': widget.albumName, 'artistName': _artistName, 'albumArt': _albumArtwork},
+                    );
+                  },
+                ),
+                const SizedBox(height: 32),
+              ],
             ),
-            _buildOptionTile(
-              iconPath: 'assets/images/info.png',
-              title: 'Album Info',
-              onTap: () {
-                Navigator.pop(context);
-                context.pushNamed(
-                  'album_info',
-                  extra: {'albumName': widget.albumName, 'artistName': _artistName, 'albumArt': _albumArtwork},
-                );
-              },
-            ),
-            const SizedBox(height: 32),
-          ],
+          ),
         ),
       ),
     );
@@ -709,12 +725,12 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: Colors.deepPurple.shade50, borderRadius: BorderRadius.circular(8)),
-        child: Image.asset(iconPath, width: 24, height: 24, color: Colors.deepPurple),
+        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(8)),
+        child: Image.asset(iconPath, width: 24, height: 24, color: Colors.white),
       ),
       title: Text(
         title,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.black87),
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.white),
       ),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),

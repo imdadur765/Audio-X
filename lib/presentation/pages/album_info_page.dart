@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../controllers/audio_controller.dart';
+import '../widgets/glass_background.dart';
 
 class AlbumInfoPage extends StatefulWidget {
   final String albumName;
@@ -32,18 +33,13 @@ class _AlbumInfoPageState extends State<AlbumInfoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      extendBody: true,
       body: Stack(
         children: [
           // Background with blur
-          if (widget.albumArt != null) Positioned.fill(child: widget.albumArt!),
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-              child: Container(color: Colors.white.withOpacity(0.6)),
-            ),
-          ),
+          GlassBackground(artworkPath: null, customChild: widget.albumArt),
 
+          Container(color: Colors.black.withValues(alpha: 0.5)), // Tint
           // Content
           SafeArea(
             child: Column(
@@ -84,19 +80,17 @@ class _AlbumInfoPageState extends State<AlbumInfoPage> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.5)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
               ),
-              child: Center(
-                child: Image.asset('assets/images/back.png', width: 20, height: 20, color: Colors.deepPurple),
-              ),
+              child: Center(child: Image.asset('assets/images/back.png', width: 20, height: 20, color: Colors.white)),
             ),
           ),
           const SizedBox(width: 16),
           const Text(
             'Album Info',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ],
       ),
@@ -131,7 +125,7 @@ class _AlbumInfoPageState extends State<AlbumInfoPage> {
           Center(
             child: Text(
               data['collectionName'] ?? widget.albumName,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
               textAlign: TextAlign.center,
             ),
           ),
@@ -139,7 +133,7 @@ class _AlbumInfoPageState extends State<AlbumInfoPage> {
           Center(
             child: Text(
               data['artistName'] ?? widget.artistName,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.deepPurple.shade700),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.8)),
               textAlign: TextAlign.center,
             ),
           ),
@@ -214,9 +208,9 @@ class _AlbumInfoPageState extends State<AlbumInfoPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.6),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -224,12 +218,12 @@ class _AlbumInfoPageState extends State<AlbumInfoPage> {
         children: [
           Text(
             label,
-            style: TextStyle(fontSize: 12, color: Colors.deepPurple.shade400, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.6), fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(fontSize: 16, color: Colors.black87, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

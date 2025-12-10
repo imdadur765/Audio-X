@@ -1,7 +1,10 @@
+import 'package:audio_x/presentation/widgets/mini_player.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:ui';
 import 'package:go_router/go_router.dart';
-import '../widgets/mini_player.dart';
+import 'package:provider/provider.dart';
+import '../controllers/audio_controller.dart';
 
 class ScaffoldWithNavBar extends StatelessWidget {
   final Widget child;
@@ -42,97 +45,124 @@ class ScaffoldWithNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final int selectedIndex = _calculateSelectedIndex(context);
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
+    // Listen to AudioController for dynamic colors
+    return Consumer<AudioController>(
+      builder: (context, controller, _) {
+        final accentColor = controller.accentColor;
 
-        // If on home tab, minimize app using native method
-        if (selectedIndex == 0) {
-          const platform = MethodChannel('com.example.audio_x/audio');
-          try {
-            await platform.invokeMethod('minimizeApp');
-          } catch (e) {
-            debugPrint("Failed to minimize app: $e");
-            // Fallback to standard pop if native method fails
-            await SystemChannels.platform.invokeMethod('SystemNavigator.pop');
-          }
-        } else {
-          // Go back to home tab
-          if (context.mounted) {
-            context.go('/home');
-          }
-        }
-      },
-      child: Scaffold(
-        body: child,
-        bottomNavigationBar: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Mini Player
-            const MiniPlayer(),
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) async {
+            if (didPop) return;
 
-            // Custom Modern Bottom Navigation Bar
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, -5)),
-                ],
-                borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavItem(
-                      context,
-                      index: 0,
-                      selectedIndex: selectedIndex,
-                      activeImage: 'assets/images/home_open.png',
-                      inactiveImage: 'assets/images/home_close.png',
-                      label: 'Home',
+            // If on home tab, minimize app using native method
+            if (selectedIndex == 0) {
+              const platform = MethodChannel('com.example.audio_x/audio');
+              try {
+                await platform.invokeMethod('minimizeApp');
+              } catch (e) {
+                debugPrint("Failed to minimize app: $e");
+                // Fallback to standard pop if native method fails
+                await SystemChannels.platform.invokeMethod('SystemNavigator.pop');
+              }
+            } else {
+              // Go back to home tab
+              if (context.mounted) {
+                context.go('/home');
+              }
+            }
+          },
+          child: Scaffold(
+            extendBody: true, // Important for glass effect to show content behind
+            body: child,
+            bottomNavigationBar: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Mini Player
+                MiniPlayer(),
+
+                // Custom Modern Bottom Navigation Bar
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6), // Dark Glass
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, -5),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildNavItem(
+                              context,
+                              index: 0,
+                              selectedIndex: selectedIndex,
+                              activeImage: 'assets/images/home_open.png',
+                              inactiveImage: 'assets/images/home_close.png',
+                              label: 'Home',
+                              accentColor: accentColor,
+                            ),
+                            _buildNavItem(
+                              context,
+                              index: 1,
+                              selectedIndex: selectedIndex,
+                              activeImage: 'assets/images/song.png',
+                              inactiveImage: 'assets/images/song.png',
+                              label: 'Songs',
+                              accentColor: accentColor,
+                            ),
+                            _buildNavItem(
+                              context,
+                              index: 2,
+                              selectedIndex: selectedIndex,
+                              activeImage: 'assets/images/artist_open.png',
+                              inactiveImage: 'assets/images/artist_close.png',
+                              label: 'Artists',
+                              accentColor: accentColor,
+                            ),
+                            _buildNavItem(
+                              context,
+                              index: 3,
+                              selectedIndex: selectedIndex,
+                              activeImage: 'assets/images/album_list_open.png',
+                              inactiveImage: 'assets/images/album_list_close.png',
+                              label: 'Albums',
+                              accentColor: accentColor,
+                            ),
+                            _buildNavItem(
+                              context,
+                              index: 4,
+                              selectedIndex: selectedIndex,
+                              activeImage: 'assets/images/playlist_open.png',
+                              inactiveImage: 'assets/images/playlist_close.png',
+                              label: 'Playlists',
+                              accentColor: accentColor,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    _buildNavItem(
-                      context,
-                      index: 1,
-                      selectedIndex: selectedIndex,
-                      activeImage: 'assets/images/song.png',
-                      inactiveImage: 'assets/images/song.png',
-                      label: 'Songs',
-                    ),
-                    _buildNavItem(
-                      context,
-                      index: 2,
-                      selectedIndex: selectedIndex,
-                      activeImage: 'assets/images/artist_open.png',
-                      inactiveImage: 'assets/images/artist_close.png',
-                      label: 'Artists',
-                    ),
-                    _buildNavItem(
-                      context,
-                      index: 3,
-                      selectedIndex: selectedIndex,
-                      activeImage: 'assets/images/album_list_open.png',
-                      inactiveImage: 'assets/images/album_list_close.png',
-                      label: 'Albums',
-                    ),
-                    _buildNavItem(
-                      context,
-                      index: 4,
-                      selectedIndex: selectedIndex,
-                      activeImage: 'assets/images/playlist_open.png',
-                      inactiveImage: 'assets/images/playlist_close.png',
-                      label: 'Playlists',
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -143,6 +173,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
     required String activeImage,
     required String inactiveImage,
     required String label,
+    required Color accentColor,
   }) {
     final isActive = selectedIndex == index;
 
@@ -152,7 +183,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? Colors.deepPurple.withValues(alpha: 0.1) : Colors.transparent,
+          color: isActive ? accentColor.withValues(alpha: 0.15) : Colors.transparent, // Dynamic Background
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -161,23 +192,17 @@ class ScaffoldWithNavBar extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: isActive ? Colors.deepPurple : Colors.transparent,
+                color: isActive ? accentColor : Colors.transparent, // Dynamic Circle
                 shape: BoxShape.circle,
                 boxShadow: isActive
-                    ? [
-                        BoxShadow(
-                          color: Colors.deepPurple.withValues(alpha: 0.3),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
+                    ? [BoxShadow(color: accentColor.withValues(alpha: 0.4), blurRadius: 8, offset: const Offset(0, 2))]
                     : null,
               ),
               child: Image.asset(
                 isActive ? activeImage : inactiveImage,
                 width: 20,
                 height: 20,
-                color: isActive ? Colors.white : Colors.grey.shade600,
+                color: isActive ? Colors.white : Colors.white54,
               ),
             ),
             const SizedBox(height: 4),
@@ -186,7 +211,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                color: isActive ? Colors.deepPurple : Colors.grey.shade600,
+                color: isActive ? accentColor : Colors.white54, // Dynamic Text
               ),
             ),
           ],

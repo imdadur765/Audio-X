@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 
 class GlassBackground extends StatelessWidget {
   final String? artworkPath;
+  final Widget? customChild;
   final Color accentColor;
   final bool isDark;
 
   const GlassBackground({
     super.key,
     required this.artworkPath,
+    this.customChild,
     this.accentColor = const Color(0xFF9B51E0),
     this.isDark = true,
   });
@@ -19,10 +21,15 @@ class GlassBackground extends StatelessWidget {
     return Stack(
       children: [
         // 1. Base Image Layer
-        if (artworkPath != null && File(artworkPath!).existsSync())
-          Positioned.fill(
-            child: Image.file(File(artworkPath!), fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildFallback()),
-          )
+        if (customChild != null)
+          Positioned.fill(child: customChild!)
+        else if (artworkPath != null)
+          if (File(artworkPath!).existsSync())
+            Positioned.fill(
+              child: Image.file(File(artworkPath!), fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildFallback()),
+            )
+          else
+            Positioned.fill(child: _buildFallback())
         else
           Positioned.fill(child: _buildFallback()),
 

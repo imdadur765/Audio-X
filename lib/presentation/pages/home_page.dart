@@ -7,6 +7,8 @@ import '../../data/models/song_model.dart';
 import '../../data/services/auth_service.dart';
 import 'playlist_details_page.dart';
 import 'profile_page.dart';
+import 'dart:ui';
+import '../widgets/glass_background.dart';
 import '../widgets/hybrid_song_artwork.dart';
 
 class HomePage extends StatefulWidget {
@@ -88,68 +90,131 @@ class _HomePageState extends State<HomePage> {
     return ChangeNotifierProvider.value(
       value: _homeController,
       child: Scaffold(
-        backgroundColor: Colors.grey[50],
-        body: Consumer<HomeController>(
-          builder: (context, homeController, child) {
-            final audioController = context.read<AudioController>();
+        extendBody: true, // Allow content to flow behind nav bar
+        body: Stack(
+          children: [
+            // Dynamic Glass Background
+            Consumer<AudioController>(
+              builder: (context, controller, child) {
+                return GlassBackground(
+                  artworkPath: controller.currentSong?.localArtworkPath,
+                  accentColor: controller.accentColor,
+                  isDark: true, // Always dark mode for home page
+                );
+              },
+            ),
 
-            if (audioController.songs.isEmpty && !homeController.isLoading) {
-              return _buildEmptyState(audioController);
-            }
+            // Content
+            Consumer<HomeController>(
+              builder: (context, homeController, child) {
+                final audioController = context.watch<AudioController>(); // Watch for color changes
 
-            if (homeController.isLoading && audioController.songs.isEmpty) {
-              return const Center(child: CircularProgressIndicator(color: Colors.deepPurple));
-            }
+                if (audioController.songs.isEmpty && !homeController.isLoading) {
+                  return _buildEmptyState(audioController);
+                }
 
-            return CustomScrollView(
-              controller: _scrollController,
-              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-              slivers: [
-                _buildHeader(),
-                _buildRecentlyPlayed(homeController, audioController),
-                _buildTopArtists(homeController),
-                _buildQuickPlaylists(homeController, audioController),
-                _buildGenreSections(homeController, audioController),
-                const SliverToBoxAdapter(child: SizedBox(height: 120)),
-              ],
-            );
-          },
+                if (homeController.isLoading && audioController.songs.isEmpty) {
+                  return const Center(child: CircularProgressIndicator(color: Colors.white));
+                }
+
+                return CustomScrollView(
+                  controller: _scrollController,
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                  slivers: [
+                    _buildHeader(audioController.accentColor),
+                    _buildRecentlyPlayed(homeController, audioController),
+                    _buildTopArtists(homeController),
+                    _buildQuickPlaylists(homeController, audioController),
+                    _buildGenreSections(homeController, audioController),
+                    const SliverToBoxAdapter(child: SizedBox(height: 120)),
+                  ],
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(Color accentColor) {
+    // Standardize opacity logic (0 to 1 based on scroll)
     final opacity = (_scrollOffset / 100).clamp(0.0, 1.0);
 
     return SliverAppBar(
       expandedHeight: 200,
       floating: false,
       pinned: true,
-      backgroundColor: Colors.white,
-      elevation: opacity * 4,
-      shadowColor: Colors.black.withValues(alpha: 0.1),
+      // Standard Dark Glass Header Background
+      backgroundColor: opacity > 0.8 ? Colors.black.withValues(alpha: 0.4) : Colors.transparent,
+      elevation: 0,
+      // Add blur when scrolled
+      flexibleSpace: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: opacity * 20, sigmaY: opacity * 20),
+          child: FlexibleSpaceBar(
+            title: AnimatedOpacity(
+              opacity: opacity,
+              duration: const Duration(milliseconds: 200),
+              child: Text(
+                _getGreeting(),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+            background: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    accentColor.withValues(alpha: 0.6),
+                    Colors.black.withValues(alpha: 0.2), // Darker fade
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.6, 1.0],
+                ),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(
+                        _getGreeting(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text('Your personal music feed', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
       actions: [
+        // Search Button - tailored for glass (Dynamic)
         Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: opacity),
+            color: accentColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              if (opacity > 0.5)
-                BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 5)),
-            ],
+            border: Border.all(color: accentColor.withValues(alpha: 0.2)),
           ),
           child: IconButton(
-            icon: Image.asset(
-              'assets/images/search.png',
-              width: 24,
-              height: 24,
-              color: opacity > 0.5 ? Colors.deepPurple : Colors.white,
-            ),
+            icon: Image.asset('assets/images/search.png', width: 24, height: 24, color: Colors.white),
             onPressed: () {},
           ),
         ),
+        // Profile Avatar
         GestureDetector(
           onTap: () async {
             await Navigator.push(
@@ -159,12 +224,11 @@ class _HomePageState extends State<HomePage> {
                   userName: _homeController.userName,
                   onNameUpdate: (name) async {
                     await _homeController.updateUserName(name);
-                    setState(() {}); // Refresh UI after name update
+                    setState(() {});
                   },
                 ),
               ),
             );
-            // Refresh UI when returning from profile page (in case user signed in/out)
             setState(() {});
           },
           child: Container(
@@ -172,63 +236,22 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 2),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 2),
             ),
             child: _authService.isLoggedIn && _authService.userPhotoUrl != null
                 ? CircleAvatar(
                     radius: 16,
                     backgroundImage: NetworkImage(_authService.userPhotoUrl!),
-                    backgroundColor: Colors.grey[200],
+                    backgroundColor: Colors.grey[900],
                   )
                 : CircleAvatar(
                     radius: 16,
-                    backgroundColor: Colors.white,
-                    child: Image.asset('assets/images/profile.png', width: 20, height: 20, color: Colors.deepPurple),
+                    backgroundColor: Colors.white.withValues(alpha: 0.1),
+                    child: Image.asset('assets/images/profile.png', width: 20, height: 20, color: Colors.white),
                   ),
           ),
         ),
       ],
-      flexibleSpace: FlexibleSpaceBar(
-        title: AnimatedOpacity(
-          opacity: opacity,
-          duration: const Duration(milliseconds: 200),
-          child: Text(
-            _getGreeting(),
-            style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
-          ),
-        ),
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.deepPurple.shade700, Colors.deepPurple.shade500, Colors.purple.shade400],
-            ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    _getGreeting(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('Your personal music feed', style: TextStyle(color: Colors.white70, fontSize: 16)),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -246,7 +269,7 @@ class _HomePageState extends State<HomePage> {
               padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
               child: Text(
                 'Recently Played',
-                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black87),
+                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
               ),
             ),
             SizedBox(
@@ -289,13 +312,13 @@ class _HomePageState extends State<HomePage> {
                 Hero(
                   tag: 'song_${song.id}',
                   child: Container(
-                    width: 140, // Reduced width
-                    height: 140, // Reduced height
+                    width: 140,
+                    height: 140,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
+                          color: Colors.black.withValues(alpha: 0.3),
                           blurRadius: 12,
                           offset: const Offset(0, 6),
                         ),
@@ -306,16 +329,16 @@ class _HomePageState extends State<HomePage> {
                 ),
                 if (isPlaying)
                   Positioned(
-                    top: 6, // Adjusted position
+                    top: 6,
                     right: 6,
                     child: Container(
-                      padding: const EdgeInsets.all(4), // Reduced padding
+                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: Colors.deepPurple,
+                        color: audioController.accentColor, // Dynamic
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.deepPurple.withValues(alpha: 0.5),
+                            color: audioController.accentColor.withValues(alpha: 0.5),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -326,26 +349,19 @@ class _HomePageState extends State<HomePage> {
                   ),
               ],
             ),
-            const SizedBox(height: 8), // Reduced spacing
+            const SizedBox(height: 8),
             Text(
               song.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 13, // Reduced font
-                color: Colors.black87,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.white),
             ),
             const SizedBox(height: 2),
             Text(
               song.artist,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 11, // Reduced font
-              ),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
             ),
           ],
         ),
@@ -366,14 +382,10 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Padding(
-              padding: EdgeInsets.fromLTRB(24, 24, 24, 12), // Reduced padding
+              padding: EdgeInsets.fromLTRB(24, 24, 24, 12),
               child: Text(
                 'Your Top Artists',
-                style: TextStyle(
-                  fontSize: 22, // Reduced font
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
               ),
             ),
             GridView.builder(
@@ -405,23 +417,15 @@ class _HomePageState extends State<HomePage> {
       },
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16), // Reduced radius
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Colors.deepPurple.shade400, Colors.purple.shade600],
-          ),
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.white.withValues(alpha: 0.05), // Subtle glass fill
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
           boxShadow: [
-            BoxShadow(
-              color: Colors.deepPurple.withValues(alpha: 0.3),
-              blurRadius: 12, // Reduced blur
-              offset: const Offset(0, 6), // Reduced offset
-            ),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 12, offset: const Offset(0, 6)),
           ],
         ),
         child: Stack(
           children: [
-            // Background image if available
             if (artist.imageUrl != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
@@ -440,13 +444,13 @@ class _HomePageState extends State<HomePage> {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
+                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.9)],
                 ),
               ),
             ),
             // Content
             Padding(
-              padding: const EdgeInsets.all(12), // Reduced padding
+              padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -458,24 +462,12 @@ class _HomePageState extends State<HomePage> {
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 16, // Reduced font
-                      shadows: [
-                        Shadow(
-                          offset: Offset(0, 1), // Reduced shadow
-                          blurRadius: 4,
-                          color: Colors.black45,
-                        ),
-                      ],
+                      fontSize: 16,
+                      shadows: [Shadow(offset: Offset(0, 1), blurRadius: 4, color: Colors.black87)],
                     ),
                   ),
-                  const SizedBox(height: 2), // Reduced spacing
-                  Text(
-                    '${artist.songCount} songs',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11, // Reduced font
-                    ),
-                  ),
+                  const SizedBox(height: 2),
+                  Text('${artist.songCount} songs', style: const TextStyle(color: Colors.white70, fontSize: 11)),
                 ],
               ),
             ),
@@ -492,18 +484,14 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Padding(
-              padding: EdgeInsets.fromLTRB(24, 24, 24, 12), // Reduced padding
+              padding: EdgeInsets.fromLTRB(24, 24, 24, 12),
               child: Text(
                 'Made For You',
-                style: TextStyle(
-                  fontSize: 22, // Reduced font
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
               ),
             ),
             SizedBox(
-              height: 160, // Reduced height
+              height: 160,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -512,7 +500,7 @@ class _HomePageState extends State<HomePage> {
                     'Most Played',
                     '${homeController.mostPlayed.length} songs',
                     'most_played.png',
-                    [Colors.orange.shade400, Colors.deepOrange.shade600],
+                    [Colors.orange.withValues(alpha: 0.4), Colors.deepOrange.withValues(alpha: 0.4)], // Glassy gradient
                     () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
@@ -529,7 +517,7 @@ class _HomePageState extends State<HomePage> {
                     'Recently Added',
                     '${homeController.recentlyAdded.length} songs',
                     'recently_added.png',
-                    [Colors.blue.shade400, Colors.indigo.shade600],
+                    [Colors.blue.withValues(alpha: 0.4), Colors.indigo.withValues(alpha: 0.4)],
                     () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
@@ -561,42 +549,51 @@ class _HomePageState extends State<HomePage> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 150, // Reduced width
-        margin: const EdgeInsets.symmetric(horizontal: 6), // Reduced margin
+        width: 150,
+        margin: const EdgeInsets.symmetric(horizontal: 6),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16), // Reduced radius
-          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: gradientColors),
+          borderRadius: BorderRadius.circular(16),
+          // Use a dark glass base, with the tint from the gradient colors provided
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            // Create a glass version of the color
+            colors: gradientColors,
+          ),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
           boxShadow: [
-            BoxShadow(
-              color: gradientColors.first.withValues(alpha: 0.4),
-              blurRadius: 12, // Reduced blur
-              offset: const Offset(0, 6), // Reduced offset
-            ),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 12, offset: const Offset(0, 6)),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
-                child: Image.asset('assets/images/$iconAsset', color: Colors.white, width: 24, height: 24),
-              ),
-              Column(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
+                    child: Image.asset('assets/images/$iconAsset', color: Colors.white, width: 24, height: 24),
                   ),
-                  const SizedBox(height: 4),
-                  Text(subtitle, style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12)),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(subtitle, style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12)),
+                    ],
+                  ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -608,7 +605,6 @@ class _HomePageState extends State<HomePage> {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
-    // Limit to 3 genres to prevent overflow
     final limitedGenres = homeController.genreSongs.entries.take(3).toList();
 
     return SliverList(
@@ -625,13 +621,13 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 12), // Reduced padding
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
             child: Text(
               genre,
               style: const TextStyle(
-                fontSize: 20, // Reduced font
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: Colors.white, // Dark theme text
               ),
             ),
           ),
@@ -661,24 +657,20 @@ class _HomePageState extends State<HomePage> {
     return GestureDetector(
       onTap: () => _playSong(song, audioController),
       child: Container(
-        width: 120, // Reduced width
-        margin: const EdgeInsets.symmetric(horizontal: 6), // Reduced margin
+        width: 120,
+        margin: const EdgeInsets.symmetric(horizontal: 6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Stack(
               children: [
                 Container(
-                  width: 120, // Reduced width
-                  height: 120, // Reduced height
+                  width: 120,
+                  height: 120,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12), // Reduced radius
+                    borderRadius: BorderRadius.circular(12),
                     boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 8, // Reduced blur
-                        offset: const Offset(0, 4), // Reduced offset
-                      ),
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4)),
                     ],
                   ),
                   child: HybridSongArtwork.fromSong(song: song, size: 120, borderRadius: 12),
@@ -688,22 +680,22 @@ class _HomePageState extends State<HomePage> {
                     top: 6,
                     right: 6,
                     child: Container(
-                      padding: const EdgeInsets.all(3), // Reduced padding
-                      decoration: BoxDecoration(color: Colors.deepPurple, shape: BoxShape.circle),
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(color: audioController.accentColor, shape: BoxShape.circle), // Dynamic
                       child: Image.asset('assets/images/equalizer.png', width: 12, height: 12, color: Colors.white),
                     ),
                   ),
               ],
             ),
-            const SizedBox(height: 6), // Reduced spacing
+            const SizedBox(height: 6),
             Text(
               song.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
-                fontSize: 12, // Reduced font
-                color: Colors.black87,
+                fontSize: 12,
+                color: Colors.white, // White text
               ),
             ),
           ],
@@ -724,66 +716,55 @@ class _HomePageState extends State<HomePage> {
   Widget _buildEmptyState(AudioController audioController) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24.0), // Reduced padding
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Dark glass empty state
             Container(
-              width: 120, // Reduced size
+              width: 120,
               height: 120,
-              decoration: BoxDecoration(color: Colors.deepPurple.shade50, shape: BoxShape.circle),
-              child: Image.asset(
-                'assets/images/album_list_open.png',
-                width: 50,
-                height: 50,
-                color: Colors.deepPurple.shade300,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05), // Dark glass
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
               ),
+              child: Image.asset('assets/images/album_list_open.png', width: 50, height: 50, color: Colors.white54),
             ),
-            const SizedBox(height: 20), // Reduced spacing
+            const SizedBox(height: 20),
             const Text(
               'No Music Found',
-              style: TextStyle(
-                fontSize: 22, // Reduced font
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
             ),
-            const SizedBox(height: 8), // Reduced spacing
+            const SizedBox(height: 8),
             const Text(
               'We need permission to access your audio files',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 14, // Reduced font
-              ),
+              style: TextStyle(color: Colors.white70, fontSize: 14),
             ),
-            const SizedBox(height: 20), // Reduced spacing
+            const SizedBox(height: 20),
             GestureDetector(
               onTap: () async {
                 await audioController.loadSongs();
                 await _homeController.loadHomeData(audioController);
               },
               child: Container(
-                height: 48, // Reduced height
+                height: 48,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(colors: [Colors.deepPurple.shade600, Colors.purple.shade600]),
-                  borderRadius: BorderRadius.circular(12), // Reduced radius
+                  borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.deepPurple.withValues(alpha: 0.3),
-                      blurRadius: 12, // Reduced blur
-                      offset: const Offset(0, 6), // Reduced offset
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
                     ),
                   ],
                 ),
                 child: const Center(
                   child: Text(
                     'Grant Permission & Reload',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14, // Reduced font
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),

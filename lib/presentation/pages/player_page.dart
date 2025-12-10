@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:palette_generator/palette_generator.dart';
 import '../../data/models/song_model.dart';
 import '../../data/models/lyrics_model.dart';
 import '../../services/lyrics_service.dart';
@@ -34,7 +33,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
   bool _isLoadingLyrics = false;
   late AnimationController _animationController;
 
-  Color? _accentColor;
+  // Color? _accentColor; // Removed in favor of AudioController
   String? _lastSongId;
   bool _showBlur = false; // Delay blur effect for faster opening
 
@@ -45,7 +44,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
   Map<String, dynamic>? _trackInfo;
 
   // Static global cache shared across all instances for better performance
-  static final Map<String, Color> _globalPaletteCache = {};
+  // static final Map<String, Color> _globalPaletteCache = {}; // Removed
 
   final ScrollController _mainScrollController = ScrollController();
 
@@ -59,7 +58,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
     _animationController.forward();
 
     // Set default color immediately - no blocking
-    _accentColor = Colors.deepPurple;
+    // _accentColor = Colors.deepPurple; // Removed
 
     // Defer ALL heavy operations to after first frame for instant opening
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -69,7 +68,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
       }
 
       // Load palette in background
-      _updatePalette(widget.song.localArtworkPath, widget.song.id);
+      // _updatePalette... // Removed
 
       // Load lyrics in background
       _loadLyrics();
@@ -102,46 +101,7 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  Future<void> _updatePalette(String? artworkPath, String songId) async {
-    if (artworkPath == null) {
-      if (mounted) setState(() => _accentColor = Colors.deepPurple);
-      return;
-    }
-
-    // Check global cache first (persists across instances)
-    if (_globalPaletteCache.containsKey(songId)) {
-      if (mounted) {
-        setState(() => _accentColor = _globalPaletteCache[songId]);
-      }
-      return;
-    }
-
-    try {
-      final palette = await PaletteGenerator.fromImageProvider(
-        FileImage(File(artworkPath)),
-        maximumColorCount: 6,
-        timeout: const Duration(milliseconds: 300),
-      );
-
-      if (mounted) {
-        // Vibrant > LightVibrant > DarkVibrant > Fallback
-        Color extracted =
-            palette.vibrantColor?.color ??
-            palette.lightVibrantColor?.color ??
-            palette.darkVibrantColor?.color ??
-            const Color(0xFF9B51E0);
-
-        // Safety Net and Contrast Check
-        extracted = ColorUtils.getSafeAccentColor(extracted);
-
-        _globalPaletteCache[songId] = extracted;
-        setState(() => _accentColor = extracted);
-      }
-    } catch (e) {
-      // Fallback on any error or timeout
-      if (mounted) setState(() => _accentColor = const Color(0xFF9B51E0));
-    }
-  }
+  // _updatePalette removed
 
   Future<void> _loadLyrics([Song? song]) async {
     if (!mounted) return; // Early exit if widget disposed
@@ -280,21 +240,19 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
         final currentSong = controller.currentSong ?? widget.song;
 
         // Only update palette when song actually changes
+        // Only check for song changes to reload lyrics/info
         if (_lastSongId != currentSong.id) {
           _lastSongId = currentSong.id;
-          // Clear lyrics and reload for new song
           _lyrics = null;
           _showLyrics = false;
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _updatePalette(currentSong.localArtworkPath, currentSong.id);
-            // Reload lyrics for new song
             _loadLyrics(currentSong);
             _loadArtistInfo(currentSong.artist);
             _loadCredits(currentSong.artist, currentSong.title);
           });
         }
 
-        final accentColor = _accentColor ?? const Color(0xFF9B51E0);
+        final accentColor = controller.accentColor;
         final uiColors = ColorUtils.getUiColors(accentColor);
         final textColor = uiColors.textColor;
         final buttonColor = uiColors.backgroundColor;

@@ -100,60 +100,60 @@ class _AllSongsPageState extends State<AllSongsPage> {
   Widget build(BuildContext context) {
     final filteredSongs = _getFilteredAndSortedSongs();
 
-    return Consumer<AudioController>(builder: (context, controller, child) {
-      final artworkPath = controller.currentSong?.localArtworkPath;
-      final accentColor = controller.accentColor;
+    return Consumer<AudioController>(
+      builder: (context, controller, child) {
+        final artworkPath = controller.currentSong?.localArtworkPath;
+        final accentColor = controller.accentColor;
 
-      return Scaffold(
-        extendBody: true,
-        body: Stack(
-          children: [
-            GlassBackground(
-              artworkPath: artworkPath,
-              accentColor: accentColor,
-              isDark: true,
-            ),
-            CustomScrollView(
-              controller: _scrollController,
-              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-              slivers: [
-                _buildHeader(accentColor),
+        return Scaffold(
+          extendBody: true,
+          body: Stack(
+            children: [
+              GlassBackground(artworkPath: artworkPath, accentColor: accentColor, isDark: true),
+              CustomScrollView(
+                controller: _scrollController,
+                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                slivers: [
+                  _buildHeader(accentColor),
 
-                if (_isLoading)
-                  _buildShimmerList()
-                else if (filteredSongs.isEmpty)
-                  SliverFillRemaining(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.05),
-                              shape: BoxShape.circle,
+                  if (_isLoading)
+                    _buildShimmerList()
+                  else if (filteredSongs.isEmpty)
+                    SliverFillRemaining(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
+                              child: Image.asset(
+                                'assets/images/song.png',
+                                width: 64,
+                                height: 64,
+                                color: Colors.white38,
+                              ),
                             ),
-                            child: Image.asset('assets/images/song.png', width: 64, height: 64, color: Colors.white38),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            _searchQuery.isNotEmpty ? 'No songs found' : 'No music available',
-                            style: const TextStyle(fontSize: 18, color: Colors.white70, fontWeight: FontWeight.w600),
-                          ),
-                        ],
+                            const SizedBox(height: 16),
+                            Text(
+                              _searchQuery.isNotEmpty ? 'No songs found' : 'No music available',
+                              style: const TextStyle(fontSize: 18, color: Colors.white70, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  )
-                else
-                  _buildSongList(filteredSongs, accentColor),
+                    )
+                  else
+                    _buildSongList(filteredSongs, accentColor),
 
-                const SliverToBoxAdapter(child: SizedBox(height: 100)),
-              ],
-            ),
-          ],
-        ),
-      );
-    });
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildHeader(Color accentColor) {
@@ -164,7 +164,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
       expandedHeight: 280,
       floating: false,
       pinned: true,
-      backgroundColor: isScrolled ? Colors.black.withOpacity(0.4) : Colors.transparent,
+      backgroundColor: isScrolled ? Colors.black.withValues(alpha: 0.4) : Colors.transparent,
       elevation: 0,
       iconTheme: const IconThemeData(color: Colors.white),
       actions: [
@@ -172,27 +172,37 @@ class _AllSongsPageState extends State<AllSongsPage> {
         Container(
           margin: const EdgeInsets.only(right: 16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+            color: accentColor.withOpacity(0.1), // Dynamic Tint
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            border: Border.all(color: accentColor.withOpacity(0.1)), // Dynamic Border
           ),
           child: PopupMenuButton<SortOrder>(
             icon: Image.asset(
               'assets/images/sort.png',
               width: 20,
               height: 20,
-              color: Colors.white,
+              color: accentColor, // Dynamic Icon Color
             ),
             onSelected: (order) => setState(() => _sortOrder = order),
             color: const Color(0xFF1E1E1E),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             itemBuilder: (context) => [
-              const PopupMenuItem(value: SortOrder.aToZ, child: Text('A to Z', style: TextStyle(color: Colors.white))),
-              const PopupMenuItem(value: SortOrder.zToA, child: Text('Z to A', style: TextStyle(color: Colors.white))),
               const PopupMenuItem(
-                  value: SortOrder.dateAdded, child: Text('Recently Added', style: TextStyle(color: Colors.white))),
+                value: SortOrder.aToZ,
+                child: Text('A to Z', style: TextStyle(color: Colors.white)),
+              ),
               const PopupMenuItem(
-                  value: SortOrder.duration, child: Text('Duration', style: TextStyle(color: Colors.white))),
+                value: SortOrder.zToA,
+                child: Text('Z to A', style: TextStyle(color: Colors.white)),
+              ),
+              const PopupMenuItem(
+                value: SortOrder.dateAdded,
+                child: Text('Recently Added', style: TextStyle(color: Colors.white)),
+              ),
+              const PopupMenuItem(
+                value: SortOrder.duration,
+                child: Text('Duration', style: TextStyle(color: Colors.white)),
+              ),
             ],
           ),
         ),
@@ -204,7 +214,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
             title: AnimatedOpacity(
               opacity: isScrolled ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 200),
-               child: Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
@@ -215,7 +225,9 @@ class _AllSongsPageState extends State<AllSongsPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                        color: accentColor.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                      color: accentColor.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Text(
                       '${widget.songs.length}',
                       style: TextStyle(color: accentColor, fontSize: 12, fontWeight: FontWeight.bold),
@@ -224,24 +236,36 @@ class _AllSongsPageState extends State<AllSongsPage> {
                 ],
               ),
             ),
-            background: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: accentColor.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(16),
+            background: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    accentColor.withValues(alpha: 0.6),
+                    Colors.black.withValues(alpha: 0.2),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.6, 1.0],
+                ),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: accentColor.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Image.asset('assets/images/song.png', width: 28, height: 28, color: Colors.white),
                           ),
-                          child:
-                              Image.asset('assets/images/song.png', width: 28, height: 28, color: Colors.white),
-                        ),
                         const SizedBox(width: 16),
                         const Text(
                           'All Songs',
@@ -340,6 +364,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
           ),
         ),
       ),
+     ),
     );
   }
 
@@ -370,11 +395,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
                 const SizedBox(width: 8),
                 Text(
                   text,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                 ),
               ],
             ),
@@ -501,15 +522,16 @@ class _AllSongsPageState extends State<AllSongsPage> {
             child: Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(8),
-              decoration:
-                  BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(16)),
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(16)),
               child: Row(
                 children: [
                   Container(
                     width: 52,
                     height: 52,
-                    decoration:
-                        BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -520,14 +542,18 @@ class _AllSongsPageState extends State<AllSongsPage> {
                           height: 14,
                           width: 140,
                           decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
                         ),
                         const SizedBox(height: 6),
                         Container(
                           height: 12,
                           width: 80,
                           decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
                         ),
                       ],
                     ),

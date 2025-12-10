@@ -6,7 +6,6 @@ import '../controllers/home_controller.dart';
 import '../../data/models/song_model.dart';
 import '../../data/services/auth_service.dart';
 import 'playlist_details_page.dart';
-import 'profile_page.dart';
 import 'dart:ui';
 import '../widgets/glass_background.dart';
 import '../widgets/hybrid_song_artwork.dart';
@@ -217,19 +216,11 @@ class _HomePageState extends State<HomePage> {
         // Profile Avatar
         GestureDetector(
           onTap: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ProfilePage(
-                  userName: _homeController.userName,
-                  onNameUpdate: (name) async {
-                    await _homeController.updateUserName(name);
-                    setState(() {});
-                  },
-                ),
-              ),
-            );
-            setState(() {});
+            final result = await context.push<String>('/profile');
+            if (result != null) {
+              await _homeController.updateUserName(result);
+            }
+            if (mounted) setState(() {});
           },
           child: Container(
             margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),

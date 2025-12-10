@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:palette_generator/palette_generator.dart';
 import '../../core/utils/color_utils.dart';
+import '../../services/cloud_sync_service.dart';
 
 class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   final AudioHandler _audioHandler = AudioHandler();
@@ -609,6 +610,21 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> toggleFavorite(Song song) async {
     song.isFavorite = !song.isFavorite;
     await song.save(); // Persist to Hive
+    notifyListeners();
+
+    // Sync all favorites to cloud in background
+    final favoriteSongIds = _songs.where((s) => s.isFavorite).map((s) => s.id).toList();
+    CloudSyncService().syncFavoritesToCloud(favoriteSongIds);
+  }
+
+  /// Apply favorites from cloud sync (called after login)
+  Future<void> applyCloudFavorites(List<String> cloudFavoriteIds) async {
+    for (var song in _songs) {
+      if (cloudFavoriteIds.contains(song.id) && !song.isFavorite) {
+        song.isFavorite = true;
+        await song.save();
+      }
+    }
     notifyListeners();
   }
 

@@ -4,12 +4,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../data/models/playlist_model.dart';
 import '../data/models/song_model.dart';
+import 'cloud_sync_service.dart';
 
 class PlaylistService {
   static const String _playlistsKey = 'custom_playlists';
   static const String _playHistoryKey = 'play_history';
 
   final Uuid _uuid = const Uuid();
+  final CloudSyncService _cloudSync = CloudSyncService();
 
   // Notifier for playlist changes to update UI across the app
   static final ValueNotifier<bool> playlistChangeNotifier = ValueNotifier(false);
@@ -27,16 +29,38 @@ class PlaylistService {
       final List<dynamic> decoded = jsonDecode(playlistsJson);
       return decoded.map((json) => Playlist.fromJson(json)).toList();
     } catch (e) {
-      print('Error loading playlists: $e');
+      debugPrint('Error loading playlists: $e');
       return [];
     }
   }
 
-  // Save custom playlists
+  // Save custom playlists (locally + cloud)
   Future<void> _saveCustomPlaylists(List<Playlist> playlists) async {
     final prefs = await SharedPreferences.getInstance();
     final playlistsJson = jsonEncode(playlists.map((p) => p.toJson()).toList());
     await prefs.setString(_playlistsKey, playlistsJson);
+
+    // Sync to cloud in background (don't await to keep UI responsive)
+    _cloudSync.syncPlaylistsToCloud(playlists);
+  }
+
+  /// Merge cloud playlists with local (for sync on login)
+  Future<void> mergeCloudPlaylists(List<Playlist> cloudPlaylists) async {
+    final localPlaylists = await getCustomPlaylists();
+
+    // Simple merge: add cloud playlists that don't exist locally
+    final localIds = localPlaylists.map((p) => p.id).toSet();
+    for (var cloudPlaylist in cloudPlaylists) {
+      if (!localIds.contains(cloudPlaylist.id)) {
+        localPlaylists.add(cloudPlaylist);
+      }
+    }
+
+    // Save merged playlists (without triggering cloud sync again)
+    final prefs = await SharedPreferences.getInstance();
+    final playlistsJson = jsonEncode(localPlaylists.map((p) => p.toJson()).toList());
+    await prefs.setString(_playlistsKey, playlistsJson);
+    playlistChangeNotifier.value = !playlistChangeNotifier.value;
   }
 
   // Create new playlist

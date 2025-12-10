@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../data/services/artist_service.dart';
 import '../../data/services/auth_service.dart';
+import '../../services/cloud_sync_service.dart';
+import '../../services/playlist_service.dart';
+import '../controllers/audio_controller.dart';
 import 'package:hive/hive.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -14,17 +18,41 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   late TextEditingController _nameController;
   final AuthService _authService = AuthService();
+  final CloudSyncService _cloudSync = CloudSyncService();
   bool _isLoading = false;
+  bool _isSyncing = false;
+  DateTime? _lastSyncTime;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: _authService.userName);
+    _loadLastSyncTime();
+    // Listen for background sync updates
+    CloudSyncService.lastSyncNotifier.addListener(_onSyncUpdate);
+  }
+
+  void _onSyncUpdate() {
+    if (mounted) {
+      setState(() => _lastSyncTime = CloudSyncService.lastSyncNotifier.value);
+    }
+  }
+
+  Future<void> _loadLastSyncTime() async {
+    // First check local notifier (for current session syncs)
+    if (CloudSyncService.lastSyncNotifier.value != null) {
+      setState(() => _lastSyncTime = CloudSyncService.lastSyncNotifier.value);
+      return;
+    }
+    // Then try to load from Firestore (for past syncs)
+    final time = await _cloudSync.getLastSyncTime();
+    if (mounted) setState(() => _lastSyncTime = time);
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    CloudSyncService.lastSyncNotifier.removeListener(_onSyncUpdate);
     super.dispose();
   }
 
@@ -40,6 +68,8 @@ class _ProfilePageState extends State<ProfilePage> {
       });
       if (user != null) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Welcome, ${user.displayName}!')));
+        // Trigger sync after login
+        _handleSync();
       }
     }
   }
@@ -51,9 +81,45 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() {
         _isLoading = false;
         _nameController.text = 'Music Lover';
+        _lastSyncTime = null;
       });
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Signed out successfully')));
     }
+  }
+
+  Future<void> _handleSync() async {
+    if (!_authService.isLoggedIn) return;
+
+    setState(() => _isSyncing = true);
+
+    final audioController = Provider.of<AudioController>(context, listen: false);
+    final playlistService = PlaylistService();
+
+    final success = await _cloudSync.syncOnLogin(
+      onFavoritesDownloaded: (favoriteIds) async {
+        await audioController.applyCloudFavorites(favoriteIds);
+      },
+      onPlaylistsDownloaded: (playlists) async {
+        await playlistService.mergeCloudPlaylists(playlists);
+      },
+    );
+
+    if (mounted) {
+      setState(() => _isSyncing = false);
+      if (success) {
+        _loadLastSyncTime();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sync completed!')));
+      }
+    }
+  }
+
+  String _getLastSyncText() {
+    if (_lastSyncTime == null) return 'Never synced';
+    final diff = DateTime.now().difference(_lastSyncTime!);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+    if (diff.inHours < 24) return '${diff.inHours} hours ago';
+    return '${diff.inDays} days ago';
   }
 
   @override
@@ -117,6 +183,55 @@ class _ProfilePageState extends State<ProfilePage> {
                   labelText: 'Display Name',
                   border: OutlineInputBorder(),
                   hintText: 'Enter your name',
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+
+            // Cloud Sync Section (only if logged in)
+            if (isLoggedIn) ...[
+              const SizedBox(
+                width: double.infinity,
+                child: Text('Cloud Sync', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.cloud_done, color: Colors.blue.shade600),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Favorites & Playlists', style: TextStyle(fontWeight: FontWeight.bold)),
+                              Text(
+                                'Last synced: ${_getLastSyncText()}',
+                                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                        _isSyncing
+                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                            : IconButton(
+                                icon: Icon(Icons.sync, color: Colors.blue.shade600),
+                                onPressed: _handleSync,
+                                tooltip: 'Sync Now',
+                              ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 20),

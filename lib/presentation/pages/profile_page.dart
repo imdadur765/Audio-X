@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
 import '../../data/services/auth_service.dart';
+import '../../data/services/artist_service.dart';
 import '../../services/cloud_sync_service.dart';
 import '../../services/playlist_service.dart';
+import '../../services/listening_stats_service.dart';
+import '../../services/achievements_service.dart';
 import '../controllers/audio_controller.dart';
 import '../widgets/glass_background.dart';
 
@@ -19,17 +22,30 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final AuthService _authService = AuthService();
   final CloudSyncService _cloudSync = CloudSyncService();
+  final ListeningStatsService _statsService = ListeningStatsService();
   final ScrollController _scrollController = ScrollController();
   bool _isLoading = false;
   bool _isSyncing = false;
   DateTime? _lastSyncTime;
 
+  // Streak data
+  int _currentStreak = 0;
+  int _bestStreak = 0;
+  List<bool> _weeklyActivity = List.filled(7, false);
+
+  // Achievements data
+  final AchievementsService _achievementsService = AchievementsService();
+  List<Map<String, dynamic>> _achievements = [];
+
   @override
   void initState() {
     super.initState();
     _loadLastSyncTime();
+    _loadStreakData();
     _scrollController.addListener(() => setState(() {}));
     CloudSyncService.lastSyncNotifier.addListener(_onSyncUpdate);
+    // Load achievements after a delay to get fresh data
+    Future.delayed(const Duration(milliseconds: 500), _loadAchievements);
   }
 
   void _onSyncUpdate() {
@@ -45,6 +61,41 @@ class _ProfilePageState extends State<ProfilePage> {
     }
     final time = await _cloudSync.getLastSyncTime();
     if (mounted) setState(() => _lastSyncTime = time);
+  }
+
+  Future<void> _loadStreakData() async {
+    final current = await _statsService.getCurrentStreak();
+    final best = await _statsService.getBestStreak();
+    final weekly = await _statsService.getWeeklyActivity();
+    if (mounted) {
+      setState(() {
+        _currentStreak = current;
+        _bestStreak = best;
+        _weeklyActivity = weekly;
+      });
+    }
+  }
+
+  Future<void> _loadAchievements() async {
+    if (!mounted) return;
+    final audioController = Provider.of<AudioController>(context, listen: false);
+    final playlistService = PlaylistService();
+    final playlists = await playlistService.getCustomPlaylists();
+
+    final totalPlays = audioController.allSongs.fold<int>(0, (sum, s) => sum + s.playCount);
+    final favoritesCount = audioController.allSongs.where((s) => s.isFavorite).length;
+
+    final achievements = await _achievementsService.getAchievementsWithStatus(
+      totalPlays: totalPlays,
+      favoritesCount: favoritesCount,
+      playlistsCount: playlists.length,
+      currentStreak: _currentStreak,
+      bestStreak: _bestStreak,
+    );
+
+    if (mounted) {
+      setState(() => _achievements = achievements);
+    }
   }
 
   @override
@@ -154,7 +205,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 actions: [
                   IconButton(
-                    icon: const Icon(Icons.settings_outlined, color: Colors.white),
+                    icon: Image.asset('assets/images/settings.png', width: 24, height: 24, color: Colors.white),
                     onPressed: () => context.push('/settings'),
                   ),
                 ],
@@ -197,6 +248,27 @@ class _ProfilePageState extends State<ProfilePage> {
                         totalSongs: audioController.allSongs.length,
                         favorites: audioController.allSongs.where((s) => s.isFavorite).length,
                       ),
+
+                      const SizedBox(height: 24),
+
+                      // Music Streak Section
+                      _buildSectionTitle('Music Streak'),
+                      const SizedBox(height: 12),
+                      _buildStreakCard(),
+
+                      const SizedBox(height: 24),
+
+                      // Top Artists Section
+                      _buildSectionTitle('Your Top Artists'),
+                      const SizedBox(height: 12),
+                      _buildTopArtistsSection(audioController),
+
+                      const SizedBox(height: 24),
+
+                      // Achievements Section
+                      _buildSectionTitle('Achievements'),
+                      const SizedBox(height: 12),
+                      _buildAchievementsSection(),
 
                       // Cloud Sync Section (only if logged in)
                       if (isLoggedIn) ...[
@@ -439,7 +511,7 @@ class _ProfilePageState extends State<ProfilePage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.logout, color: Colors.red.shade400, size: 22),
+              Image.asset('assets/images/signout.png', width: 22, height: 22, color: Colors.red.shade400),
               const SizedBox(width: 12),
               Text(
                 'Sign Out',
@@ -448,6 +520,354 @@ class _ProfilePageState extends State<ProfilePage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildStreakCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.orange.withOpacity(0.2), Colors.deepOrange.withOpacity(0.1)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          // Streak Info Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              // Current Streak
+              Column(
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.asset('assets/images/day_streak.png', width: 32, height: 32, color: Colors.orange),
+                      const SizedBox(width: 8),
+                      Text(
+                        '$_currentStreak',
+                        style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.orange),
+                      ),
+                    ],
+                  ),
+                  const Text('Day Streak', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                ],
+              ),
+              // Divider
+              Container(width: 1, height: 60, color: Colors.white.withOpacity(0.1)),
+              // Best Streak
+              Column(
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.asset('assets/images/best_streak.png', width: 28, height: 28, color: Colors.amber),
+                      const SizedBox(width: 8),
+                      Text(
+                        '$_bestStreak',
+                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.amber),
+                      ),
+                    ],
+                  ),
+                  const Text('Best Streak', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // Weekly Activity
+          Column(
+            children: [
+              const Text('This Week', style: TextStyle(color: Colors.white70, fontSize: 12)),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: List.generate(7, (index) {
+                  final dayLabels = ['T', 'Y', '2d', '3d', '4d', '5d', '6d'];
+                  final isActive = _weeklyActivity[index];
+                  return Column(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: isActive ? Colors.orange.withOpacity(0.8) : Colors.white.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: isActive ? Colors.orange : Colors.white24, width: 2),
+                        ),
+                        child: isActive ? const Icon(Icons.music_note, size: 16, color: Colors.white) : null,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        dayLabels[index],
+                        style: TextStyle(
+                          color: isActive ? Colors.orange : Colors.white54,
+                          fontSize: 10,
+                          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopArtistsSection(AudioController audioController) {
+    final topArtists = ListeningStatsService.getTopArtists(audioController.allSongs, limit: 5);
+
+    if (topArtists.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+        ),
+        child: const Center(
+          child: Text('Play some songs to see your top artists!', style: TextStyle(color: Colors.white70)),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 130,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: topArtists.length,
+        itemBuilder: (context, index) {
+          final artist = topArtists[index];
+          final colors = [Colors.purple, Colors.blue, Colors.teal, Colors.orange, Colors.pink];
+          final color = colors[index % colors.length];
+
+          return Container(
+            width: 100,
+            margin: EdgeInsets.only(right: index < topArtists.length - 1 ? 12 : 0),
+            child: Column(
+              children: [
+                // Avatar with cached artist image
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: color.withOpacity(0.5), width: 2),
+                    boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 10, spreadRadius: 1)],
+                  ),
+                  child: ClipOval(child: _buildArtistAvatar(artist['name'], color)),
+                ),
+                const SizedBox(height: 8),
+                // Name
+                Text(
+                  artist['name'],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
+                ),
+                // Play count
+                Text('${artist['playCount']} plays', style: TextStyle(color: color, fontSize: 10)),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Build artist avatar with cached image from Spotify or fallback initial
+  Widget _buildArtistAvatar(String artistName, Color fallbackColor) {
+    final artistService = ArtistService();
+    final cachedArtist = artistService.getCachedArtist(artistName);
+    final imageUrl = cachedArtist?.imageUrl;
+
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return Image.network(
+        imageUrl,
+        width: 70,
+        height: 70,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _buildFallbackAvatar(artistName, fallbackColor),
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return _buildFallbackAvatar(artistName, fallbackColor);
+        },
+      );
+    }
+
+    return _buildFallbackAvatar(artistName, fallbackColor);
+  }
+
+  Widget _buildFallbackAvatar(String artistName, Color color) {
+    return Container(
+      width: 70,
+      height: 70,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color.withOpacity(0.6), color.withOpacity(0.3)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          artistName.isNotEmpty ? artistName.substring(0, 1).toUpperCase() : '?',
+          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAchievementsSection() {
+    if (_achievements.isEmpty) {
+      return Container(
+        width: double.infinity,
+        height: 160,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 160,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _achievements.length,
+        itemBuilder: (context, index) {
+          final data = _achievements[index];
+          final achievement = data['achievement'] as Achievement;
+          final isUnlocked = data['isUnlocked'] as bool;
+          final progress = data['progress'] as int;
+
+          return Container(
+            width: 110,
+            margin: EdgeInsets.only(right: index < _achievements.length - 1 ? 12 : 0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: isUnlocked
+                          ? [
+                              Colors.amber.withOpacity(0.2),
+                              Colors.orange.withOpacity(0.1),
+                            ]
+                          : [
+                              Colors.grey.withOpacity(0.1),
+                              Colors.grey.withOpacity(0.05),
+                            ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isUnlocked
+                          ? Colors.amber.withOpacity(0.4)
+                          : Colors.white.withOpacity(0.1),
+                    ),
+                    boxShadow: isUnlocked
+                        ? [
+                            BoxShadow(
+                              color: Colors.amber.withOpacity(0.2),
+                              blurRadius: 12,
+                              spreadRadius: 1,
+                            ),
+                          ]
+                        : null,
+                  ),
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Badge Icon
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: isUnlocked
+                                  ? Colors.amber.withOpacity(0.15)
+                                  : Colors.grey.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: ColorFiltered(
+                                colorFilter: ColorFilter.mode(
+                                  isUnlocked ? Colors.amber : Colors.grey.shade600,
+                                  BlendMode.srcIn,
+                                ),
+                                child: Image.asset(
+                                  achievement.iconPath,
+                                  width: 28,
+                                  height: 28,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (!isUnlocked)
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade800,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.lock, size: 12, color: Colors.white54),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Name
+                      Text(
+                        achievement.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: isUnlocked ? Colors.white : Colors.white54,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      // Progress or Description
+                      if (!isUnlocked)
+                        Text(
+                          '$progress/${achievement.requiredValue}',
+                          style: const TextStyle(color: Colors.white38, fontSize: 10),
+                        )
+                      else
+                        const Icon(Icons.check_circle, size: 14, color: Colors.amber),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

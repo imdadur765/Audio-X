@@ -455,6 +455,10 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> playSong(Song song) async {
     final index = _songs.indexOf(song);
     if (index != -1) {
+      // Reset queue to full song library when playing individual songs
+      // This ensures the index matches the playlist
+      _queue = List.from(_songs);
+
       final songMaps = _queue
           .map(
             (s) => {

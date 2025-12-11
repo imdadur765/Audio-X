@@ -9,15 +9,14 @@ import 'data/models/artist_model.dart';
 import 'data/models/search_history_model.dart'; // Import SearchHistory Model
 import 'presentation/controllers/audio_controller.dart';
 import 'presentation/controllers/audio_effects_controller.dart';
+import 'presentation/controllers/theme_controller.dart';
 import 'routes/app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await Hive.initFlutter();
 
@@ -38,6 +37,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AudioController()),
+        ChangeNotifierProvider(create: (_) => ThemeController()),
         ChangeNotifierProvider(
           create: (_) {
             final controller = AudioEffectsController();
@@ -57,10 +57,17 @@ class AudioXApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Audio X',
-      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple), useMaterial3: true),
-      routerConfig: appRouter,
+    return Consumer<ThemeController>(
+      builder: (context, themeController, child) {
+        return MaterialApp.router(
+          title: 'Audio X',
+          theme: themeController.lightTheme,
+          darkTheme: themeController.darkTheme,
+          themeMode: themeController.themeMode,
+          routerConfig: appRouter,
+          debugShowCheckedModeBanner: false,
+        );
+      },
     );
   }
 }

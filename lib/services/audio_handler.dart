@@ -170,6 +170,36 @@ class AudioHandler {
     }
   }
 
+  Future<int> getEqualizerBandCount() async {
+    try {
+      final count = await _channel.invokeMethod('getEqualizerBandCount');
+      return count as int;
+    } on PlatformException catch (e) {
+      print("Failed to get equalizer band count: '${e.message}'.");
+      return 5; // Default fallback
+    }
+  }
+
+  Future<int> getEqualizerCenterFreq(int bandIndex) async {
+    try {
+      final freq = await _channel.invokeMethod('getEqualizerCenterFreq', {'bandIndex': bandIndex});
+      return freq as int;
+    } on PlatformException catch (e) {
+      print("Failed to get center freq: '${e.message}'.");
+      return 0;
+    }
+  }
+
+  Future<List<int>> getEqualizerBandLevelRange() async {
+    try {
+      final range = await _channel.invokeMethod('getEqualizerBandLevelRange');
+      return (range as List).cast<int>();
+    } on PlatformException catch (e) {
+      print("Failed to get level range: '${e.message}'.");
+      return [-1500, 1500];
+    }
+  }
+
   Future<void> setBassBoost(int strength) async {
     try {
       await _channel.invokeMethod('setBassBoost', {'strength': strength}); // 0-1000

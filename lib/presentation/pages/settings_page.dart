@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../data/services/artist_service.dart';
+import '../controllers/audio_controller.dart';
+import '../controllers/theme_controller.dart';
 import 'package:hive/hive.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -25,22 +28,26 @@ class SettingsPage extends StatelessWidget {
             icon: Icons.timer_outlined,
             iconColor: Colors.orange,
             title: 'Sleep Timer',
-            subtitle: 'Coming Soon',
-            isComingSoon: true,
+            subtitle: context.watch<AudioController>().isSleepTimerActive
+                ? 'Stops in ${_formatDuration(context.watch<AudioController>().sleepTimerRemaining)}'
+                : 'Off',
+            onTap: () => _showSleepTimerDialog(context),
           ),
-          _buildSettingsTile(
+          _buildSwitchTile(
+            context,
             icon: Icons.speed,
             iconColor: Colors.blue,
             title: 'Crossfade',
-            subtitle: 'Coming Soon',
-            isComingSoon: true,
+            subtitle: 'Smooth transitions',
+            value: context.watch<AudioController>().isCrossfadeEnabled,
+            onChanged: (val) => context.read<AudioController>().setCrossfade(val),
           ),
           _buildSettingsTile(
             icon: Icons.equalizer,
             iconColor: Colors.purple,
             title: 'Equalizer Presets',
-            subtitle: 'Coming Soon',
-            isComingSoon: true,
+            subtitle: 'Adjust audio frequencies',
+            onTap: () => context.push('/equalizer'),
           ),
 
           const SizedBox(height: 24),
@@ -51,9 +58,19 @@ class SettingsPage extends StatelessWidget {
             icon: Icons.palette_outlined,
             iconColor: Colors.pink,
             title: 'Theme',
-            subtitle: 'Coming Soon',
-            isComingSoon: true,
+            subtitle: _getThemeName(context.watch<ThemeController>().themeMode),
+            onTap: () => _showThemeDialog(context),
           ),
+          if (context.watch<ThemeController>().themeMode == ThemeMode.dark)
+            _buildSwitchTile(
+              context,
+              icon: Icons.brightness_2_outlined,
+              iconColor: Colors.grey,
+              title: 'OLED Mode',
+              subtitle: 'Pure black background',
+              value: context.watch<ThemeController>().isOledMode,
+              onChanged: (val) => context.read<ThemeController>().toggleOledMode(val),
+            ),
           _buildSettingsTile(
             icon: Icons.text_fields,
             iconColor: Colors.teal,
@@ -91,10 +108,25 @@ class SettingsPage extends StatelessWidget {
             title: 'App Version',
             subtitle: '1.0.0',
           ),
-          _buildSettingsTile(icon: Icons.code, iconColor: Colors.grey, title: 'Developer', subtitle: 'Imdadur Rahman'),
+          _buildSettingsTile(
+            icon: Icons.code,
+            iconColor: Colors.grey,
+            title: 'Developer',
+            subtitle: 'Imdadur Rahman\ngithub.com/imdadur765',
+            onTap: () {
+              /* Open URL */
+            },
+          ),
         ],
       ),
     );
+  }
+
+  String _formatDuration(Duration? duration) {
+    if (duration == null) return '';
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '${minutes}m ${seconds}s';
   }
 
   Widget _buildSectionHeader(String title) {
@@ -103,6 +135,34 @@ class SettingsPage extends StatelessWidget {
       child: Text(
         title,
         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey, letterSpacing: 0.5),
+      ),
+    );
+  }
+
+  Widget _buildSwitchTile(
+    BuildContext context, {
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required Function(bool) onChanged,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(color: Colors.grey.shade900, borderRadius: BorderRadius.circular(12)),
+      child: SwitchListTile(
+        secondary: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: iconColor.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+          child: Icon(icon, color: iconColor, size: 22),
+        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+        subtitle: Text(subtitle, style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+        value: value,
+        onChanged: onChanged,
+        activeThumbColor: Colors.deepPurple,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       ),
     );
   }
@@ -148,6 +208,99 @@ class SettingsPage extends StatelessWidget {
         onTap: isComingSoon ? null : onTap,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       ),
+    );
+  }
+
+  void _showSleepTimerDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Sleep Timer'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildSleepTimerOption(context, 15),
+              _buildSleepTimerOption(context, 30),
+              _buildSleepTimerOption(context, 45),
+              _buildSleepTimerOption(context, 60),
+              ListTile(
+                title: const Text('Turn Off Timer', style: TextStyle(color: Colors.red)),
+                leading: const Icon(Icons.close, color: Colors.red),
+                onTap: () {
+                  context.read<AudioController>().cancelSleepTimer();
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSleepTimerOption(BuildContext context, int minutes) {
+    return ListTile(
+      title: Text('$minutes minutes'),
+      leading: const Icon(Icons.timer),
+      onTap: () {
+        context.read<AudioController>().scheduleSleepTimer(Duration(minutes: minutes));
+        Navigator.pop(context);
+      },
+    );
+  }
+
+  String _getThemeName(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.system:
+        return 'System Default';
+      case ThemeMode.light:
+        return 'Light';
+      case ThemeMode.dark:
+        return 'Dark';
+    }
+  }
+
+  void _showThemeDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Select Theme'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildThemeOption(context, 'System Default', ThemeMode.system),
+              _buildThemeOption(context, 'Light', ThemeMode.light),
+              _buildThemeOption(context, 'Dark', ThemeMode.dark),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildThemeOption(BuildContext context, String title, ThemeMode mode) {
+    final currentMode = context.read<ThemeController>().themeMode;
+    final isSelected = currentMode == mode;
+
+    return ListTile(
+      title: Text(title),
+      leading: Radio<ThemeMode>(
+        value: mode,
+        groupValue: currentMode,
+        onChanged: (val) {
+          if (val != null) {
+            context.read<ThemeController>().setThemeMode(val);
+            Navigator.pop(context);
+          }
+        },
+        activeColor: Colors.deepPurple,
+      ),
+      onTap: () {
+        context.read<ThemeController>().setThemeMode(mode);
+        Navigator.pop(context);
+      },
     );
   }
 

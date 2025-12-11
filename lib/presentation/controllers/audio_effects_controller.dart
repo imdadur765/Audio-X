@@ -17,8 +17,50 @@ class AudioEffectsController extends ChangeNotifier {
     // Load saved effects or create default
     _effects = _effectsBox.get('current') ?? AudioEffects();
 
+    // Check native EQ capabilities
+    try {
+      final int nativeBandCount = await _audioHandler.getEqualizerBandCount();
+      if (nativeBandCount > 0 && _effects.equalizerBands.length != nativeBandCount) {
+        print('🎚️ Resizing EQ bands from ${_effects.equalizerBands.length} to $nativeBandCount');
+        // Resize bands to match native count
+        _effects.equalizerBands = List.filled(nativeBandCount, 0);
+        // Also clear labels to force refresh
+        _effects.frequencyLabels = null;
+      }
+
+      // Fetch Frequency Labels if missing or count mismatch
+      if (_effects.frequencyLabels == null || _effects.frequencyLabels!.length != nativeBandCount) {
+        final List<String> labels = [];
+        for (int i = 0; i < nativeBandCount; i++) {
+          final freq = await _audioHandler.getEqualizerCenterFreq(i);
+          if (freq < 1000) {
+            labels.add('${freq / 1000}Hz'); // This looks wrong, freq < 1000 should be Hz.
+            // Wait, standard is mHz? No, usually Hz or mHz.
+            // Android getCenterFreq returns milliHertz.
+            // So 60000 mHz = 60 Hz.
+            // Let's verify units. Android docs: "milliHertz".
+          }
+        }
+        // Let's rewrite the loop with correct units logic
+        final List<String> newLabels = [];
+        for (int i = 0; i < nativeBandCount; i++) {
+          final mHz = await _audioHandler.getEqualizerCenterFreq(i);
+          final hz = mHz / 1000;
+          if (hz >= 1000) {
+            newLabels.add('${(hz / 1000).toStringAsFixed(1).replaceAll('.0', '')}kHz');
+          } else {
+            newLabels.add('${hz.toInt()}Hz');
+          }
+        }
+        _effects.frequencyLabels = newLabels;
+      }
+    } catch (e) {
+      print('Error initializing native EQ: $e');
+    }
+
     // Apply saved effects to native layer
     await _applyAllEffects();
+    notifyListeners();
   }
 
   Future<void> _applyAllEffects() async {

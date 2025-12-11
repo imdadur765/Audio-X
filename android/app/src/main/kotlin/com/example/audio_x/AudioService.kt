@@ -33,8 +33,8 @@ class AudioService : MediaSessionService() {
     private var notificationManager: NotificationManager? = null
 
     companion object {
-        private const val CHANNEL_ID = "AudioX_Playback"
-        private const val NOTIFICATION_ID = 1
+        const val CHANNEL_ID = "AudioX_Playback"
+        const val NOTIFICATION_ID = 1
         
         const val ACTION_PLAY = "com.example.audio_x.PLAY"
         const val ACTION_PAUSE = "com.example.audio_x.PAUSE"
@@ -270,6 +270,120 @@ class AudioService : MediaSessionService() {
         return START_STICKY
     }
 
+    // Method to handle method channel calls from MainActivity
+    fun handleMethodCall(call: io.flutter.plugin.common.MethodCall, result: io.flutter.plugin.common.MethodChannel.Result) {
+       when (call.method) {
+           "play" -> {
+               mediaSession?.player?.play()
+               result.success(null)
+           }
+           "pause" -> {
+               mediaSession?.player?.pause()
+               result.success(null)
+           }
+           "stop" -> {
+               mediaSession?.player?.stop()
+               mediaSession?.player?.clearMediaItems()
+               stopForeground(STOP_FOREGROUND_REMOVE)
+               stopSelf()
+               result.success(null)
+           }
+           "seekTo" -> {
+               val pos = call.argument<Int>("position")?.toLong() ?: 0L
+               mediaSession?.player?.seekTo(pos)
+               result.success(null)
+           }
+           "seekToNext" -> {
+                if (mediaSession?.player?.hasNextMediaItem() == true) {
+                    mediaSession?.player?.seekToNextMediaItem()
+                }
+               result.success(null)
+           }
+            "seekToPrevious" -> {
+                if (mediaSession?.player?.hasPreviousMediaItem() == true) {
+                    mediaSession?.player?.seekToPreviousMediaItem()
+                }
+                result.success(null)
+            }
+           "getEqualizerBandCount" -> {
+               try {
+                   val count = equalizer?.numberOfBands?.toInt() ?: 0
+                   result.success(count)
+               } catch (e: Exception) {
+                   result.error("EQ_ERROR", e.message, null)
+               }
+           }
+           "getEqualizerCenterFreq" -> {
+               try {
+                   val index = call.argument<Int>("bandIndex") ?: 0
+                   val freq = equalizer?.getCenterFreq(index.toShort())?.toInt() ?: 0
+                   result.success(freq)
+               } catch (e: Exception) {
+                    result.error("EQ_ERROR", e.message, null)
+               }
+           }
+           "getEqualizerBandLevelRange" -> {
+               try {
+                   val range = equalizer?.bandLevelRange
+                   if (range != null && range.size >= 2) {
+                       result.success(listOf(range[0].toInt(), range[1].toInt()))
+                   } else {
+                       result.success(listOf(-1500, 1500))
+                   }
+               } catch (e: Exception) {
+                   result.error("EQ_ERROR", e.message, null)
+               }
+           }
+           "setEqualizerBand" -> {
+               try {
+                   val index = call.argument<Int>("bandIndex") ?: 0
+                   val level = call.argument<Int>("level") ?: 0
+                   equalizer?.setBandLevel(index.toShort(), level.toShort())
+                   result.success(null)
+               } catch (e: Exception) {
+                   result.error("EQ_ERROR", e.message, null)
+               }
+           }
+           "getEqualizerBand" -> {
+               try {
+                   val index = call.argument<Int>("bandIndex") ?: 0
+                   val level = equalizer?.getBandLevel(index.toShort())?.toInt() ?: 0
+                   result.success(level)
+               } catch (e: Exception) {
+                   result.error("EQ_ERROR", e.message, null)
+               }
+           }
+           "setBassBoost" -> {
+               try {
+                   val strength = call.argument<Int>("strength") ?: 0
+                   bassBoost?.setStrength(strength.toShort())
+                   result.success(null)
+               } catch (e: Exception) {
+                   result.error("EQ_ERROR", e.message, null)
+               }
+           }
+           "setVirtualizer" -> {
+               try {
+                   val strength = call.argument<Int>("strength") ?: 0
+                   virtualizer?.setStrength(strength.toShort())
+                   result.success(null)
+               } catch (e: Exception) {
+                   result.error("EQ_ERROR", e.message, null)
+               }
+           }
+            "setReverb" -> {
+               try {
+                   val preset = call.argument<Int>("preset")?.toShort() ?: 0
+                   presetReverb?.preset = preset
+                   result.success(null)
+               } catch (e: Exception) {
+                   result.error("EQ_ERROR", e.message, null)
+               }
+           }
+           else -> result.notImplemented()
+       }
+    }
+
     private fun createPendingIntent(action: String): PendingIntent {
         val intent = Intent(this, AudioService::class.java).apply {
             this.action = action
@@ -324,16 +438,16 @@ class AudioService : MediaSessionService() {
 
 
             // Add actions - Order: Shuffle, Previous, Play/Pause, Next, Close
-            notification.addAction(R.drawable.ic_shuffle, "Shuffle", createPendingIntent(ACTION_SHUFFLE))
-                .addAction(R.drawable.ic_skip_previous, "Previous", createPendingIntent(ACTION_PREVIOUS))
+            val service = this@AudioService
+            notification.addAction(R.drawable.ic_shuffle, "Shuffle", service.createPendingIntent(ACTION_SHUFFLE))
+                .addAction(R.drawable.ic_skip_previous, "Previous", service.createPendingIntent(ACTION_PREVIOUS))
                 .addAction(
                     if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play,
                     if (isPlaying) "Pause" else "Play",
-                    createPendingIntent(if (isPlaying) ACTION_PAUSE else ACTION_PLAY)
+                    service.createPendingIntent(if (isPlaying) ACTION_PAUSE else ACTION_PLAY)
                 )
-                .addAction(R.drawable.ic_skip_next, "Next", createPendingIntent(ACTION_NEXT))
-                .addAction(R.drawable.ic_close, "Close", createPendingIntent(ACTION_STOP))
-
+                .addAction(R.drawable.ic_skip_next, "Next", service.createPendingIntent(ACTION_NEXT))
+                .addAction(R.drawable.ic_close, "Close", service.createPendingIntent(ACTION_STOP))
             
             return MediaNotification(NOTIFICATION_ID, notification.build())
         }

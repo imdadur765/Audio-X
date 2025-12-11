@@ -236,6 +236,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     final repeatMode = settingsBox.get('repeatMode') as int? ?? 0;
     final volume = settingsBox.get('volume') as double? ?? 1.0;
     final speed = settingsBox.get('speed') as double? ?? 1.0;
+    _isCrossfadeEnabled = settingsBox.get('crossfade', defaultValue: false);
 
     // Restore playback settings
     _isShuffleEnabled = shuffleMode;
@@ -471,6 +472,8 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
             },
           )
           .toList();
+      
+      await _fadeOut();
       await _audioHandler.setPlaylist(songMaps, initialIndex: index);
       _isPlaying = true;
       _currentSong = song;
@@ -478,6 +481,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
       _duration = Duration(milliseconds: song.duration);
       _startProgressTimer();
       _updatePalette(song.localArtworkPath);
+      await _fadeIn();
       notifyListeners();
     }
   }
@@ -502,6 +506,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
         )
         .toList();
 
+    await _fadeOut();
     await _audioHandler.setPlaylist(songMaps, initialIndex: initialIndex);
 
     // Apply shuffle if requested
@@ -516,6 +521,7 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     _duration = Duration(milliseconds: _currentSong!.duration);
     _startProgressTimer();
     _updatePalette(_currentSong!.localArtworkPath);
+    await _fadeIn();
     notifyListeners();
   }
 
@@ -542,7 +548,9 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> next() async {
+    await _fadeOut();
     await _audioHandler.next();
+    await _fadeIn();
 
     // Wait for the audio handler to process the skip
     await Future.delayed(const Duration(milliseconds: 200));
@@ -563,7 +571,9 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> previous() async {
+    await _fadeOut();
     await _audioHandler.previous();
+    await _fadeIn();
 
     // Wait for the audio handler to process the skip
     await Future.delayed(const Duration(milliseconds: 200));
@@ -602,6 +612,54 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     await _audioHandler.setVolume(_volume);
     await _saveState();
     notifyListeners();
+  }
+
+  // Crossfade (Smart Fading)
+  bool _isCrossfadeEnabled = false;
+  bool get isCrossfadeEnabled => _isCrossfadeEnabled;
+
+  Future<void> setCrossfade(bool enabled) async {
+    _isCrossfadeEnabled = enabled;
+    final settingsBox = Hive.box('settings');
+    await settingsBox.put('crossfade', enabled);
+    notifyListeners();
+  }
+
+  /// Helper to fade out volume
+  Future<void> _fadeOut() async {
+    if (!_isCrossfadeEnabled) return;
+    final startVol = _volume;
+    const steps = 10;
+    const duration = Duration(milliseconds: 500); // 500ms fade
+    final stepTime = Duration(milliseconds: duration.inMilliseconds ~/ steps);
+
+    for (int i = 1; i <= steps; i++) {
+      final vol = startVol * (1 - (i / steps));
+      await _audioHandler.setVolume(vol);
+      await Future.delayed(stepTime);
+    }
+  }
+
+  /// Helper to fade in volume
+  Future<void> _fadeIn() async {
+    if (!_isCrossfadeEnabled) {
+      // Ensure volume is restored if crossfade disabled mid-transition
+      await _audioHandler.setVolume(_volume);
+      return;
+    }
+    final targetVol = _volume;
+    const steps = 10;
+    const duration = Duration(milliseconds: 500);
+    final stepTime = Duration(milliseconds: duration.inMilliseconds ~/ steps);
+
+    // Start from 0
+    await _audioHandler.setVolume(0);
+
+    for (int i = 1; i <= steps; i++) {
+      final vol = targetVol * (i / steps);
+      await _audioHandler.setVolume(vol);
+      await Future.delayed(stepTime);
+    }
   }
 
   Future<void> setSpeed(double speed) async {
@@ -657,6 +715,35 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     await prefs.setString('play_history', jsonEncode(history));
+  }
+
+  // Sleep Timer
+  Timer? _sleepTimer;
+  DateTime? _sleepTimerEndTime;
+
+  bool get isSleepTimerActive => _sleepTimer != null && _sleepTimer!.isActive;
+
+  Duration? get sleepTimerRemaining {
+    if (_sleepTimerEndTime == null) return null;
+    final remaining = _sleepTimerEndTime!.difference(DateTime.now());
+    return remaining.isNegative ? Duration.zero : remaining;
+  }
+
+  void scheduleSleepTimer(Duration duration) {
+    cancelSleepTimer();
+    _sleepTimerEndTime = DateTime.now().add(duration);
+    _sleepTimer = Timer(duration, () {
+      pause();
+      cancelSleepTimer();
+    });
+    notifyListeners();
+  }
+
+  void cancelSleepTimer() {
+    _sleepTimer?.cancel();
+    _sleepTimer = null;
+    _sleepTimerEndTime = null;
+    notifyListeners();
   }
 
   /// Stop playback and clear session (called from notification close button)

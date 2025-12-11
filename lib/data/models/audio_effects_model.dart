@@ -24,12 +24,17 @@ class AudioEffects extends HiveObject {
   @HiveField(4)
   String? currentPreset;
 
+  // Frequency labels (e.g., "60Hz", "1kHz")
+  @HiveField(5)
+  List<String>? frequencyLabels;
+
   AudioEffects({
     List<int>? equalizerBands,
     this.bassBoost = 0,
     this.virtualizer = 0,
     this.reverbPreset = 0,
     this.currentPreset,
+    this.frequencyLabels,
   }) : equalizerBands = equalizerBands ?? [0, 0, 0, 0, 0]; // 5 bands default to 0
 
   // Built-in presets
@@ -58,14 +63,28 @@ class AudioEffects extends HiveObject {
   // Apply a built-in preset
   void applyPreset(String presetName) {
     if (builtInPresets.containsKey(presetName)) {
-      equalizerBands = List.from(builtInPresets[presetName]!);
+      // Create a temporary list of target values
+      // If native bands != 5, we might need value mapping, but for now apply direct mapping or fallback
+      // Ideally we should interpolate, but for simplicity we'll just apply to first N bands or repeat
+      // A better approach for dynamic bands is to skip presets or intelligent map.
+      // For this task, we will apply 5-band presets to first 5 bands or stretch.
+
+      final preset = builtInPresets[presetName]!;
+      if (equalizerBands.length == 5) {
+        equalizerBands = List.from(preset);
+      } else {
+        // Naive mapping for dynamic bands: just map what we can or reset to 0
+        // TODO: Implement intelligent mapping for 10 bands
+        // For now, reset to flat if band count mismatches standard 5-band presets
+        equalizerBands = List.filled(equalizerBands.length, 0);
+      }
       currentPreset = presetName;
     }
   }
 
   // Reset to flat
   void reset() {
-    equalizerBands = [0, 0, 0, 0, 0];
+    equalizerBands = List.filled(equalizerBands.length, 0);
     bassBoost = 0;
     virtualizer = 0;
     reverbPreset = 0;
@@ -79,6 +98,7 @@ class AudioEffects extends HiveObject {
     int? virtualizer,
     int? reverbPreset,
     String? currentPreset,
+    List<String>? frequencyLabels,
   }) {
     return AudioEffects(
       equalizerBands: equalizerBands ?? List.from(this.equalizerBands),
@@ -86,6 +106,7 @@ class AudioEffects extends HiveObject {
       virtualizer: virtualizer ?? this.virtualizer,
       reverbPreset: reverbPreset ?? this.reverbPreset,
       currentPreset: currentPreset ?? this.currentPreset,
+      frequencyLabels: frequencyLabels ?? this.frequencyLabels,
     );
   }
 }

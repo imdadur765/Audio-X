@@ -253,10 +253,12 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
         }
 
         final accentColor = controller.accentColor;
-        final uiColors = ColorUtils.getUiColors(accentColor);
-        final textColor = uiColors.textColor;
-        final buttonColor = uiColors.backgroundColor;
-        final isDark = uiColors.isDark;
+
+        // Adaptive Theme Logic
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final textColor = isDark ? Colors.white : Colors.black;
+        // Button background: Light on Dark, Dark on Light
+        final buttonColor = isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05);
 
         return Scaffold(
           backgroundColor: isDark ? Colors.black : Colors.white,
@@ -484,6 +486,23 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                     ),
                   ),
                 ),
+              GestureDetector(
+                onTap: () => _showSleepTimerDialog(context),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(color: buttonColor, borderRadius: BorderRadius.circular(12)),
+                  child: Center(
+                    child: Image.asset(
+                      'assets/images/sleep_timer.png',
+                      width: 20,
+                      height: 20,
+                      color: context.watch<AudioController>().isSleepTimerActive ? accentColor : textColor,
+                    ),
+                  ),
+                ),
+              ),
               Container(
                 width: 40,
                 height: 40,
@@ -510,9 +529,14 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                       value: 'upload',
                       child: Row(
                         children: [
-                          Image.asset('assets/images/upload_lrc.png', width: 20, height: 20, color: Colors.black87),
+                          Image.asset(
+                            'assets/images/upload_lrc.png',
+                            width: 20,
+                            height: 20,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                           const SizedBox(width: 12),
-                          const Text('Upload .lrc file', style: TextStyle(color: Colors.black87)),
+                          Text('Upload .lrc file', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                         ],
                       ),
                     ),
@@ -520,9 +544,14 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                       value: 'search',
                       child: Row(
                         children: [
-                          Image.asset('assets/images/search.png', width: 20, height: 20, color: Colors.black87),
+                          Image.asset(
+                            'assets/images/search.png',
+                            width: 20,
+                            height: 20,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                           const SizedBox(width: 12),
-                          const Text('Search lyrics', style: TextStyle(color: Colors.black87)),
+                          Text('Search lyrics', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                         ],
                       ),
                     ),
@@ -543,6 +572,52 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
           ),
         ],
       ),
+    );
+  }
+
+  void _showSleepTimerDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Sleep Timer'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildSleepTimerOption(context, 15),
+              _buildSleepTimerOption(context, 30),
+              _buildSleepTimerOption(context, 45),
+              _buildSleepTimerOption(context, 60),
+              ListTile(
+                title: const Text('Turn Off Timer', style: TextStyle(color: Colors.red)),
+                leading: const Icon(Icons.close, color: Colors.red),
+                onTap: () {
+                  context.read<AudioController>().cancelSleepTimer();
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSleepTimerOption(BuildContext context, int minutes) {
+    return ListTile(
+      title: Text('$minutes minutes'),
+      leading: const Icon(Icons.timer),
+      onTap: () {
+        context.read<AudioController>().scheduleSleepTimer(Duration(minutes: minutes));
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Sleep timer set for $minutes minutes'),
+            backgroundColor: Colors.deepPurple,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
     );
   }
 }

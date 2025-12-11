@@ -23,7 +23,7 @@ class GlassAppBar extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
         child: Container(
-          color: Colors.black.withOpacity(0.2), // Semi-transparent based on dark mode pref
+          color: Theme.of(context).colorScheme.surface.withOpacity(0.2), // Adaptive tint
           alignment: Alignment.center,
           padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
           height: height + MediaQuery.of(context).padding.top,
@@ -31,7 +31,11 @@ class GlassAppBar extends StatelessWidget {
             leading: leading,
             middle: Text(
               title,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface, // Adaptive text
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
             ),
             trailing: actions != null ? Row(mainAxisSize: MainAxisSize.min, children: actions!) : null,
           ),

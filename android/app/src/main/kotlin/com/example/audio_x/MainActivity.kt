@@ -229,6 +229,23 @@ class MainActivity : FlutterActivity() {
                     android.util.Log.d("AudioX", "Set reverb preset to $preset")
                     result.success(null)
                 }
+                "getEqualizerBandCount" -> {
+                    val count = AudioService.equalizer?.numberOfBands?.toInt() ?: 0
+                    result.success(count)
+                }
+                "getEqualizerCenterFreq" -> {
+                    val bandIndex = call.argument<Int>("bandIndex") ?: 0
+                    val freq = AudioService.equalizer?.getCenterFreq(bandIndex.toShort()) ?: 0
+                    result.success(freq)
+                }
+                "getEqualizerBandLevelRange" -> {
+                    val range = AudioService.equalizer?.bandLevelRange
+                    if (range != null && range.size >= 2) {
+                        result.success(listOf(range[0].toInt(), range[1].toInt()))
+                    } else {
+                        result.success(listOf(-1500, 1500))
+                    }
+                }
                 "resetEqualizer" -> {
                     AudioService.equalizer?.let {
                         for (i in 0 until it.numberOfBands) {

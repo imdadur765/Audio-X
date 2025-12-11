@@ -181,6 +181,7 @@ class _ProfilePageState extends State<ProfilePage> {
         GlassBackground(
           artworkPath: audioController.currentSong?.localArtworkPath,
           accentColor: audioController.accentColor,
+          isDark: Theme.of(context).brightness == Brightness.dark,
         ),
 
         Scaffold(
@@ -199,9 +200,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   icon: Image.asset('assets/images/back.png', width: 24, height: 24, color: Colors.white),
                   onPressed: () => context.pop(),
                 ),
-                title: const Text(
+                title: Text(
                   'Profile',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
                 ),
                 actions: [
                   IconButton(
@@ -212,7 +213,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 flexibleSpace: ClipRRect(
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: isScrolled ? 20 : 0, sigmaY: isScrolled ? 20 : 0),
-                    child: Container(color: Colors.transparent),
+                    child: Container(color: Theme.of(context).colorScheme.surface.withOpacity(0.1)),
                   ),
                 ),
               ),
@@ -295,19 +296,20 @@ class _ProfilePageState extends State<ProfilePage> {
       width: double.infinity,
       child: Text(
         title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
       ),
     );
   }
 
   Widget _buildProfileCard(bool isLoggedIn, String? photoUrl) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: colorScheme.surface.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: colorScheme.onSurface.withOpacity(0.1)),
       ),
       child: Column(
         children: [
@@ -318,15 +320,20 @@ class _ProfilePageState extends State<ProfilePage> {
               Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 3),
+                  border: Border.all(color: colorScheme.onSurface.withOpacity(0.3), width: 3),
                   boxShadow: [BoxShadow(color: Colors.deepPurple.withOpacity(0.3), blurRadius: 20, spreadRadius: 2)],
                 ),
                 child: CircleAvatar(
                   radius: 50,
-                  backgroundColor: Colors.grey.shade800,
+                  backgroundColor: colorScheme.surfaceContainerHighest,
                   backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
                   child: photoUrl == null
-                      ? Image.asset('assets/images/profile.png', width: 50, height: 50, color: Colors.white54)
+                      ? Image.asset(
+                          'assets/images/profile.png',
+                          width: 50,
+                          height: 50,
+                          color: colorScheme.onSurface.withOpacity(0.5),
+                        )
                       : null,
                 ),
               ),
@@ -336,7 +343,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   decoration: BoxDecoration(
                     color: Colors.green,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black, width: 2),
+                    border: Border.all(color: colorScheme.surface, width: 2),
                   ),
                   child: const Icon(Icons.check, size: 14, color: Colors.white),
                 ),
@@ -346,10 +353,13 @@ class _ProfilePageState extends State<ProfilePage> {
           // Name
           Text(
             _authService.userName,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
           ),
           if (isLoggedIn && _authService.currentUser?.email != null)
-            Text(_authService.currentUser!.email!, style: TextStyle(color: Colors.grey.shade400, fontSize: 14)),
+            Text(
+              _authService.currentUser!.email!,
+              style: TextStyle(color: colorScheme.onSurface.withOpacity(0.6), fontSize: 14),
+            ),
         ],
       ),
     );
@@ -361,13 +371,14 @@ class _ProfilePageState extends State<ProfilePage> {
     required int totalSongs,
     required int favorites,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: colorScheme.surface.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: colorScheme.onSurface.withOpacity(0.1)),
       ),
       child: Column(
         children: [
@@ -376,7 +387,7 @@ class _ProfilePageState extends State<ProfilePage> {
               Expanded(
                 child: _buildStatItem('assets/images/most_played.png', '$totalPlays', 'Songs Played', Colors.pink),
               ),
-              Container(width: 1, height: 50, color: Colors.white.withOpacity(0.1)),
+              Container(width: 1, height: 50, color: colorScheme.onSurface.withOpacity(0.1)),
               Expanded(
                 child: _buildStatItem(
                   'assets/images/duration.png',
@@ -388,12 +399,12 @@ class _ProfilePageState extends State<ProfilePage> {
             ],
           ),
           const SizedBox(height: 16),
-          Container(height: 1, color: Colors.white.withOpacity(0.1)),
+          Container(height: 1, color: colorScheme.onSurface.withOpacity(0.1)),
           const SizedBox(height: 16),
           Row(
             children: [
               Expanded(child: _buildStatItem('assets/images/song.png', '$totalSongs', 'Total Songs', Colors.blue)),
-              Container(width: 1, height: 50, color: Colors.white.withOpacity(0.1)),
+              Container(width: 1, height: 50, color: colorScheme.onSurface.withOpacity(0.1)),
               Expanded(child: _buildStatItem('assets/images/favorite.png', '$favorites', 'Favorites', Colors.red)),
             ],
           ),
@@ -421,11 +432,12 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildCloudSyncCard() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: colorScheme.surface.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.blue.withOpacity(0.3)),
       ),
@@ -441,11 +453,14 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Favorites & Playlists',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: colorScheme.onSurface),
                 ),
-                Text('Last synced: ${_getLastSyncText()}', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+                Text(
+                  'Last synced: ${_getLastSyncText()}',
+                  style: TextStyle(color: colorScheme.onSurface.withOpacity(0.6), fontSize: 12),
+                ),
               ],
             ),
           ),
@@ -465,13 +480,14 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildGoogleSignInButton() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       height: 54,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: colorScheme.surface.withOpacity(0.1),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: colorScheme.onSurface.withOpacity(0.2)),
       ),
       child: Material(
         color: Colors.transparent,
@@ -483,9 +499,9 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               Image.asset('assets/images/google.png', width: 24, height: 24),
               const SizedBox(width: 12),
-              const Text(
+              Text(
                 'Sign in with Google',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: colorScheme.onSurface),
               ),
             ],
           ),
@@ -557,11 +573,11 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ],
                   ),
-                  const Text('Day Streak', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  Text('Day Streak', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 14)),
                 ],
               ),
               // Divider
-              Container(width: 1, height: 60, color: Colors.white.withOpacity(0.1)),
+              Container(width: 1, height: 60, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1)),
               // Best Streak
               Column(
                 children: [
@@ -576,7 +592,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ],
                   ),
-                  const Text('Best Streak', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  Text('Best Streak', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 14)),
                 ],
               ),
             ],
@@ -585,7 +601,7 @@ class _ProfilePageState extends State<ProfilePage> {
           // Weekly Activity
           Column(
             children: [
-              const Text('This Week', style: TextStyle(color: Colors.white70, fontSize: 12)),
+              Text('This Week', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12)),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -608,7 +624,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       Text(
                         dayLabels[index],
                         style: TextStyle(
-                          color: isActive ? Colors.orange : Colors.white54,
+                          color: isActive ? Colors.orange : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                           fontSize: 10,
                           fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                         ),
@@ -734,13 +750,8 @@ class _ProfilePageState extends State<ProfilePage> {
       return Container(
         width: double.infinity,
         height: 160,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Center(
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
+        decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(16)),
+        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
       );
     }
 
@@ -768,29 +779,15 @@ class _ProfilePageState extends State<ProfilePage> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: isUnlocked
-                          ? [
-                              Colors.amber.withOpacity(0.2),
-                              Colors.orange.withOpacity(0.1),
-                            ]
-                          : [
-                              Colors.grey.withOpacity(0.1),
-                              Colors.grey.withOpacity(0.05),
-                            ],
+                          ? [Colors.amber.withOpacity(0.2), Colors.orange.withOpacity(0.1)]
+                          : [Colors.grey.withOpacity(0.1), Colors.grey.withOpacity(0.05)],
                     ),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isUnlocked
-                          ? Colors.amber.withOpacity(0.4)
-                          : Colors.white.withOpacity(0.1),
+                      color: isUnlocked ? Colors.amber.withOpacity(0.4) : Colors.white.withOpacity(0.1),
                     ),
                     boxShadow: isUnlocked
-                        ? [
-                            BoxShadow(
-                              color: Colors.amber.withOpacity(0.2),
-                              blurRadius: 12,
-                              spreadRadius: 1,
-                            ),
-                          ]
+                        ? [BoxShadow(color: Colors.amber.withOpacity(0.2), blurRadius: 12, spreadRadius: 1)]
                         : null,
                   ),
                   padding: const EdgeInsets.all(12),
@@ -805,9 +802,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             width: 52,
                             height: 52,
                             decoration: BoxDecoration(
-                              color: isUnlocked
-                                  ? Colors.amber.withOpacity(0.15)
-                                  : Colors.grey.withOpacity(0.1),
+                              color: isUnlocked ? Colors.amber.withOpacity(0.15) : Colors.grey.withOpacity(0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Center(
@@ -816,11 +811,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   isUnlocked ? Colors.amber : Colors.grey.shade600,
                                   BlendMode.srcIn,
                                 ),
-                                child: Image.asset(
-                                  achievement.iconPath,
-                                  width: 28,
-                                  height: 28,
-                                ),
+                                child: Image.asset(achievement.iconPath, width: 28, height: 28),
                               ),
                             ),
                           ),
@@ -830,10 +821,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               right: 0,
                               child: Container(
                                 padding: const EdgeInsets.all(2),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade800,
-                                  shape: BoxShape.circle,
-                                ),
+                                decoration: BoxDecoration(color: Colors.grey.shade800, shape: BoxShape.circle),
                                 child: const Icon(Icons.lock, size: 12, color: Colors.white54),
                               ),
                             ),
@@ -847,7 +835,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: isUnlocked ? Colors.white : Colors.white54,
+                          color: isUnlocked ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                           fontWeight: FontWeight.w600,
                           fontSize: 11,
                         ),
@@ -857,7 +845,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       if (!isUnlocked)
                         Text(
                           '$progress/${achievement.requiredValue}',
-                          style: const TextStyle(color: Colors.white38, fontSize: 10),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), fontSize: 10),
                         )
                       else
                         const Icon(Icons.check_circle, size: 14, color: Colors.amber),

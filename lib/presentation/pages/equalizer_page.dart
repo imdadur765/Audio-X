@@ -82,7 +82,9 @@ class EqualizerPage extends StatelessWidget {
   }
 
   Widget _buildEqualizer(BuildContext context, AudioEffectsController controller) {
-    const bandFrequencies = ['60Hz', '230Hz', '910Hz', '3.6kHz', '14kHz'];
+    final frequencyLabels =
+        controller.effects.frequencyLabels ?? List.filled(controller.effects.equalizerBands.length, '? Hz');
+    final bandCount = controller.effects.equalizerBands.length;
 
     return Card(
       child: Padding(
@@ -95,7 +97,7 @@ class EqualizerPage extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.end,
-              children: List.generate(5, (index) {
+              children: List.generate(bandCount, (index) {
                 return Expanded(
                   child: Column(
                     children: [
@@ -117,7 +119,10 @@ class EqualizerPage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(bandFrequencies[index], style: const TextStyle(fontSize: 11)),
+                      Text(
+                        index < frequencyLabels.length ? frequencyLabels[index] : '?',
+                        style: const TextStyle(fontSize: 11)
+                      ),
                     ],
                   ),
                 );

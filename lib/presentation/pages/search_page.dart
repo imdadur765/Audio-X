@@ -85,24 +85,29 @@ class _SearchPageState extends State<SearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        surfaceTintColor: Theme.of(context).colorScheme.surface,
         titleSpacing: 0,
         leading: IconButton(
-          icon: Image.asset('assets/images/back.png', width: 24, height: 24),
+          icon: Image.asset(
+            'assets/images/back.png',
+            width: 24,
+            height: 24,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
           onPressed: () => context.pop(),
         ),
         title: TextField(
           controller: _searchController,
           focusNode: _focusNode,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'Search artists...',
             border: InputBorder.none,
-            hintStyle: TextStyle(color: Colors.grey),
+            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
           ),
-          style: const TextStyle(fontSize: 18),
+          style: TextStyle(fontSize: 18, color: Theme.of(context).colorScheme.onSurface),
           onChanged: _performSearch,
           onSubmitted: (value) {
             if (value.isNotEmpty) {
@@ -113,7 +118,7 @@ class _SearchPageState extends State<SearchPage> {
         actions: [
           if (_searchController.text.isNotEmpty)
             IconButton(
-              icon: const Icon(Icons.close_rounded),
+              icon: Icon(Icons.close_rounded, color: Theme.of(context).colorScheme.onSurface),
               onPressed: () {
                 _searchController.clear();
                 _performSearch('');
@@ -137,9 +142,16 @@ class _SearchPageState extends State<SearchPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.history_rounded, size: 64, color: Colors.grey[300]),
+                Icon(
+                  Icons.history_rounded,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                ),
                 const SizedBox(height: 16),
-                Text('No recent searches', style: TextStyle(color: Colors.grey[500], fontSize: 16)),
+                Text(
+                  'No recent searches',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 16),
+                ),
               ],
             ),
           );
@@ -153,7 +165,14 @@ class _SearchPageState extends State<SearchPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Recent Searches', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(
+                    'Recent Searches',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
                   TextButton(onPressed: () => box.clear(), child: const Text('Clear All')),
                 ],
               ),
@@ -164,10 +183,17 @@ class _SearchPageState extends State<SearchPage> {
                 itemBuilder: (context, index) {
                   final item = history[index];
                   return ListTile(
-                    leading: const Icon(Icons.history_rounded, color: Colors.grey),
-                    title: Text(item.query),
+                    leading: Icon(
+                      Icons.history_rounded,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    title: Text(item.query, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                     trailing: IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 18, color: Colors.grey),
+                      icon: Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
                       onPressed: () => item.delete(),
                     ),
                     onTap: () {
@@ -191,9 +217,16 @@ class _SearchPageState extends State<SearchPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off_rounded, size: 64, color: Colors.grey[300]),
+            Icon(
+              Icons.search_off_rounded,
+              size: 64,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+            ),
             const SizedBox(height: 16),
-            Text('No artists found', style: TextStyle(color: Colors.grey[500], fontSize: 16)),
+            Text(
+              'No artists found',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 16),
+            ),
           ],
         ),
       );
@@ -204,11 +237,11 @@ class _SearchPageState extends State<SearchPage> {
       itemBuilder: (context, index) {
         final artistName = _searchResults[index];
         return ListTile(
-          leading: const CircleAvatar(
+          leading: CircleAvatar(
             backgroundColor: Colors.deepPurple,
-            child: Icon(Icons.person, color: Colors.white),
+            child: Icon(Icons.person, color: Theme.of(context).colorScheme.onSurface),
           ),
-          title: Text(artistName),
+          title: Text(artistName, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           onTap: () => _onResultTap(artistName),
         );
       },

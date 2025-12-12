@@ -34,7 +34,9 @@ class MiniPlayer extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Color.alphaBlend(
                       controller.accentColor.withValues(alpha: 0.15),
-                      Colors.black.withValues(alpha: 0.85),
+                      Theme.of(context).brightness == Brightness.dark
+                          ? Colors.black.withValues(alpha: 0.85)
+                          : Colors.white.withValues(alpha: 0.85),
                     ),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: controller.accentColor.withValues(alpha: 0.2), width: 1),
@@ -90,14 +92,21 @@ class MiniPlayer extends StatelessWidget {
                               song.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               song.artist,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.7)),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
                             ),
                           ],
                         ),
@@ -114,16 +123,18 @@ class MiniPlayer extends StatelessWidget {
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.05),
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                                ),
                               ),
                               child: Center(
                                 child: Image.asset(
                                   'assets/images/skip_previous.png',
                                   width: 18,
                                   height: 18,
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             ),
@@ -172,16 +183,18 @@ class MiniPlayer extends StatelessWidget {
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.05),
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                                ),
                               ),
                               child: Center(
                                 child: Image.asset(
                                   'assets/images/skip_next.png',
                                   width: 18,
                                   height: 18,
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             ),

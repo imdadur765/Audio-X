@@ -88,12 +88,16 @@ class ScaffoldWithNavBar extends StatelessWidget {
                     filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6), // Dark Glass
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.black.withValues(alpha: 0.6)
+                            : Colors.white.withValues(alpha: 0.8), // Adaptive Glass
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(20),
                           topRight: Radius.circular(20),
                         ),
-                        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+                        border: Border(
+                          top: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.3),
@@ -202,7 +206,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
                 isActive ? activeImage : inactiveImage,
                 width: 20,
                 height: 20,
-                color: isActive ? Colors.white : Colors.white54,
+                color: isActive ? Colors.white : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
             const SizedBox(height: 4),
@@ -211,7 +215,9 @@ class ScaffoldWithNavBar extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                color: isActive ? accentColor : Colors.white54, // Dynamic Text
+                color: isActive
+                    ? accentColor
+                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5), // Dynamic Text
               ),
             ),
           ],

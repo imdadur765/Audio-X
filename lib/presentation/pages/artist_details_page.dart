@@ -209,7 +209,7 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Theme.of(context).colorScheme.surface.withValues(alpha: 0.8)],
+                          colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
                           stops: const [0.6, 1.0],
                         ),
                       ),
@@ -232,12 +232,12 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                               style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.onSurface,
+                                color: Colors.white,
                                 shadows: [
                                   Shadow(
                                     offset: const Offset(0, 2),
                                     blurRadius: 8,
-                                    color: Theme.of(context).shadowColor.withValues(alpha: 0.5),
+                                    color: Colors.black.withValues(alpha: 0.5),
                                   ),
                                 ],
                               ),
@@ -562,9 +562,9 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -575,7 +575,7 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
             label: 'Songs',
             color: Colors.blue.shade600,
           ),
-          Container(width: 1, height: 40, color: Colors.grey.shade200),
+          Container(width: 1, height: 40, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2)),
           _buildLocalStatItem(
             imagePath: 'assets/images/duration.png',
             value: _formatTotalDuration(totalDuration),
@@ -607,7 +607,11 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
         ),
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );
@@ -1008,7 +1012,7 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
       padding: const EdgeInsets.only(left: 4),
       child: Text(
         title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
       ),
     );
   }
@@ -1063,7 +1067,11 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                     maxLines: 2,
                     textAlign: TextAlign.center,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                 ],
               ),
@@ -1127,10 +1135,10 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                       album['name']!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                         height: 1.2,
                       ),
                     ),
@@ -1180,13 +1188,14 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
         .replaceAll(RegExp(r'Read more on Last\.fm.*', caseSensitive: false), '')
         .trim();
 
+    final isLight = Theme.of(context).brightness == Brightness.light;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: isLight ? Colors.black : Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: isLight ? Colors.black : Colors.white.withOpacity(0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1230,7 +1239,11 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
         children: [
           Text(
             'Powered By',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white70),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
           ),
           const SizedBox(height: 16),
           Row(
@@ -1290,7 +1303,11 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
           const SizedBox(height: 6),
           Text(
             name,
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white70),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
           ),
         ],
       ),

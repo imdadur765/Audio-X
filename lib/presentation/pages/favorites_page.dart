@@ -53,7 +53,11 @@ class _FavoritesPageState extends State<FavoritesPage> {
           body: Stack(
             children: [
               // Shared Glass Background
-              GlassBackground(artworkPath: artworkPath, accentColor: accentColor, isDark: true),
+              GlassBackground(
+                artworkPath: artworkPath,
+                accentColor: accentColor,
+                isDark: Theme.of(context).brightness == Brightness.dark,
+              ),
 
               CustomScrollView(
                 controller: _scrollController,
@@ -97,9 +101,9 @@ class _FavoritesPageState extends State<FavoritesPage> {
             title: AnimatedOpacity(
               opacity: isScrolled ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 200),
-              child: const Text(
+              child: Text(
                 'Favorites',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
               ),
             ),
             background: SafeArea(
@@ -116,13 +120,18 @@ class _FavoritesPageState extends State<FavoritesPage> {
                         color: accentColor.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Image.asset('assets/images/favorite.png', width: 32, height: 32, color: Colors.white),
+                      child: Image.asset(
+                        'assets/images/favorite.png',
+                        width: 32,
+                        height: 32,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       'Favorites',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                         shadows: [Shadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))],
@@ -131,7 +140,11 @@ class _FavoritesPageState extends State<FavoritesPage> {
                     const SizedBox(height: 8),
                     Text(
                       '${widget.songs.length} songs',
-                      style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 16, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     Row(
@@ -183,18 +196,27 @@ class _FavoritesPageState extends State<FavoritesPage> {
           child: Container(
             height: 50,
             decoration: BoxDecoration(
-              color: isPrimary ? accentColor : Colors.white.withOpacity(0.1),
+              color: isPrimary ? accentColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset(icon, width: 22, height: 22, color: Colors.white),
+                Image.asset(
+                  icon,
+                  width: 22,
+                  height: 22,
+                  color: isPrimary ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   text,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(
+                    color: isPrimary ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ],
             ),
@@ -221,9 +243,11 @@ class _FavoritesPageState extends State<FavoritesPage> {
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
-            color: isPlaying ? accentColor.withOpacity(0.2) : Colors.white.withOpacity(0.05),
+            color: isPlaying
+                ? accentColor.withOpacity(0.2)
+                : Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -251,7 +275,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontWeight: isPlaying ? FontWeight.bold : FontWeight.w600,
-                color: isPlaying ? accentColor : Colors.white,
+                color: isPlaying ? accentColor : Theme.of(context).colorScheme.onSurface,
                 fontSize: 16,
               ),
             ),
@@ -263,10 +287,16 @@ class _FavoritesPageState extends State<FavoritesPage> {
                   song.artist,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.white60, fontSize: 13),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 13),
                 ),
                 const SizedBox(height: 2),
-                Text(_formatDuration(song.duration), style: TextStyle(color: Colors.white38, fontSize: 11)),
+                Text(
+                  _formatDuration(song.duration),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
+                    fontSize: 11,
+                  ),
+                ),
               ],
             ),
             trailing: MoreOptionsButton(

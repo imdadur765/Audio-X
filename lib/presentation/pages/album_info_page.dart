@@ -37,9 +37,13 @@ class _AlbumInfoPageState extends State<AlbumInfoPage> {
       body: Stack(
         children: [
           // Background with blur
-          GlassBackground(artworkPath: null, customChild: widget.albumArt),
+          GlassBackground(
+            artworkPath: null,
+            customChild: widget.albumArt,
+            isDark: Theme.of(context).brightness == Brightness.dark,
+          ),
 
-          Container(color: Colors.black.withValues(alpha: 0.5)), // Tint
+          // Container(color: Colors.black.withValues(alpha: 0.5)), // Removed hardcoded tint for adaptive UI
           // Content
           SafeArea(
             child: Column(
@@ -80,17 +84,24 @@ class _AlbumInfoPageState extends State<AlbumInfoPage> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
               ),
-              child: Center(child: Image.asset('assets/images/back.png', width: 20, height: 20, color: Colors.white)),
+              child: Center(
+                child: Image.asset(
+                  'assets/images/back.png',
+                  width: 20,
+                  height: 20,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 16),
-          const Text(
+          Text(
             'Album Info',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
           ),
         ],
       ),
@@ -125,7 +136,11 @@ class _AlbumInfoPageState extends State<AlbumInfoPage> {
           Center(
             child: Text(
               data['collectionName'] ?? widget.albumName,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -133,7 +148,11 @@ class _AlbumInfoPageState extends State<AlbumInfoPage> {
           Center(
             child: Text(
               data['artistName'] ?? widget.artistName,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.8)),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -208,9 +227,9 @@ class _AlbumInfoPageState extends State<AlbumInfoPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,12 +237,16 @@ class _AlbumInfoPageState extends State<AlbumInfoPage> {
         children: [
           Text(
             label,
-            style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.6), fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

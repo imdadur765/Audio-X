@@ -204,9 +204,11 @@ class _AddToPlaylistSheetState extends State<AddToPlaylistSheet> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 24),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.7),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withValues(alpha: 0.7)
+                : Colors.white.withValues(alpha: 0.9), // Adaptive Sheet
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+            border: Border(top: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1))),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -217,9 +219,13 @@ class _AddToPlaylistSheetState extends State<AddToPlaylistSheet> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Add to Playlist',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                     ),
                     IconButton(
                       onPressed: () => _showCreatePlaylistDialog(context),
@@ -250,7 +256,10 @@ class _AddToPlaylistSheetState extends State<AddToPlaylistSheet> {
                       children: [
                         Image.asset('assets/images/playlist_open.png', width: 48, height: 48, color: Colors.white24),
                         const SizedBox(height: 16),
-                        Text('No playlists yet', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
+                        Text(
+                          'No playlists yet',
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
+                        ),
                         TextButton(
                           onPressed: () => _showCreatePlaylistDialog(context),
                           child: const Text('Create one'),
@@ -278,7 +287,7 @@ class _AddToPlaylistSheetState extends State<AddToPlaylistSheet> {
                           height: 48,
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.1),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Center(
@@ -294,15 +303,23 @@ class _AddToPlaylistSheetState extends State<AddToPlaylistSheet> {
                         ),
                         title: Text(
                           playlist.name,
-                          style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+                          style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                         ),
                         subtitle: Text(
                           '${playlist.songIds.length} songs',
-                          style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.5)),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                          ),
                         ),
                         trailing: allIn
                             ? const Icon(Icons.check_circle_rounded, color: Colors.green)
-                            : Image.asset('assets/images/create.png', width: 24, height: 24, color: Colors.white70),
+                            : Image.asset(
+                                'assets/images/create.png',
+                                width: 24,
+                                height: 24,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
                         onTap: allIn ? null : () => _addToPlaylist(playlist),
                       );
                     },

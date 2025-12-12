@@ -122,15 +122,15 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
     final accentColor = widget.gradientColors.isNotEmpty ? widget.gradientColors.first : audioController.accentColor;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      extendBody: true,
       body: Stack(
         children: [
-          // Dark Glass Background
+          // Adaptive Glass Background
           GlassBackground(
             // Using first song artwork if available, otherwise generic
             artworkPath: _songs.isNotEmpty ? _songs.first.localArtworkPath : null,
             accentColor: accentColor,
-            isDark: true,
+            isDark: Theme.of(context).brightness == Brightness.dark,
           ),
 
           CustomScrollView(
@@ -155,13 +155,18 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
     return SliverAppBar(
       expandedHeight: 250,
       pinned: true,
-      backgroundColor: opacity > 0.8 ? Colors.black.withValues(alpha: 0.8) : Colors.transparent,
+      backgroundColor: opacity > 0.8
+          ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.8)
+          : Colors.transparent,
       elevation: 0,
       leading: IconButton(
         icon: Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.2), shape: BoxShape.circle),
-          child: const Icon(Icons.arrow_back, color: Colors.white),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
         ),
         onPressed: () => Navigator.pop(context),
       ),
@@ -170,8 +175,16 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
           IconButton(
             icon: Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.2), shape: BoxShape.circle),
-              child: Image.asset('assets/images/more.png', width: 24, height: 24, color: Colors.white),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Image.asset(
+                'assets/images/more.png',
+                width: 24,
+                height: 24,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
             onPressed: _deletePlaylist, // Currently only option is delete
           ),
@@ -182,7 +195,7 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
           opacity: opacity,
           child: Text(
             widget.title,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
           ),
         ),
         centerTitle: true,
@@ -191,7 +204,11 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [accentColor.withValues(alpha: 0.6), Colors.black.withValues(alpha: 0.4), Colors.transparent],
+              colors: [
+                accentColor.withValues(alpha: 0.6),
+                Theme.of(context).colorScheme.surface.withValues(alpha: 0.4),
+                Colors.transparent,
+              ],
             ),
           ),
           child: Column(
@@ -218,7 +235,11 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
                 opacity: 1.0 - opacity, // Fade out on scroll
                 child: Text(
                   widget.title,
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
               ),
             ],
@@ -240,7 +261,11 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
         child: Center(
           child: Text(
             '${_songs.length} songs • $durationText',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 14, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ),
@@ -276,12 +301,17 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
             const SizedBox(width: 16),
             Container(
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: IconButton(
                 onPressed: _songs.isEmpty ? null : () => audioController.playSongList(_songs, 0, shuffle: true),
-                icon: Image.asset('assets/images/shuffle.png', width: 24, height: 24, color: Colors.white),
+                icon: Image.asset(
+                  'assets/images/shuffle.png',
+                  width: 24,
+                  height: 24,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
                 padding: const EdgeInsets.all(16),
               ),
             ),
@@ -298,9 +328,17 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset('assets/images/playlist_open.png', width: 64, height: 64, color: Colors.white24),
+              Image.asset(
+                'assets/images/playlist_open.png',
+                width: 64,
+                height: 64,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.24),
+              ),
               const SizedBox(height: 16),
-              Text('No songs yet', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
+              Text(
+                'No songs yet',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
+              ),
             ],
           ),
         ),
@@ -329,16 +367,23 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
                 image: song.localArtworkPath != null
                     ? DecorationImage(image: FileImage(File(song.localArtworkPath!)), fit: BoxFit.cover)
                     : null,
-                color: Colors.white.withValues(alpha: 0.1),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
               ),
               child: song.localArtworkPath == null
-                  ? Center(child: Image.asset('assets/images/song.png', width: 24, height: 24, color: Colors.white54))
+                  ? Center(
+                      child: Image.asset(
+                        'assets/images/song.png',
+                        width: 24,
+                        height: 24,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
+                      ),
+                    )
                   : null,
             ),
             title: Text(
               song.title,
               style: TextStyle(
-                color: isPlaying ? accentColor : Colors.white,
+                color: isPlaying ? accentColor : Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
                 fontSize: 15,
               ),
@@ -347,7 +392,7 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
             ),
             subtitle: Text(
               song.artist,
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 13),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),

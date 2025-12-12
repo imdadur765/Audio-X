@@ -239,14 +239,14 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                                   Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: accentColor.withOpacity(0.2),
+                                      color: accentColor.withValues(alpha: 0.2),
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: Image.asset(
                                       'assets/images/artist_open.png',
                                       width: 28,
                                       height: 28,
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onSurface,
                                     ),
                                   ),
                                   const SizedBox(width: 16),
@@ -332,7 +332,7 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                                     data: Theme.of(context).copyWith(
                                       textSelectionTheme: TextSelectionThemeData(
                                         cursorColor: accentColor,
-                                        selectionColor: accentColor.withOpacity(0.4),
+                                        selectionColor: accentColor.withValues(alpha: 0.4),
                                         selectionHandleColor: accentColor,
                                       ),
                                     ),
@@ -350,7 +350,7 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                                             'assets/images/search.png',
                                             width: 20,
                                             height: 20,
-                                            color: Colors.white70,
+                                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                           ),
                                         ),
                                         suffixIcon: _searchController.text.isNotEmpty
@@ -490,7 +490,12 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
           color: isSelected ? accentColor.withValues(alpha: 0.3) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Image.asset(imagePath, width: 20, height: 20, color: isSelected ? accentColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+        child: Image.asset(
+          imagePath,
+          width: 20,
+          height: 20,
+          color: isSelected ? accentColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+        ),
       ),
     );
   }
@@ -568,9 +573,9 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
           },
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.2), // Glass style
+              color: Colors.black.withValues(alpha: 0.2), // Glass style
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
@@ -594,7 +599,11 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.black.withOpacity(0.2), Colors.black.withOpacity(0.8)],
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.2),
+                          Colors.black.withValues(alpha: 0.8),
+                        ],
                         stops: const [0.5, 0.7, 1.0],
                       ),
                     ),
@@ -624,7 +633,7 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
+                              color: Colors.white.withValues(alpha: 0.8),
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),

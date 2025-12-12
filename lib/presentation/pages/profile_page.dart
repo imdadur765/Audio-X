@@ -197,7 +197,12 @@ class _ProfilePageState extends State<ProfilePage> {
                 elevation: 0,
                 systemOverlayStyle: SystemUiOverlayStyle.light,
                 leading: IconButton(
-                  icon: Image.asset('assets/images/back.png', width: 24, height: 24, color: Colors.white),
+                  icon: Image.asset(
+                    'assets/images/back.png',
+                    width: 24,
+                    height: 24,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                   onPressed: () => context.pop(),
                 ),
                 title: Text(
@@ -206,7 +211,12 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 actions: [
                   IconButton(
-                    icon: Image.asset('assets/images/settings.png', width: 24, height: 24, color: Colors.white),
+                    icon: Image.asset(
+                      'assets/images/settings.png',
+                      width: 24,
+                      height: 24,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                     onPressed: () => context.push('/settings'),
                   ),
                 ],
@@ -345,7 +355,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     shape: BoxShape.circle,
                     border: Border.all(color: colorScheme.surface, width: 2),
                   ),
-                  child: const Icon(Icons.check, size: 14, color: Colors.white),
+                  child: Icon(Icons.check, size: 14, color: Theme.of(context).colorScheme.onSurface),
                 ),
             ],
           ),
@@ -573,7 +583,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ],
                   ),
-                  Text('Day Streak', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 14)),
+                  Text(
+                    'Day Streak',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 14),
+                  ),
                 ],
               ),
               // Divider
@@ -592,7 +605,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ],
                   ),
-                  Text('Best Streak', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 14)),
+                  Text(
+                    'Best Streak',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 14),
+                  ),
                 ],
               ),
             ],
@@ -601,7 +617,10 @@ class _ProfilePageState extends State<ProfilePage> {
           // Weekly Activity
           Column(
             children: [
-              Text('This Week', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12)),
+              Text(
+                'This Week',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
+              ),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -614,11 +633,20 @@ class _ProfilePageState extends State<ProfilePage> {
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          color: isActive ? Colors.orange.withOpacity(0.8) : Colors.white.withOpacity(0.1),
+                          color: isActive
+                              ? Colors.orange.withOpacity(0.8)
+                              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
-                          border: Border.all(color: isActive ? Colors.orange : Colors.white24, width: 2),
+                          border: Border.all(
+                            color: isActive
+                                ? Colors.orange
+                                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.24),
+                            width: 2,
+                          ),
                         ),
-                        child: isActive ? const Icon(Icons.music_note, size: 16, color: Colors.white) : null,
+                        child: isActive
+                            ? Icon(Icons.music_note, size: 16, color: Theme.of(context).colorScheme.onSurface)
+                            : null,
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -648,12 +676,15 @@ class _ProfilePageState extends State<ProfilePage> {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
         ),
-        child: const Center(
-          child: Text('Play some songs to see your top artists!', style: TextStyle(color: Colors.white70)),
+        child: Center(
+          child: Text(
+            'Play some songs to see your top artists!',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+          ),
         ),
       );
     }
@@ -690,7 +721,11 @@ class _ProfilePageState extends State<ProfilePage> {
                   artist['name'],
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
                 ),
                 // Play count
                 Text('${artist['playCount']} plays', style: TextStyle(color: color, fontSize: 10)),
@@ -739,7 +774,7 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Center(
         child: Text(
           artistName.isNotEmpty ? artistName.substring(0, 1).toUpperCase() : '?',
-          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
         ),
       ),
     );
@@ -750,8 +785,16 @@ class _ProfilePageState extends State<ProfilePage> {
       return Container(
         width: double.infinity,
         height: 160,
-        decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(16)),
-        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+        ),
       );
     }
 
@@ -784,7 +827,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isUnlocked ? Colors.amber.withOpacity(0.4) : Colors.white.withOpacity(0.1),
+                      color: isUnlocked
+                          ? Colors.amber.withOpacity(0.4)
+                          : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                     ),
                     boxShadow: isUnlocked
                         ? [BoxShadow(color: Colors.amber.withOpacity(0.2), blurRadius: 12, spreadRadius: 1)]
@@ -822,7 +867,11 @@ class _ProfilePageState extends State<ProfilePage> {
                               child: Container(
                                 padding: const EdgeInsets.all(2),
                                 decoration: BoxDecoration(color: Colors.grey.shade800, shape: BoxShape.circle),
-                                child: const Icon(Icons.lock, size: 12, color: Colors.white54),
+                                child: Icon(
+                                  Icons.lock,
+                                  size: 12,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
+                                ),
                               ),
                             ),
                         ],
@@ -835,7 +884,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: isUnlocked ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                          color: isUnlocked
+                              ? Theme.of(context).colorScheme.onSurface
+                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                           fontWeight: FontWeight.w600,
                           fontSize: 11,
                         ),
@@ -845,7 +896,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       if (!isUnlocked)
                         Text(
                           '$progress/${achievement.requiredValue}',
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), fontSize: 10),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                            fontSize: 10,
+                          ),
                         )
                       else
                         const Icon(Icons.check_circle, size: 14, color: Colors.amber),

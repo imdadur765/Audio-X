@@ -125,14 +125,14 @@ class _PlaylistPageState extends State<PlaylistPage> {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
               child: AlertDialog(
-                backgroundColor: Colors.white.withOpacity(0.1),
+                backgroundColor: Theme.of(context).cardColor.withValues(alpha: 0.9),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
-                  side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                  side: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
                 ),
-                title: const Text(
+                title: Text(
                   'Create Playlist',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
                 ),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -140,12 +140,12 @@ class _PlaylistPageState extends State<PlaylistPage> {
                   children: [
                     TextField(
                       controller: nameController,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       decoration: InputDecoration(
                         hintText: 'Playlist Name',
-                        hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                        hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
                         filled: true,
-                        fillColor: Colors.white.withOpacity(0.1),
+                        fillColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide.none,
@@ -154,9 +154,13 @@ class _PlaylistPageState extends State<PlaylistPage> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text(
+                    Text(
                       'Choose Icon',
-                      style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     SizedBox(
@@ -198,7 +202,10 @@ class _PlaylistPageState extends State<PlaylistPage> {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                    ),
                   ),
                   ElevatedButton(
                     onPressed: () async {
@@ -242,7 +249,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
               GlassBackground(
                 artworkPath: artworkPath,
                 accentColor: accentColor,
-                isDark: true, // Force dark mode for premium look
+                isDark: Theme.of(context).brightness == Brightness.dark,
               ),
 
               CustomScrollView(
@@ -270,7 +277,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
             backgroundColor: accentColor,
             elevation: 4,
             icon: Image.asset('assets/images/create.png', width: 24, height: 24, color: Colors.white),
-            label: const Text(
+            label: Text(
               'Create',
               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
@@ -288,7 +295,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
       expandedHeight: 220,
       floating: false,
       pinned: true,
-      backgroundColor: isScrolled ? Colors.black.withValues(alpha: 0.4) : Colors.transparent,
+      backgroundColor: isScrolled ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.8) : Colors.transparent,
       elevation: 0,
       flexibleSpace: ClipRRect(
         child: BackdropFilter(
@@ -297,9 +304,13 @@ class _PlaylistPageState extends State<PlaylistPage> {
             title: AnimatedOpacity(
               opacity: isScrolled ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 200),
-              child: const Text(
+              child: Text(
                 'Playlists',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
             ),
             background: Container(
@@ -309,7 +320,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
                   end: Alignment.bottomCenter,
                   colors: [
                     accentColor.withValues(alpha: 0.6),
-                    Colors.black.withValues(alpha: 0.2), // Darker fade
+                    Theme.of(context).colorScheme.surface.withValues(alpha: 0.2), // Darker fade
                     Colors.transparent,
                   ],
                   stops: const [0.0, 0.6, 1.0],
@@ -337,17 +348,23 @@ class _PlaylistPageState extends State<PlaylistPage> {
                                   'assets/images/playlist_open.png',
                                   width: 28,
                                   height: 28,
-                                  color: Colors.white,
+                                  color: accentColor,
                                 ),
                               ),
                               const SizedBox(width: 16),
-                              const Text(
+                              Text(
                                 'Playlists',
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                   fontSize: 32,
                                   fontWeight: FontWeight.bold,
-                                  shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
+                                  shadows: [
+                                    Shadow(
+                                      offset: Offset(0, 2),
+                                      blurRadius: 8,
+                                      color: Theme.of(context).shadowColor.withValues(alpha: 0.3),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -356,9 +373,9 @@ class _PlaylistPageState extends State<PlaylistPage> {
                           Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white.withOpacity(0.1)),
+                              border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
                             ),
                             child: Row(
                               children: [
@@ -381,7 +398,10 @@ class _PlaylistPageState extends State<PlaylistPage> {
                       ),
 
                       const SizedBox(height: 8),
-                      const Text('Your custom collections', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                      Text(
+                        'Your custom collections',
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16),
+                      ),
                       const SizedBox(height: 16),
                       // Search bar
                       Row(
@@ -404,17 +424,18 @@ class _PlaylistPageState extends State<PlaylistPage> {
                                 ),
                                 child: TextField(
                                   controller: _searchController,
-                                  style: const TextStyle(fontSize: 15, color: Colors.white),
+                                  style: TextStyle(fontSize: 15, color: Theme.of(context).colorScheme.onSurface),
                                   decoration: InputDecoration(
                                     hintText: 'Search playlists...',
-                                    hintStyle: const TextStyle(color: Colors.white38),
+                                    hintStyle: TextStyle(
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                    ),
                                     prefixIcon: Padding(
                                       padding: const EdgeInsets.all(12),
                                       child: Image.asset(
                                         'assets/images/search.png',
-                                        color: Colors.white70,
-                                        width: 20,
                                         height: 20,
+                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                       ),
                                     ),
                                     suffixIcon: _searchController.text.isNotEmpty
@@ -555,9 +576,9 @@ class _PlaylistPageState extends State<PlaylistPage> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,14 +606,21 @@ class _PlaylistPageState extends State<PlaylistPage> {
                 children: [
                   Text(
                     playlist.name,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${playlist.songCount} songs • $durationText',
-                    style: TextStyle(fontSize: 12, color: Colors.white60),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -619,9 +647,9 @@ class _PlaylistPageState extends State<PlaylistPage> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -640,13 +668,16 @@ class _PlaylistPageState extends State<PlaylistPage> {
         ),
         title: Text(
           playlist.name,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.white),
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Theme.of(context).colorScheme.onSurface),
         ),
         subtitle: Text(
           '${playlist.songCount} songs • $durationText',
-          style: TextStyle(color: Colors.white60, fontSize: 13),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 13),
         ),
-        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white38),
+        trailing: Icon(
+          Icons.chevron_right_rounded,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
+        ),
         onTap: () {
           if (playlist.id == 'auto_recently_added') {
             context.pushNamed('recently_added', extra: songs);
@@ -684,11 +715,21 @@ class _PlaylistPageState extends State<PlaylistPage> {
       if (playlist.id == 'auto_most_played') assetName = 'most_played.png';
       if (playlist.id == 'auto_all_songs') assetName = 'song.png';
 
-      return Image.asset('assets/images/$assetName', width: size, height: size, color: Colors.white);
+      return Image.asset(
+        'assets/images/$assetName',
+        width: size,
+        height: size,
+        color: Theme.of(context).colorScheme.onSurface,
+      );
     }
     // Check if it's an asset path (ends with .png)
     if (playlist.iconEmoji.endsWith('.png')) {
-      return Image.asset('assets/images/${playlist.iconEmoji}', width: size, height: size, color: Colors.white);
+      return Image.asset(
+        'assets/images/${playlist.iconEmoji}',
+        width: size,
+        height: size,
+        color: Theme.of(context).colorScheme.onSurface,
+      );
     }
     return Text(playlist.iconEmoji, style: TextStyle(fontSize: size));
   }
@@ -701,24 +742,27 @@ class _PlaylistPageState extends State<PlaylistPage> {
           Container(
             width: 120,
             height: 120,
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
             child: Image.asset(
               'assets/images/playlist_open.png',
               width: 50,
               height: 50,
-              color: Colors.white.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'No Playlists Found',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Create your first playlist to get started',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white70, fontSize: 14),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 14),
           ),
         ],
       ),
@@ -739,7 +783,12 @@ class _PlaylistPageState extends State<PlaylistPage> {
           color: isSelected ? accentColor.withOpacity(0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Image.asset(imagePath, width: 20, height: 20, color: isSelected ? accentColor : Colors.white60),
+        child: Image.asset(
+          imagePath,
+          width: 20,
+          height: 20,
+          color: isSelected ? accentColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+        ),
       ),
     );
   }

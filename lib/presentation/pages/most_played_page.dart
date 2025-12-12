@@ -51,7 +51,11 @@ class _MostPlayedPageState extends State<MostPlayedPage> {
           extendBody: true,
           body: Stack(
             children: [
-              GlassBackground(artworkPath: artworkPath, accentColor: accentColor, isDark: true),
+              GlassBackground(
+                artworkPath: artworkPath,
+                accentColor: accentColor,
+                isDark: Theme.of(context).brightness == Brightness.dark,
+              ),
               CustomScrollView(
                 controller: _scrollController,
                 physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
@@ -94,9 +98,9 @@ class _MostPlayedPageState extends State<MostPlayedPage> {
             title: AnimatedOpacity(
               opacity: isScrolled ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 200),
-              child: const Text(
+              child: Text(
                 'Most Played',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
               ),
             ),
             background: SafeArea(
@@ -112,13 +116,18 @@ class _MostPlayedPageState extends State<MostPlayedPage> {
                         color: accentColor.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Image.asset('assets/images/most_played.png', width: 32, height: 32, color: Colors.white),
+                      child: Image.asset(
+                        'assets/images/most_played.png',
+                        width: 32,
+                        height: 32,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       'Most Played',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                         shadows: [Shadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))],
@@ -127,7 +136,11 @@ class _MostPlayedPageState extends State<MostPlayedPage> {
                     const SizedBox(height: 8),
                     Text(
                       '${widget.songs.length} songs',
-                      style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 16, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     Row(
@@ -179,18 +192,27 @@ class _MostPlayedPageState extends State<MostPlayedPage> {
           child: Container(
             height: 50,
             decoration: BoxDecoration(
-              color: isPrimary ? accentColor : Colors.white.withOpacity(0.1),
+              color: isPrimary ? accentColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset(icon, width: 22, height: 22, color: Colors.white),
+                Image.asset(
+                  icon,
+                  width: 22,
+                  height: 22,
+                  color: isPrimary ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   text,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(
+                    color: isPrimary ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ],
             ),
@@ -217,9 +239,11 @@ class _MostPlayedPageState extends State<MostPlayedPage> {
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
-            color: isPlaying ? accentColor.withOpacity(0.2) : Colors.white.withOpacity(0.05),
+            color: isPlaying
+                ? accentColor.withOpacity(0.2)
+                : Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -269,7 +293,7 @@ class _MostPlayedPageState extends State<MostPlayedPage> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontWeight: isPlaying ? FontWeight.bold : FontWeight.w600,
-                color: isPlaying ? accentColor : Colors.white,
+                color: isPlaying ? accentColor : Theme.of(context).colorScheme.onSurface,
                 fontSize: 16,
               ),
             ),
@@ -281,16 +305,25 @@ class _MostPlayedPageState extends State<MostPlayedPage> {
                   song.artist,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.white60, fontSize: 13),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 13),
                 ),
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    Image.asset('assets/images/play.png', width: 14, height: 14, color: Colors.white38),
+                    Image.asset(
+                      'assets/images/play.png',
+                      width: 14,
+                      height: 14,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       '${song.playCount} plays',
-                      style: const TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),

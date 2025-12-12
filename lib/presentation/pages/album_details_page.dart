@@ -575,7 +575,9 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                           Text(
                             _formatDuration(song.duration),
                             style: TextStyle(
-                              color: isCurrentlyPlaying ? Colors.deepPurple.shade100 : Colors.white70,
+                              color: isCurrentlyPlaying
+                                  ? Colors.deepPurple.shade100
+                                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                               fontWeight: isCurrentlyPlaying ? FontWeight.w700 : FontWeight.w500,
                               fontSize: 13,
                             ),

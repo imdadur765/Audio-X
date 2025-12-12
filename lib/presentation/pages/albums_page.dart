@@ -145,12 +145,15 @@ class _AlbumsPageState extends State<AlbumsPage> {
                             Container(
                               width: 120,
                               height: 120,
-                              decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
                               child: Image.asset(
                                 'assets/images/album.png',
                                 width: 50,
                                 height: 50,
-                                color: Colors.white.withOpacity(0.5),
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                               ),
                             ),
                             const SizedBox(height: 20),
@@ -272,7 +275,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
                                   'assets/images/album.png',
                                   width: 28,
                                   height: 28,
-                                  color: Colors.white,
+                                  color: accentColor,
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -366,7 +369,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
                                         'assets/images/search.png',
                                         width: 20,
                                         height: 20,
-                                        color: Colors.white70,
+                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                       ),
                                     ),
                                     suffixIcon: _searchQuery.isNotEmpty
@@ -462,7 +465,9 @@ class _AlbumsPageState extends State<AlbumsPage> {
       onTap: () => _navigateToAlbumDetails(context, albumName, songs, heroTag: 'album_grid_$albumName'),
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.05)
+              : Colors.grey.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
         ),
@@ -493,7 +498,9 @@ class _AlbumsPageState extends State<AlbumsPage> {
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, Theme.of(context).colorScheme.surface.withValues(alpha: 0.3)],
+                            colors: Theme.of(context).brightness == Brightness.dark
+                                ? [Colors.transparent, Theme.of(context).colorScheme.surface.withValues(alpha: 0.3)]
+                                : [Colors.transparent, Colors.black.withValues(alpha: 0.15)],
                           ),
                         ),
                       ),
@@ -646,7 +653,10 @@ class _AlbumsPageState extends State<AlbumsPage> {
           '${songs.length} ${songs.length == 1 ? 'song' : 'songs'}',
           style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 13),
         ),
-        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white38),
+        trailing: Icon(
+          Icons.chevron_right_rounded,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
+        ),
         onTap: () => _navigateToAlbumDetails(context, albumName, songs, heroTag: 'album_list_$albumName'),
       ),
     );

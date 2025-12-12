@@ -35,9 +35,11 @@ class MoreOptionsButton extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.7),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.black.withValues(alpha: 0.7)
+                  : Colors.white.withValues(alpha: 0.9),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+              border: Border(top: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1))),
             ),
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: Column(
@@ -52,7 +54,7 @@ class MoreOptionsButton extends StatelessWidget {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: HybridSongArtwork(localArtworkPath: song.localArtworkPath, size: 48, borderRadius: 8),
@@ -64,13 +66,20 @@ class MoreOptionsButton extends StatelessWidget {
                           children: [
                             Text(
                               song.title,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
                               song.artist,
-                              style: const TextStyle(color: Colors.white70, fontSize: 14),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                fontSize: 14,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -80,11 +89,16 @@ class MoreOptionsButton extends StatelessWidget {
                     ],
                   ),
                 ),
-                Divider(color: Colors.white.withValues(alpha: 0.1)),
+                Divider(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
                 // Options
                 ListTile(
-                  leading: Image.asset('assets/images/playlist_open.png', width: 24, height: 24, color: Colors.white),
-                  title: const Text('Add to Playlist', style: TextStyle(color: Colors.white)),
+                  leading: Image.asset(
+                    'assets/images/playlist_open.png',
+                    width: 24,
+                    height: 24,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  title: Text('Add to Playlist', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                   onTap: () {
                     Navigator.pop(context); // Close this sheet
                     showModalBottomSheet(
@@ -95,8 +109,13 @@ class MoreOptionsButton extends StatelessWidget {
                   },
                 ),
                 ListTile(
-                  leading: Image.asset('assets/images/info.png', width: 24, height: 24, color: Colors.white),
-                  title: const Text('Album Info', style: TextStyle(color: Colors.white)),
+                  leading: Image.asset(
+                    'assets/images/info.png',
+                    width: 24,
+                    height: 24,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  title: Text('Album Info', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                   onTap: () {
                     Navigator.pop(context); // Close sheet
                     context.pushNamed(

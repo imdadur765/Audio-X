@@ -130,12 +130,15 @@ class _AllSongsPageState extends State<AllSongsPage> {
                           children: [
                             Container(
                               padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+                                shape: BoxShape.circle,
+                              ),
                               child: Image.asset(
                                 'assets/images/song.png',
                                 width: 64,
                                 height: 64,
-                                color: Colors.white38,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -191,21 +194,21 @@ class _AllSongsPageState extends State<AllSongsPage> {
             color: Theme.of(context).cardColor,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: SortOrder.aToZ,
-                child: Text('A to Z', style: TextStyle(color: Colors.white)),
+                child: Text('A to Z', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: SortOrder.zToA,
-                child: Text('Z to A', style: TextStyle(color: Colors.white)),
+                child: Text('Z to A', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: SortOrder.dateAdded,
-                child: Text('Recently Added', style: TextStyle(color: Colors.white)),
+                child: Text('Recently Added', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: SortOrder.duration,
-                child: Text('Duration', style: TextStyle(color: Colors.white)),
+                child: Text('Duration', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
               ),
             ],
           ),
@@ -272,7 +275,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
                               color: accentColor.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            child: Image.asset('assets/images/song.png', width: 28, height: 28, color: Colors.white),
+                            child: Image.asset('assets/images/song.png', width: 28, height: 28, color: accentColor),
                           ),
                           const SizedBox(width: 16),
                           Text(
@@ -310,9 +313,11 @@ class _AllSongsPageState extends State<AllSongsPage> {
                             child: Container(
                               height: 48,
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.1),
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                                ),
                               ),
                               child: TextField(
                                 controller: _searchController,
@@ -328,12 +333,16 @@ class _AllSongsPageState extends State<AllSongsPage> {
                                       'assets/images/search.png',
                                       width: 20,
                                       height: 20,
-                                      color: Colors.white70,
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                     ),
                                   ),
                                   suffixIcon: _searchQuery.isNotEmpty
                                       ? IconButton(
-                                          icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                                          icon: Icon(
+                                            Icons.close_rounded,
+                                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                            size: 20,
+                                          ),
                                           onPressed: () {
                                             setState(() {
                                               _searchController.clear();
@@ -404,14 +413,19 @@ class _AllSongsPageState extends State<AllSongsPage> {
           child: Container(
             height: 44,
             decoration: BoxDecoration(
-              color: isPrimary ? accentColor : Colors.white.withOpacity(0.1),
+              color: isPrimary ? accentColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset(icon, width: 20, height: 20, color: Colors.white),
+                Image.asset(
+                  icon,
+                  width: 20,
+                  height: 20,
+                  color: isPrimary ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   text,
@@ -515,7 +529,13 @@ class _AllSongsPageState extends State<AllSongsPage> {
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                  child: Text('•', style: TextStyle(color: Colors.white38, fontSize: 10)),
+                  child: Text(
+                    '•',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
+                      fontSize: 10,
+                    ),
+                  ),
                 ),
                 Text(
                   _formatDuration(song.duration),

@@ -98,7 +98,7 @@ class _HomePageState extends State<HomePage> {
                 return GlassBackground(
                   artworkPath: controller.currentSong?.localArtworkPath,
                   accentColor: controller.accentColor,
-                  isDark: true, // Always dark mode for home page
+                  isDark: Theme.of(context).brightness == Brightness.dark,
                 );
               },
             ),
@@ -145,8 +145,11 @@ class _HomePageState extends State<HomePage> {
       floating: false,
       pinned: true,
       // Standard Dark Glass Header Background
-      backgroundColor: opacity > 0.8 ? Colors.black.withValues(alpha: 0.4) : Colors.transparent,
+      backgroundColor: opacity > 0.8
+          ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.8)
+          : Colors.transparent,
       elevation: 0,
+      iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
       // Add blur when scrolled
       flexibleSpace: ClipRRect(
         child: BackdropFilter(
@@ -157,7 +160,11 @@ class _HomePageState extends State<HomePage> {
               duration: const Duration(milliseconds: 200),
               child: Text(
                 _getGreeting(),
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
             ),
             background: Container(
@@ -167,7 +174,7 @@ class _HomePageState extends State<HomePage> {
                   end: Alignment.bottomCenter,
                   colors: [
                     accentColor.withValues(alpha: 0.6),
-                    Colors.black.withValues(alpha: 0.2), // Darker fade
+                    Theme.of(context).colorScheme.surface.withValues(alpha: 0.2), // Adaptive fade
                     Colors.transparent,
                   ],
                   stops: const [0.0, 0.6, 1.0],
@@ -182,15 +189,27 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       Text(
                         _getGreeting(),
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 36,
                           fontWeight: FontWeight.bold,
-                          shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
+                          shadows: [
+                            Shadow(
+                              offset: Offset(0, 2),
+                              blurRadius: 8,
+                              color: Theme.of(context).shadowColor.withValues(alpha: 0.3),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text('Your personal music feed', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                      Text(
+                        'Your personal music feed',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          fontSize: 16,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -209,7 +228,12 @@ class _HomePageState extends State<HomePage> {
             border: Border.all(color: accentColor.withValues(alpha: 0.2)),
           ),
           child: IconButton(
-            icon: Image.asset('assets/images/search.png', width: 24, height: 24, color: Colors.white),
+            icon: Image.asset(
+              'assets/images/search.png',
+              width: 24,
+              height: 24,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
             onPressed: () {},
           ),
         ),
@@ -227,7 +251,7 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 2),
+              border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2), width: 2),
             ),
             child: _authService.isLoggedIn && _authService.userPhotoUrl != null
                 ? CircleAvatar(
@@ -237,8 +261,13 @@ class _HomePageState extends State<HomePage> {
                   )
                 : CircleAvatar(
                     radius: 16,
-                    backgroundColor: Colors.white.withValues(alpha: 0.1),
-                    child: Image.asset('assets/images/profile.png', width: 20, height: 20, color: Colors.white),
+                    backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                    child: Image.asset(
+                      'assets/images/profile.png',
+                      width: 20,
+                      height: 20,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
           ),
         ),
@@ -260,7 +289,11 @@ class _HomePageState extends State<HomePage> {
               padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
               child: Text(
                 'Recently Played',
-                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ),
             SizedBox(
@@ -309,7 +342,7 @@ class _HomePageState extends State<HomePage> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
+                          color: Theme.of(context).shadowColor.withValues(alpha: 0.3),
                           blurRadius: 12,
                           offset: const Offset(0, 6),
                         ),
@@ -345,14 +378,18 @@ class _HomePageState extends State<HomePage> {
               song.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.white),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
               song.artist,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 11),
             ),
           ],
         ),
@@ -372,11 +409,15 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(24, 24, 24, 12),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
               child: Text(
                 'Your Top Artists',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ),
             GridView.builder(
@@ -409,10 +450,14 @@ class _HomePageState extends State<HomePage> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color: Colors.white.withValues(alpha: 0.05), // Subtle glass fill
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.05), // Subtle glass fill
+          border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1), width: 1),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 12, offset: const Offset(0, 6)),
+            BoxShadow(
+              color: Theme.of(context).shadowColor.withValues(alpha: 0.2),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
           ],
         ),
         child: Stack(
@@ -428,14 +473,19 @@ class _HomePageState extends State<HomePage> {
                   errorBuilder: (context, error, stackTrace) => Container(),
                 ),
               ),
-            // Gradient overlay
+            // Gradient overlay - darker for better image visibility
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.9)],
+                  colors: [
+                    Colors.transparent,
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.8), // Dark gradient only at bottom
+                  ],
+                  stops: const [0.0, 0.5, 1.0], // Keep top 50% completely clear
                 ),
               ),
             ),
@@ -450,15 +500,20 @@ class _HomePageState extends State<HomePage> {
                     artist.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Colors.white, // Always white for better contrast on dark gradient
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      shadows: [Shadow(offset: Offset(0, 1), blurRadius: 4, color: Colors.black87)],
+                      shadows: [
+                        Shadow(offset: Offset(0, 1), blurRadius: 4, color: Colors.black.withValues(alpha: 0.5)),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text('${artist.songCount} songs', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                  Text(
+                    '${artist.songCount} songs',
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 11),
+                  ),
                 ],
               ),
             ),
@@ -474,11 +529,15 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(24, 24, 24, 12),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
               child: Text(
                 'Made For You',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ),
             SizedBox(
@@ -491,7 +550,7 @@ class _HomePageState extends State<HomePage> {
                     'Most Played',
                     '${homeController.mostPlayed.length} songs',
                     'most_played.png',
-                    [Colors.orange.withValues(alpha: 0.4), Colors.deepOrange.withValues(alpha: 0.4)], // Glassy gradient
+                    [Colors.orange.shade600, Colors.deepOrange.shade600], // Solid vibrant gradient
                     () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
@@ -508,7 +567,7 @@ class _HomePageState extends State<HomePage> {
                     'Recently Added',
                     '${homeController.recentlyAdded.length} songs',
                     'recently_added.png',
-                    [Colors.blue.withValues(alpha: 0.4), Colors.indigo.withValues(alpha: 0.4)],
+                    [Colors.blue.shade600, Colors.indigo.shade600], // Solid vibrant gradient
                     () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
@@ -544,10 +603,9 @@ class _HomePageState extends State<HomePage> {
         margin: const EdgeInsets.symmetric(horizontal: 6),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color: Colors.white.withValues(alpha: 0.05), // Standard Dark Card fill
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          gradient: LinearGradient(colors: gradientColors, begin: Alignment.topLeft, end: Alignment.bottomRight),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 12, offset: const Offset(0, 6)),
+            BoxShadow(color: gradientColors.first.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 6)),
           ],
         ),
         child: Padding(
@@ -559,17 +617,12 @@ class _HomePageState extends State<HomePage> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  // Use the gradient colors only for the icon background, not the whole card
-                  gradient: LinearGradient(
-                    colors: [gradientColors.first.withValues(alpha: 0.2), gradientColors.last.withValues(alpha: 0.2)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: Colors.white.withValues(alpha: 0.25), // Semi-transparent white background for icon
                   shape: BoxShape.circle,
                 ),
                 child: Image.asset(
                   'assets/images/$iconAsset',
-                  color: gradientColors.first, // Icon takes the primary color
+                  color: Colors.white, // White icon for visibility
                   width: 24,
                   height: 24,
                 ),
@@ -579,10 +632,10 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12)),
+                  Text(subtitle, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12)),
                 ],
               ),
             ],
@@ -616,10 +669,10 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
             child: Text(
               genre,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.white, // Dark theme text
+                color: Theme.of(context).colorScheme.onSurface, // Dark theme text
               ),
             ),
           ),
@@ -662,7 +715,11 @@ class _HomePageState extends State<HomePage> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4)),
+                      BoxShadow(
+                        color: Theme.of(context).shadowColor.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
                     ],
                   ),
                   child: HybridSongArtwork.fromSong(song: song, size: 120, borderRadius: 12),
@@ -684,10 +741,10 @@ class _HomePageState extends State<HomePage> {
               song.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 12,
-                color: Colors.white, // White text
+                color: Theme.of(context).colorScheme.onSurface, // White text
               ),
             ),
           ],
@@ -717,22 +774,31 @@ class _HomePageState extends State<HomePage> {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05), // Dark glass
+                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.05), // Dark glass
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
               ),
-              child: Image.asset('assets/images/album_list_open.png', width: 50, height: 50, color: Colors.white54),
+              child: Image.asset(
+                'assets/images/album_list_open.png',
+                width: 50,
+                height: 50,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'No Music Found',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'We need permission to access your audio files',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70, fontSize: 14),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 14),
             ),
             const SizedBox(height: 20),
             GestureDetector(

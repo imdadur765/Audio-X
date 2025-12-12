@@ -150,7 +150,10 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
 
     return Stack(
       children: [
-        GlassBackground(artworkPath: currentSong?.localArtworkPath),
+        GlassBackground(
+          artworkPath: currentSong?.localArtworkPath,
+          isDark: Theme.of(context).brightness == Brightness.dark,
+        ),
 
         Scaffold(
           backgroundColor: Colors.transparent,
@@ -188,7 +191,9 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
           expandedHeight: 220,
           floating: false,
           pinned: true,
-          backgroundColor: isScrolled ? Colors.black.withValues(alpha: 0.4) : Colors.transparent,
+          backgroundColor: isScrolled
+              ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.8)
+              : Colors.transparent,
           elevation: 0,
           flexibleSpace: ClipRRect(
             child: BackdropFilter(
@@ -197,9 +202,13 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                 title: AnimatedOpacity(
                   opacity: isScrolled ? 1.0 : 0.0,
                   duration: const Duration(milliseconds: 200),
-                  child: const Text(
+                  child: Text(
                     'Artists',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
                   ),
                 ),
                 background: Container(
@@ -209,7 +218,7 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                       end: Alignment.bottomCenter,
                       colors: [
                         accentColor.withValues(alpha: 0.6),
-                        Colors.black.withValues(alpha: 0.2), // Darker fade
+                        Theme.of(context).colorScheme.surface.withValues(alpha: 0.2), // Adaptive fade
                         Colors.transparent,
                       ],
                       stops: const [0.0, 0.6, 1.0],
@@ -241,13 +250,19 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                                     ),
                                   ),
                                   const SizedBox(width: 16),
-                                  const Text(
+                                  Text(
                                     'Artists',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onSurface,
                                       fontSize: 32,
                                       fontWeight: FontWeight.bold,
-                                      shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
+                                      shadows: [
+                                        Shadow(
+                                          offset: Offset(0, 2),
+                                          blurRadius: 8,
+                                          color: Theme.of(context).shadowColor.withValues(alpha: 0.3),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
@@ -256,9 +271,11 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                               Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                  border: Border.all(
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                                  ),
                                 ),
                                 child: Row(
                                   children: [
@@ -285,9 +302,12 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              const Text(
+                              Text(
                                 'Your music collection',
-                                style: TextStyle(color: Colors.white70, fontSize: 16),
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                  fontSize: 16,
+                                ),
                               ),
                               const SizedBox(width: 8),
                               _buildConnectivityBadge(compact: true),
@@ -302,9 +322,11 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                                 child: Container(
                                   height: 48,
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.1),
+                                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                    border: Border.all(
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                                    ),
                                   ),
                                   child: Theme(
                                     data: Theme.of(context).copyWith(
@@ -316,10 +338,12 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                                     ),
                                     child: TextField(
                                       controller: _searchController,
-                                      style: const TextStyle(fontSize: 15, color: Colors.white),
+                                      style: TextStyle(fontSize: 15, color: Theme.of(context).colorScheme.onSurface),
                                       decoration: InputDecoration(
                                         hintText: 'Search artists...',
-                                        hintStyle: const TextStyle(color: Colors.white38),
+                                        hintStyle: TextStyle(
+                                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                        ),
                                         prefixIcon: Padding(
                                           padding: const EdgeInsets.all(12.0),
                                           child: Image.asset(
@@ -331,7 +355,11 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                                         ),
                                         suffixIcon: _searchController.text.isNotEmpty
                                             ? IconButton(
-                                                icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                                                icon: Icon(
+                                                  Icons.close_rounded,
+                                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                                  size: 20,
+                                                ),
                                                 onPressed: () {
                                                   setState(() {
                                                     _searchController.clear();
@@ -355,9 +383,11 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                                 icon: Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.1),
+                                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                    border: Border.all(
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                                    ),
                                   ),
                                   child: Image.asset(
                                     'assets/images/sort.png',
@@ -371,20 +401,28 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                                     _sortOrder = order;
                                   });
                                 },
-                                color: const Color(0xFF1E1E1E),
+                                color: Theme.of(context).cardColor,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
-                                  side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                                  side: BorderSide(
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                                  ),
                                 ),
                                 offset: const Offset(0, 40),
                                 itemBuilder: (context) => [
-                                  const PopupMenuItem(
+                                  PopupMenuItem(
                                     value: SortOrder.aToZ,
-                                    child: Text('A to Z', style: TextStyle(color: Colors.white)),
+                                    child: Text(
+                                      'A to Z',
+                                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                                    ),
                                   ),
-                                  const PopupMenuItem(
+                                  PopupMenuItem(
                                     value: SortOrder.zToA,
-                                    child: Text('Z to A', style: TextStyle(color: Colors.white)),
+                                    child: Text(
+                                      'Z to A',
+                                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -415,9 +453,9 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
+        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -430,7 +468,7 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
           const SizedBox(width: 6),
           Text(
             _isOnline ? 'Online' : 'Offline',
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
           ),
         ],
       ),
@@ -449,10 +487,10 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isSelected ? accentColor.withOpacity(0.3) : Colors.transparent,
+          color: isSelected ? accentColor.withValues(alpha: 0.3) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Image.asset(imagePath, width: 20, height: 20, color: isSelected ? accentColor : Colors.white60),
+        child: Image.asset(imagePath, width: 20, height: 20, color: isSelected ? accentColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
       ),
     );
   }
@@ -572,8 +610,8 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                           artistName,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: Colors.white, // Keep white for image overlay
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                             shadows: [Shadow(color: Colors.black45, offset: Offset(0, 1), blurRadius: 2)],
@@ -620,9 +658,9 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.2), // Glass style
+            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.05), // Glass style
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -641,17 +679,30 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                     : _buildPlaceholderAvatar(),
               ),
             ),
-            title: Text(artistName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+            title: Text(
+              artistName,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
             subtitle: artist?.tags.isNotEmpty == true
                 ? Text(
                     artist!.tags.take(2).join(", "),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      fontSize: 13,
+                    ),
                   )
                 : Text(
                     isLoading ? "Loading..." : "Unknown Genre",
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      fontSize: 13,
+                    ),
                   ),
             trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
             onTap: () async {

@@ -109,7 +109,11 @@ class _AllSongsPageState extends State<AllSongsPage> {
           extendBody: true,
           body: Stack(
             children: [
-              GlassBackground(artworkPath: artworkPath, accentColor: accentColor, isDark: true),
+              GlassBackground(
+                artworkPath: artworkPath,
+                accentColor: accentColor,
+                isDark: Theme.of(context).brightness == Brightness.dark,
+              ),
               CustomScrollView(
                 controller: _scrollController,
                 physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
@@ -164,9 +168,9 @@ class _AllSongsPageState extends State<AllSongsPage> {
       expandedHeight: 280,
       floating: false,
       pinned: true,
-      backgroundColor: isScrolled ? Colors.black.withValues(alpha: 0.4) : Colors.transparent,
+      backgroundColor: isScrolled ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.8) : Colors.transparent,
       elevation: 0,
-      iconTheme: const IconThemeData(color: Colors.white),
+      iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
       actions: [
         // Sort Button
         Container(
@@ -184,7 +188,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
               color: accentColor, // Dynamic Icon Color
             ),
             onSelected: (order) => setState(() => _sortOrder = order),
-            color: const Color(0xFF1E1E1E),
+            color: Theme.of(context).cardColor,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             itemBuilder: (context) => [
               const PopupMenuItem(
@@ -217,9 +221,13 @@ class _AllSongsPageState extends State<AllSongsPage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
+                  Text(
                     'All Songs',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Container(
@@ -243,7 +251,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
                   end: Alignment.bottomCenter,
                   colors: [
                     accentColor.withValues(alpha: 0.6),
-                    Colors.black.withValues(alpha: 0.2),
+                    Theme.of(context).colorScheme.surface.withValues(alpha: 0.2),
                     Colors.transparent,
                   ],
                   stops: const [0.0, 0.6, 1.0],
@@ -266,105 +274,117 @@ class _AllSongsPageState extends State<AllSongsPage> {
                             ),
                             child: Image.asset('assets/images/song.png', width: 28, height: 28, color: Colors.white),
                           ),
-                        const SizedBox(width: 16),
-                        const Text(
-                          'All Songs',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${widget.songs.length} tracks • $totalDuration',
-                      style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Search Bar
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.white.withOpacity(0.1)),
-                            ),
-                            child: TextField(
-                              controller: _searchController,
-                              style: const TextStyle(fontSize: 15, color: Colors.white),
-                              decoration: InputDecoration(
-                                hintText: 'Search collection...',
-                                hintStyle: const TextStyle(color: Colors.white38),
-                                prefixIcon: Padding(
-                                  padding: const EdgeInsets.all(12.0),
-                                  child: Image.asset(
-                                    'assets/images/search.png',
-                                    width: 20,
-                                    height: 20,
-                                    color: Colors.white70,
-                                  ),
+                          const SizedBox(width: 16),
+                          Text(
+                            'All Songs',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              shadows: [
+                                Shadow(
+                                  offset: Offset(0, 2),
+                                  blurRadius: 8,
+                                  color: Theme.of(context).shadowColor.withValues(alpha: 0.3),
                                 ),
-                                suffixIcon: _searchQuery.isNotEmpty
-                                    ? IconButton(
-                                        icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
-                                        onPressed: () {
-                                          setState(() {
-                                            _searchController.clear();
-                                            _searchQuery = '';
-                                          });
-                                        },
-                                      )
-                                    : null,
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                              ),
-                              onChanged: (value) => setState(() => _searchQuery = value),
+                              ],
                             ),
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${widget.songs.length} tracks • $totalDuration',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
+                      ),
+                      const SizedBox(height: 20),
 
-                    // Action Buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildHeaderActionButton(
-                            text: 'Play All',
-                            icon: 'assets/images/play.png',
-                            onTap: _playAll,
-                            isPrimary: true,
-                            accentColor: accentColor,
+                      // Search Bar
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                              ),
+                              child: TextField(
+                                controller: _searchController,
+                                style: TextStyle(fontSize: 15, color: Theme.of(context).colorScheme.onSurface),
+                                decoration: InputDecoration(
+                                  hintText: 'Search collection...',
+                                  hintStyle: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                  ),
+                                  prefixIcon: Padding(
+                                    padding: const EdgeInsets.all(12.0),
+                                    child: Image.asset(
+                                      'assets/images/search.png',
+                                      width: 20,
+                                      height: 20,
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                  suffixIcon: _searchQuery.isNotEmpty
+                                      ? IconButton(
+                                          icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                                          onPressed: () {
+                                            setState(() {
+                                              _searchController.clear();
+                                              _searchQuery = '';
+                                            });
+                                          },
+                                        )
+                                      : null,
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                ),
+                                onChanged: (value) => setState(() => _searchQuery = value),
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildHeaderActionButton(
-                            text: 'Shuffle',
-                            icon: 'assets/images/shuffle.png',
-                            onTap: _shuffleAll,
-                            isPrimary: false,
-                            accentColor: accentColor,
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Action Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildHeaderActionButton(
+                              text: 'Play All',
+                              icon: 'assets/images/play.png',
+                              onTap: _playAll,
+                              isPrimary: true,
+                              accentColor: accentColor,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildHeaderActionButton(
+                              text: 'Shuffle',
+                              icon: 'assets/images/shuffle.png',
+                              onTap: _shuffleAll,
+                              isPrimary: false,
+                              accentColor: accentColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
       ),
-     ),
     );
   }
 
@@ -395,7 +415,11 @@ class _AllSongsPageState extends State<AllSongsPage> {
                 const SizedBox(width: 8),
                 Text(
                   text,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                  style: TextStyle(
+                    color: isPrimary ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
               ],
             ),
@@ -430,9 +454,9 @@ class _AllSongsPageState extends State<AllSongsPage> {
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
-            color: isCurrent ? accentColor.withOpacity(0.2) : Colors.white.withOpacity(0.05),
+            color: isCurrent ? accentColor.withOpacity(0.2) : Theme.of(context).colorScheme.surface.withOpacity(0.05),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1)),
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -472,7 +496,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w600,
-                color: isCurrent ? accentColor : Colors.white,
+                color: isCurrent ? accentColor : Theme.of(context).colorScheme.onSurface,
                 fontSize: 15,
               ),
             ),
@@ -483,14 +507,20 @@ class _AllSongsPageState extends State<AllSongsPage> {
                     song.artist,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.white60, fontSize: 13),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      fontSize: 13,
+                    ),
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4.0),
                   child: Text('•', style: TextStyle(color: Colors.white38, fontSize: 10)),
                 ),
-                Text(_formatDuration(song.duration), style: TextStyle(color: Colors.white38, fontSize: 12)),
+                Text(
+                  _formatDuration(song.duration),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 12),
+                ),
               ],
             ),
             trailing: MoreOptionsButton(
@@ -500,7 +530,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
                   'assets/images/favorite.png',
                   width: 20,
                   height: 20,
-                  color: song.isFavorite ? Colors.red : Colors.white38,
+                  color: song.isFavorite ? Colors.red : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                 ),
                 onPressed: () => audioController.toggleFavorite(song),
               ),
@@ -517,19 +547,22 @@ class _AllSongsPageState extends State<AllSongsPage> {
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
           return Shimmer.fromColors(
-            baseColor: Colors.white.withOpacity(0.1),
-            highlightColor: Colors.white.withOpacity(0.05),
+            baseColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+            highlightColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
             child: Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(16)),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Row(
                 children: [
                   Container(
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
+                      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),

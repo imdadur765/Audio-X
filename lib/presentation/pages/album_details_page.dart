@@ -82,7 +82,10 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
       body: Stack(
         children: [
           // Dark Glass Background (consitent with Home/Artist)
-          GlassBackground(artworkPath: widget.songs.firstOrNull?.localArtworkPath),
+          GlassBackground(
+            artworkPath: widget.songs.firstOrNull?.localArtworkPath,
+            isDark: Theme.of(context).brightness == Brightness.dark,
+          ),
 
           CustomScrollView(
             controller: _scrollController,
@@ -92,15 +95,27 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                 expandedHeight: 320,
                 pinned: true,
                 stretch: true,
-                backgroundColor: opacity > 0.8 ? Colors.black.withValues(alpha: 0.4) : Colors.transparent,
+                backgroundColor: opacity > 0.8
+                    ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.8)
+                    : Colors.transparent,
                 elevation: 0,
                 leading: IconButton(
-                  icon: Image.asset('assets/images/back.png', width: 24, height: 24, color: Colors.white),
+                  icon: Image.asset(
+                    'assets/images/back.png',
+                    width: 24,
+                    height: 24,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                   onPressed: () => Navigator.pop(context),
                 ),
                 actions: [
                   IconButton(
-                    icon: Image.asset('assets/images/more.png', width: 24, height: 24, color: Colors.white),
+                    icon: Image.asset(
+                      'assets/images/more.png',
+                      width: 24,
+                      height: 24,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                     onPressed: _showOptionsMenu,
                   ),
                 ],
@@ -113,7 +128,11 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                         duration: const Duration(milliseconds: 200),
                         child: Text(
                           widget.albumName,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                       background: Stack(
@@ -129,8 +148,8 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                                 end: Alignment.bottomCenter,
                                 colors: [
                                   Colors.transparent,
-                                  Colors.black.withValues(alpha: 0.5),
-                                  Colors.black.withValues(alpha: 0.8),
+                                  Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
+                                  Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
                                 ],
                               ),
                             ),
@@ -225,12 +244,18 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
         children: [
           Text(
             widget.albumName,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 28,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.5,
-              shadows: [Shadow(offset: Offset(0, 2), blurRadius: 4, color: Colors.black54)],
+              shadows: [
+                Shadow(
+                  offset: Offset(0, 2),
+                  blurRadius: 4,
+                  color: Theme.of(context).shadowColor.withValues(alpha: 0.5),
+                ),
+              ],
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -244,11 +269,11 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
             child: Text(
               _artistName,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.9),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 decoration: TextDecoration.underline,
-                decorationColor: Colors.white70,
+                decorationColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
               maxLines: 1,
@@ -273,18 +298,27 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Image.asset(icon, width: 16, height: 16, color: Colors.white70),
+          Image.asset(
+            icon,
+            width: 16,
+            height: 16,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
           const SizedBox(width: 6),
           Text(
             text,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -351,12 +385,19 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
           child: Container(
             height: 56,
             decoration: BoxDecoration(
-              color: isPrimary ? Colors.deepPurple.withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.1),
+              color: isPrimary
+                  ? Colors.deepPurple.withValues(alpha: 0.8)
+                  : Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: isPrimary ? Colors.transparent : Colors.white.withValues(alpha: 0.1), width: 1),
+              border: Border.all(
+                color: isPrimary ? Colors.transparent : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                width: 1,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: isPrimary ? Colors.deepPurple.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.1),
+                  color: isPrimary
+                      ? Colors.deepPurple.withValues(alpha: 0.3)
+                      : Theme.of(context).shadowColor.withValues(alpha: 0.1),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -365,13 +406,18 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset(iconPath, width: 24, height: 24, color: Colors.white),
+                Image.asset(
+                  iconPath,
+                  width: 24,
+                  height: 24,
+                  color: isPrimary ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                ),
                 if (isPrimary) ...[
                   const SizedBox(width: 12),
                   Text(
                     text,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: isPrimary ? Colors.white : Theme.of(context).colorScheme.onSurface,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.5,
@@ -392,11 +438,15 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
                 'Tracks',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -411,7 +461,7 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                 decoration: BoxDecoration(
                   color: isCurrentlyPlaying
                       ? Colors.deepPurple.withValues(alpha: 0.3)
-                      : Colors.white.withValues(alpha: 0.05),
+                      : Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isCurrentlyPlaying ? Colors.deepPurple.withValues(alpha: 0.5) : Colors.transparent,
@@ -499,7 +549,9 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    color: isCurrentlyPlaying ? Colors.deepPurple.shade100 : Colors.white,
+                                    color: isCurrentlyPlaying
+                                        ? Colors.deepPurple.shade100
+                                        : Theme.of(context).colorScheme.onSurface,
                                     fontWeight: isCurrentlyPlaying ? FontWeight.w700 : FontWeight.w600,
                                     fontSize: 15,
                                   ),
@@ -510,7 +562,9 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    color: isCurrentlyPlaying ? Colors.deepPurple.shade200 : Colors.white70,
+                                    color: isCurrentlyPlaying
+                                        ? Colors.deepPurple.shade200
+                                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                     fontSize: 13,
                                   ),
                                 ),
@@ -593,9 +647,9 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
           filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.85),
+              color: Theme.of(context).cardColor.withValues(alpha: 0.95),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+              border: Border(top: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1))),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -605,7 +659,7 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -622,7 +676,7 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.3),
+                              color: Theme.of(context).shadowColor.withValues(alpha: 0.3),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -644,7 +698,7 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                                   'assets/images/album.png',
                                   width: 28,
                                   height: 28,
-                                  color: Colors.white54,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
                                 ),
                               ),
                         ),
@@ -656,14 +710,22 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                           children: [
                             Text(
                               widget.albumName,
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
                             Text(
                               _artistName,
-                              style: TextStyle(fontSize: 14, color: Colors.white70, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                fontWeight: FontWeight.w600,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -674,7 +736,7 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
                   ),
                 ),
                 const SizedBox(height: 24),
-                Divider(height: 1, color: Colors.white.withValues(alpha: 0.1)),
+                Divider(height: 1, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
                 // Options
                 _buildOptionTile(
                   iconPath: 'assets/images/playlist_open.png',
@@ -725,12 +787,15 @@ class _AlbumDetailsPageState extends State<AlbumDetailsPage> with SingleTickerPr
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(8)),
-        child: Image.asset(iconPath, width: 24, height: 24, color: Colors.white),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Image.asset(iconPath, width: 24, height: 24, color: Theme.of(context).colorScheme.onSurface),
       ),
       title: Text(
         title,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.white),
+        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Theme.of(context).colorScheme.onSurface),
       ),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),

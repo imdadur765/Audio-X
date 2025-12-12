@@ -121,7 +121,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
               GlassBackground(
                 artworkPath: artworkPath,
                 accentColor: accentColor,
-                isDark: true, // Force dark mode for premium look
+                isDark: Theme.of(context).brightness == Brightness.dark,
               ),
 
               // Content
@@ -154,15 +154,22 @@ class _AlbumsPageState extends State<AlbumsPage> {
                               ),
                             ),
                             const SizedBox(height: 20),
-                            const Text(
+                            Text(
                               'No Albums Found',
-                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
                             ),
                             const SizedBox(height: 8),
-                            const Text(
+                            Text(
                               'Add some music to see your albums',
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.white70, fontSize: 14),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                fontSize: 14,
+                              ),
                             ),
                           ],
                         ),
@@ -177,7 +184,13 @@ class _AlbumsPageState extends State<AlbumsPage> {
                         if (albums.isEmpty) {
                           return SliverFillRemaining(
                             child: Center(
-                              child: Text('No results found', style: TextStyle(fontSize: 16, color: Colors.white70)),
+                              child: Text(
+                                'No results found',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                ),
+                              ),
                             ),
                           );
                         }
@@ -206,7 +219,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
       expandedHeight: 220,
       floating: false,
       pinned: true,
-      backgroundColor: isScrolled ? Colors.black.withValues(alpha: 0.4) : Colors.transparent,
+      backgroundColor: isScrolled ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.8) : Colors.transparent,
       elevation: 0,
       flexibleSpace: ClipRRect(
         child: BackdropFilter(
@@ -215,9 +228,13 @@ class _AlbumsPageState extends State<AlbumsPage> {
             title: AnimatedOpacity(
               opacity: isScrolled ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 200),
-              child: const Text(
+              child: Text(
                 'Albums',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
             ),
             background: Container(
@@ -227,7 +244,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
                   end: Alignment.bottomCenter,
                   colors: [
                     accentColor.withValues(alpha: 0.6),
-                    Colors.black.withValues(alpha: 0.2), // Darker fade
+                    Theme.of(context).colorScheme.surface.withValues(alpha: 0.2), // Darker fade
                     Colors.transparent,
                   ],
                   stops: const [0.0, 0.6, 1.0],
@@ -259,13 +276,19 @@ class _AlbumsPageState extends State<AlbumsPage> {
                                 ),
                               ),
                               const SizedBox(width: 16),
-                              const Text(
+                              Text(
                                 'Albums',
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                   fontSize: 32,
                                   fontWeight: FontWeight.bold,
-                                  shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26)],
+                                  shadows: [
+                                    Shadow(
+                                      offset: Offset(0, 2),
+                                      blurRadius: 8,
+                                      color: Theme.of(context).shadowColor.withValues(alpha: 0.3),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -274,9 +297,9 @@ class _AlbumsPageState extends State<AlbumsPage> {
                           Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
+                              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white.withOpacity(0.1)),
+                              border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
                             ),
                             child: Row(
                               children: [
@@ -299,7 +322,14 @@ class _AlbumsPageState extends State<AlbumsPage> {
                       ),
 
                       const SizedBox(height: 8),
-                      const Text('Your music collection', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Your music collection',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          fontSize: 16,
+                        ),
+                      ),
                       const SizedBox(height: 16),
                       // Search bar in glass
                       Row(
@@ -308,9 +338,11 @@ class _AlbumsPageState extends State<AlbumsPage> {
                             child: Container(
                               height: 48,
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.1),
+                                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                                ),
                               ),
                               child: Theme(
                                 data: Theme.of(context).copyWith(
@@ -322,10 +354,12 @@ class _AlbumsPageState extends State<AlbumsPage> {
                                 ),
                                 child: TextField(
                                   controller: _searchController,
-                                  style: const TextStyle(fontSize: 15, color: Colors.white),
+                                  style: TextStyle(fontSize: 15, color: Theme.of(context).colorScheme.onSurface),
                                   decoration: InputDecoration(
                                     hintText: 'Search albums...',
-                                    hintStyle: const TextStyle(color: Colors.white38),
+                                    hintStyle: TextStyle(
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                    ),
                                     prefixIcon: Padding(
                                       padding: const EdgeInsets.all(12.0),
                                       child: Image.asset(
@@ -337,7 +371,11 @@ class _AlbumsPageState extends State<AlbumsPage> {
                                     ),
                                     suffixIcon: _searchQuery.isNotEmpty
                                         ? IconButton(
-                                            icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                                            icon: Icon(
+                                              Icons.close_rounded,
+                                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                              size: 20,
+                                            ),
                                             onPressed: () {
                                               setState(() {
                                                 _searchController.clear();
@@ -364,9 +402,11 @@ class _AlbumsPageState extends State<AlbumsPage> {
                             icon: Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.1),
+                                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                                ),
                               ),
                               child: Image.asset(
                                 'assets/images/sort.png',
@@ -380,10 +420,10 @@ class _AlbumsPageState extends State<AlbumsPage> {
                                 _sortOrder = order;
                               });
                             },
-                            color: const Color(0xFF1E1E1E),
+                            color: Theme.of(context).cardColor,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
-                              side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                              side: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
                             ),
                             offset: const Offset(0, 40),
                             itemBuilder: (context) => [
@@ -409,7 +449,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
   PopupMenuItem<SortOrder> _buildPopupItem(SortOrder value, String text) {
     return PopupMenuItem(
       value: value,
-      child: Text(text, style: const TextStyle(color: Colors.white)),
+      child: Text(text, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
     );
   }
 
@@ -422,9 +462,9 @@ class _AlbumsPageState extends State<AlbumsPage> {
       onTap: () => _navigateToAlbumDetails(context, albumName, songs, heroTag: 'album_grid_$albumName'),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -453,7 +493,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, Colors.black.withOpacity(0.3)],
+                            colors: [Colors.transparent, Theme.of(context).colorScheme.surface.withValues(alpha: 0.3)],
                           ),
                         ),
                       ),
@@ -470,14 +510,21 @@ class _AlbumsPageState extends State<AlbumsPage> {
                 children: [
                   Text(
                     albumName,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${songs.length} ${songs.length == 1 ? 'song' : 'songs'}',
-                    style: TextStyle(fontSize: 12, color: Colors.white60),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
                   ),
                 ],
               ),
@@ -490,9 +537,14 @@ class _AlbumsPageState extends State<AlbumsPage> {
 
   Widget _buildPlaceholderArt() {
     return Container(
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.1)),
+      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1)),
       child: Center(
-        child: Image.asset('assets/images/album.png', width: 48, height: 48, color: Colors.white.withOpacity(0.3)),
+        child: Image.asset(
+          'assets/images/album.png',
+          width: 48,
+          height: 48,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+        ),
       ),
     );
   }
@@ -508,10 +560,15 @@ class _AlbumsPageState extends State<AlbumsPage> {
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isSelected ? accentColor.withOpacity(0.2) : Colors.transparent,
+          color: isSelected ? accentColor.withValues(alpha: 0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Image.asset(imagePath, width: 20, height: 20, color: isSelected ? accentColor : Colors.white60),
+        child: Image.asset(
+          imagePath,
+          width: 20,
+          height: 20,
+          color: isSelected ? accentColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+        ),
       ),
     );
   }
@@ -561,9 +618,9 @@ class _AlbumsPageState extends State<AlbumsPage> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -583,11 +640,11 @@ class _AlbumsPageState extends State<AlbumsPage> {
         ),
         title: Text(
           albumName,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.white),
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Theme.of(context).colorScheme.onSurface),
         ),
         subtitle: Text(
           '${songs.length} ${songs.length == 1 ? 'song' : 'songs'}',
-          style: TextStyle(color: Colors.white60, fontSize: 13),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 13),
         ),
         trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white38),
         onTap: () => _navigateToAlbumDetails(context, albumName, songs, heroTag: 'album_list_$albumName'),
@@ -605,26 +662,35 @@ class _AlbumsPageState extends State<AlbumsPage> {
       ),
       delegate: SliverChildBuilderDelegate((context, index) {
         return Shimmer.fromColors(
-          baseColor: Colors.white.withOpacity(0.1),
-          highlightColor: Colors.white.withOpacity(0.05),
+          baseColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+          highlightColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 height: 160,
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
               ),
               const SizedBox(height: 12),
               Container(
                 height: 16,
                 width: 120,
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
               const SizedBox(height: 6),
               Container(
                 height: 12,
                 width: 80,
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
             ],
           ),
@@ -637,18 +703,24 @@ class _AlbumsPageState extends State<AlbumsPage> {
     return SliverList(
       delegate: SliverChildBuilderDelegate((context, index) {
         return Shimmer.fromColors(
-          baseColor: Colors.white.withOpacity(0.1),
-          highlightColor: Colors.white.withOpacity(0.05),
+          baseColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+          highlightColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
           child: Container(
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Row(
               children: [
                 Container(
                   width: 56,
                   height: 56,
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -658,13 +730,19 @@ class _AlbumsPageState extends State<AlbumsPage> {
                       Container(
                         height: 16,
                         width: 150,
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Container(
                         height: 12,
                         width: 100,
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
                       ),
                     ],
                   ),

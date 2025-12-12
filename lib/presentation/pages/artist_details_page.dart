@@ -54,7 +54,10 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
 
     return Stack(
       children: [
-        GlassBackground(artworkPath: currentSong?.localArtworkPath),
+        GlassBackground(
+          artworkPath: currentSong?.localArtworkPath,
+          isDark: Theme.of(context).brightness == Brightness.dark,
+        ),
         Scaffold(
           backgroundColor: Colors.transparent,
           body: FutureBuilder<Artist?>(
@@ -145,13 +148,18 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
       expandedHeight: 350,
       pinned: true,
       floating: false,
-      backgroundColor: isScrolled ? Colors.black.withValues(alpha: 0.4) : Colors.transparent,
+      backgroundColor: isScrolled ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.8) : Colors.transparent,
       elevation: 0,
       shadowColor: Colors.transparent,
       systemOverlayStyle: SystemUiOverlayStyle.light,
-      iconTheme: const IconThemeData(color: Colors.white),
+      iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
       leading: IconButton(
-        icon: Image.asset('assets/images/back.png', width: 24, height: 24, color: Colors.white),
+        icon: Image.asset(
+          'assets/images/back.png',
+          width: 24,
+          height: 24,
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
         onPressed: () => Navigator.of(context).pop(),
       ),
       flexibleSpace: LayoutBuilder(
@@ -172,7 +180,11 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                   duration: const Duration(milliseconds: 200),
                   child: Text(
                     artist.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 18,
+                    ),
                   ),
                 ),
                 background: Stack(
@@ -197,7 +209,7 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
+                          colors: [Colors.transparent, Theme.of(context).colorScheme.surface.withValues(alpha: 0.8)],
                           stops: const [0.6, 1.0],
                         ),
                       ),
@@ -217,11 +229,17 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                           children: [
                             Text(
                               artist.name,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black45)],
+                                color: Theme.of(context).colorScheme.onSurface,
+                                shadows: [
+                                  Shadow(
+                                    offset: const Offset(0, 2),
+                                    blurRadius: 8,
+                                    color: Theme.of(context).shadowColor.withValues(alpha: 0.5),
+                                  ),
+                                ],
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -654,11 +672,15 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                   child: Container(
                     height: 56,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
+                      border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5)),
+                        BoxShadow(
+                          color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
                       ],
                     ),
                     child: Material(
@@ -686,9 +708,9 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                   child: Container(
                     height: 56,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
+                      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
                     ),
                     child: Material(
                       color: Colors.transparent,
@@ -698,11 +720,20 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Image.asset('assets/images/playlist_open.png', width: 20, height: 20, color: Colors.white),
+                            Image.asset(
+                              'assets/images/playlist_open.png',
+                              width: 20,
+                              height: 20,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
                             const SizedBox(height: 2),
-                            const Text(
+                            Text(
                               'Add',
-                              style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ],
                         ),
@@ -730,10 +761,14 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
             return Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               decoration: BoxDecoration(
-                color: isCurrentlyPlaying ? Colors.deepPurple.withOpacity(0.2) : Colors.white.withOpacity(0.05),
+                color: isCurrentlyPlaying
+                    ? Colors.deepPurple.withValues(alpha: 0.2)
+                    : Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isCurrentlyPlaying ? Colors.deepPurple.withOpacity(0.5) : Colors.white.withOpacity(0.05),
+                  color: isCurrentlyPlaying
+                      ? Colors.deepPurple.withValues(alpha: 0.5)
+                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
                   width: 1.5,
                 ),
               ),
@@ -795,7 +830,9 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: isCurrentlyPlaying ? Colors.yellowAccent : Colors.white,
+                                  color: isCurrentlyPlaying
+                                      ? Colors.yellowAccent
+                                      : Theme.of(context).colorScheme.onSurface,
                                   fontWeight: isCurrentlyPlaying ? FontWeight.w700 : FontWeight.w600,
                                   fontSize: 15,
                                 ),
@@ -806,7 +843,9 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: isCurrentlyPlaying ? Colors.white70 : Colors.white54,
+                                  color: isCurrentlyPlaying
+                                      ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)
+                                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54),
                                   fontSize: 13,
                                 ),
                               ),
@@ -829,7 +868,7 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                                       'assets/images/equalizer.png',
                                       width: 18,
                                       height: 18,
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onSurface,
                                     ),
                                   );
                                 },
@@ -838,7 +877,9 @@ class _ArtistDetailsPageState extends State<ArtistDetailsPage> {
                             Text(
                               _formatDuration(song.duration),
                               style: TextStyle(
-                                color: isCurrentlyPlaying ? Colors.yellowAccent : Colors.white70,
+                                color: isCurrentlyPlaying
+                                    ? Colors.yellowAccent
+                                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                 fontWeight: isCurrentlyPlaying ? FontWeight.w700 : FontWeight.w500,
                                 fontSize: 13,
                               ),

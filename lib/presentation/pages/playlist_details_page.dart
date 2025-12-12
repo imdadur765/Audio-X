@@ -80,20 +80,23 @@ class _PlaylistDetailsPageState extends State<PlaylistDetailsPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey.shade900,
+        backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade900 : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          side: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
         ),
-        title: const Text('Delete Playlist?', style: TextStyle(color: Colors.white)),
+        title: Text('Delete Playlist?', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'Are you sure you want to delete "${widget.title}"? This action cannot be undone.',
-          style: const TextStyle(color: Colors.white70),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),

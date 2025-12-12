@@ -61,16 +61,6 @@ class SettingsPage extends StatelessWidget {
             subtitle: _getThemeName(context.watch<ThemeController>().themeMode),
             onTap: () => _showThemeDialog(context),
           ),
-          if (context.watch<ThemeController>().themeMode == ThemeMode.dark)
-            _buildSwitchTile(
-              context,
-              icon: Icons.brightness_2_outlined,
-              iconColor: Colors.grey,
-              title: 'OLED Mode',
-              subtitle: 'Pure black background',
-              value: context.watch<ThemeController>().isOledMode,
-              onChanged: (val) => context.read<ThemeController>().toggleOledMode(val),
-            ),
           _buildSettingsTile(
             icon: Icons.text_fields,
             iconColor: Colors.teal,
@@ -252,11 +242,10 @@ class SettingsPage extends StatelessWidget {
 
   String _getThemeName(ThemeMode mode) {
     switch (mode) {
-      case ThemeMode.system:
-        return 'System Default';
       case ThemeMode.light:
         return 'Light';
       case ThemeMode.dark:
+      default:
         return 'Dark';
     }
   }
@@ -270,9 +259,8 @@ class SettingsPage extends StatelessWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildThemeOption(context, 'System Default', ThemeMode.system),
-              _buildThemeOption(context, 'Light', ThemeMode.light),
-              _buildThemeOption(context, 'Dark', ThemeMode.dark),
+              _buildThemeOption(context, 'Dark', ThemeMode.dark, Icons.dark_mode),
+              _buildThemeOption(context, 'Light', ThemeMode.light, Icons.light_mode),
             ],
           ),
         );
@@ -280,27 +268,39 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildThemeOption(BuildContext context, String title, ThemeMode mode) {
+  Widget _buildThemeOption(BuildContext context, String title, ThemeMode mode, IconData icon) {
     final currentMode = context.read<ThemeController>().themeMode;
     final isSelected = currentMode == mode;
 
-    return ListTile(
-      title: Text(title),
-      leading: Radio<ThemeMode>(
-        value: mode,
-        groupValue: currentMode,
-        onChanged: (val) {
-          if (val != null) {
-            context.read<ThemeController>().setThemeMode(val);
-            Navigator.pop(context);
-          }
-        },
-        activeColor: Colors.deepPurple,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: isSelected ? Colors.deepPurple.withValues(alpha: 0.15) : Colors.grey.shade800,
+        borderRadius: BorderRadius.circular(12),
+        border: isSelected ? Border.all(color: Colors.deepPurple, width: 2) : null,
       ),
-      onTap: () {
-        context.read<ThemeController>().setThemeMode(mode);
-        Navigator.pop(context);
-      },
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.deepPurple.withValues(alpha: 0.2) : Colors.grey.shade700,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: isSelected ? Colors.deepPurple : Colors.grey),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? Colors.deepPurple : null,
+          ),
+        ),
+        trailing: isSelected ? const Icon(Icons.check_circle, color: Colors.deepPurple) : null,
+        onTap: () {
+          context.read<ThemeController>().setThemeMode(mode);
+          Navigator.pop(context);
+        },
+      ),
     );
   }
 

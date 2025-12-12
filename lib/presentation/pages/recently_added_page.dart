@@ -288,7 +288,10 @@ class _RecentlyAddedPageState extends State<RecentlyAddedPage> {
                 const SizedBox(height: 2),
                 Text(
                   'Added ${_formatDate(song.dateAdded)}',
-                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
@@ -299,7 +302,7 @@ class _RecentlyAddedPageState extends State<RecentlyAddedPage> {
                   'assets/images/favorite.png',
                   width: 24,
                   height: 24,
-                  color: song.isFavorite ? Colors.red : Colors.white38,
+                  color: song.isFavorite ? Colors.red : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
                 ),
                 onPressed: () => audioController.toggleFavorite(song),
               ),

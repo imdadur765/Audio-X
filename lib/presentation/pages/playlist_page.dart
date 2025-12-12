@@ -182,15 +182,21 @@ class _PlaylistPageState extends State<PlaylistPage> {
                             child: Container(
                               padding: const EdgeInsets.all(12), // Slightly more padding
                               decoration: BoxDecoration(
-                                color: isSelected ? Colors.deepPurple.withOpacity(0.4) : Colors.white.withOpacity(0.1),
+                                color: isSelected
+                                    ? Colors.deepPurple.withOpacity(0.4)
+                                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                                 border: isSelected
                                     ? Border.all(color: Colors.deepPurple, width: 2)
-                                    : Border.all(color: Colors.white.withOpacity(0.05)),
+                                    : Border.all(
+                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+                                      ),
                               ),
                               child: Image.asset(
                                 'assets/images/$iconName',
-                                color: isSelected ? Colors.white : Colors.white60,
+                                color: isSelected
+                                    ? Colors.white
+                                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
                           );
@@ -442,7 +448,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
                                         ? IconButton(
                                             icon: Image.asset(
                                               'assets/images/home_close.png',
-                                              color: Colors.white70,
+                                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                               width: 20,
                                               height: 20,
                                             ),
@@ -465,24 +471,30 @@ class _PlaylistPageState extends State<PlaylistPage> {
                             color: const Color(0xFF1E1E1E),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
-                              side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                              side: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
                             ),
                             itemBuilder: (context) => [
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: SortOrder.newest,
-                                child: Text('Newest First', style: TextStyle(color: Colors.white)),
+                                child: Text(
+                                  'Newest First',
+                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                                ),
                               ),
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: SortOrder.oldest,
-                                child: Text('Oldest First', style: TextStyle(color: Colors.white)),
+                                child: Text(
+                                  'Oldest First',
+                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                                ),
                               ),
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: SortOrder.aToZ,
-                                child: Text('A to Z', style: TextStyle(color: Colors.white)),
+                                child: Text('A to Z', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                               ),
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: SortOrder.zToA,
-                                child: Text('Z to A', style: TextStyle(color: Colors.white)),
+                                child: Text('Z to A', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                               ),
                             ],
                             child: Container(

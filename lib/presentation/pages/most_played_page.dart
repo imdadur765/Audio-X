@@ -336,7 +336,7 @@ class _MostPlayedPageState extends State<MostPlayedPage> {
                   'assets/images/favorite.png',
                   width: 24,
                   height: 24,
-                  color: song.isFavorite ? Colors.red : Colors.white38,
+                  color: song.isFavorite ? Colors.red : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
                 ),
                 onPressed: () => audioController.toggleFavorite(song),
               ),

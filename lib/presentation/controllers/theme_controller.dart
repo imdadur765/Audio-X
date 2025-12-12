@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
 class ThemeController extends ChangeNotifier {
-  ThemeMode _themeMode = ThemeMode.system;
+  ThemeMode _themeMode = ThemeMode.dark; // Default to Dark Mode
 
   /// If true, use pure black for dark mode backgrounds (OLED save)
   bool _isOledMode = false;
@@ -16,7 +16,7 @@ class ThemeController extends ChangeNotifier {
 
   Future<void> _loadSettings() async {
     final box = await Hive.openBox('settings');
-    final modeString = box.get('themeMode', defaultValue: 'system');
+    final modeString = box.get('themeMode', defaultValue: 'dark'); // Default to dark
     _isOledMode = box.get('isOledMode', defaultValue: false);
 
     switch (modeString) {
@@ -24,10 +24,8 @@ class ThemeController extends ChangeNotifier {
         _themeMode = ThemeMode.light;
         break;
       case 'dark':
+      default: // Fallback to dark for any unknown value
         _themeMode = ThemeMode.dark;
-        break;
-      default:
-        _themeMode = ThemeMode.system;
     }
     notifyListeners();
   }
@@ -41,11 +39,8 @@ class ThemeController extends ChangeNotifier {
         modeString = 'light';
         break;
       case ThemeMode.dark:
+      default: // Save as dark for any mode including system
         modeString = 'dark';
-        break;
-      case ThemeMode.system:
-        modeString = 'system';
-        break;
     }
     await box.put('themeMode', modeString);
     notifyListeners();

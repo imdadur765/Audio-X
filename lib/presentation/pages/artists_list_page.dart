@@ -573,9 +573,11 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
           },
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.2), // Glass style
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.black.withValues(alpha: 0.2)
+                  : Colors.grey.withValues(alpha: 0.1), // Glass style
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+              border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
@@ -745,7 +747,12 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
         ),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Image.asset('assets/images/artist_open.png', width: 28, height: 28, color: Colors.white54),
+      child: Image.asset(
+        'assets/images/artist_open.png',
+        width: 28,
+        height: 28,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+      ),
     );
   }
 
@@ -754,7 +761,10 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
       baseColor: Colors.grey[300]!,
       highlightColor: Colors.grey[100]!,
       child: Container(
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+        ),
       ),
     );
   }
@@ -768,7 +778,14 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
           colors: [Colors.deepPurple.shade300, Colors.pink.shade400],
         ),
       ),
-      child: Center(child: Image.asset('assets/images/artist_open.png', width: 40, height: 40, color: Colors.white54)),
+      child: Center(
+        child: Image.asset(
+          'assets/images/artist_open.png',
+          width: 40,
+          height: 40,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+        ),
+      ),
     );
   }
 }

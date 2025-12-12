@@ -65,8 +65,8 @@ class SettingsPage extends StatelessWidget {
             icon: Icons.text_fields,
             iconColor: Colors.teal,
             title: 'Font Size',
-            subtitle: 'Coming Soon',
-            isComingSoon: true,
+            subtitle: _getFontSizeName(context.watch<ThemeController>().fontScale),
+            onTap: () => _showFontSizeDialog(context),
           ),
 
           const SizedBox(height: 24),
@@ -248,6 +248,67 @@ class SettingsPage extends StatelessWidget {
       default:
         return 'Dark';
     }
+  }
+
+  String _getFontSizeName(double scale) {
+    if (scale <= 0.87) return 'Small';
+    if (scale <= 0.92) return 'Default';
+    return 'Large';
+  }
+
+  void _showFontSizeDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Font Size'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildFontSizeOption(context, 'Small', 0.85, Icons.text_decrease),
+              _buildFontSizeOption(context, 'Default', 0.9, Icons.text_fields),
+              _buildFontSizeOption(context, 'Large', 1.0, Icons.text_increase),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFontSizeOption(BuildContext context, String title, double scale, IconData icon) {
+    final currentScale = context.read<ThemeController>().fontScale;
+    final isSelected = (currentScale - scale).abs() < 0.1;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: isSelected ? Colors.teal.withValues(alpha: 0.15) : Colors.grey.shade800,
+        borderRadius: BorderRadius.circular(12),
+        border: isSelected ? Border.all(color: Colors.teal, width: 2) : null,
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.teal.withValues(alpha: 0.2) : Colors.grey.shade700,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: isSelected ? Colors.teal : Colors.grey),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? Colors.teal : null,
+          ),
+        ),
+        trailing: isSelected ? const Icon(Icons.check_circle, color: Colors.teal) : null,
+        onTap: () {
+          context.read<ThemeController>().setFontScale(scale);
+          Navigator.pop(context);
+        },
+      ),
+    );
   }
 
   void _showThemeDialog(BuildContext context) {

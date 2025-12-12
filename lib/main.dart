@@ -66,6 +66,12 @@ class AudioXApp extends StatelessWidget {
           themeMode: themeController.themeMode,
           routerConfig: appRouter,
           debugShowCheckedModeBanner: false,
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(themeController.fontScale)),
+              child: child!,
+            );
+          },
         );
       },
     );

@@ -7,8 +7,12 @@ class ThemeController extends ChangeNotifier {
   /// If true, use pure black for dark mode backgrounds (OLED save)
   bool _isOledMode = false;
 
+  /// Font scale factor (0.85 = Small, 0.9 = Default, 0.95 = Large)
+  double _fontScale = 0.9; // Default is current look
+
   ThemeMode get themeMode => _themeMode;
   bool get isOledMode => _isOledMode;
+  double get fontScale => _fontScale;
 
   ThemeController() {
     _loadSettings();
@@ -18,6 +22,7 @@ class ThemeController extends ChangeNotifier {
     final box = await Hive.openBox('settings');
     final modeString = box.get('themeMode', defaultValue: 'dark'); // Default to dark
     _isOledMode = box.get('isOledMode', defaultValue: false);
+    _fontScale = box.get('fontScale', defaultValue: 0.9); // Default to 0.9
 
     switch (modeString) {
       case 'light':
@@ -50,6 +55,13 @@ class ThemeController extends ChangeNotifier {
     _isOledMode = enabled;
     final box = await Hive.openBox('settings');
     await box.put('isOledMode', enabled);
+    notifyListeners();
+  }
+
+  Future<void> setFontScale(double scale) async {
+    _fontScale = scale.clamp(0.85, 1.0); // Tight range
+    final box = await Hive.openBox('settings');
+    await box.put('fontScale', _fontScale);
     notifyListeners();
   }
 

@@ -107,7 +107,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
                         ],
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
@@ -210,14 +210,17 @@ class ScaffoldWithNavBar extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                color: isActive
-                    ? accentColor
-                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5), // Dynamic Text
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                  color: isActive
+                      ? accentColor
+                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5), // Dynamic Text
+                ),
               ),
             ),
           ],

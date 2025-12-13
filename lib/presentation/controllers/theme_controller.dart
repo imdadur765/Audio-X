@@ -15,10 +15,10 @@ class ThemeController extends ChangeNotifier {
   double get fontScale => _fontScale;
 
   ThemeController() {
-    _loadSettings();
+    loadSettings();
   }
 
-  Future<void> _loadSettings() async {
+  Future<void> loadSettings() async {
     final box = await Hive.openBox('settings');
     final modeString = box.get('themeMode', defaultValue: 'dark'); // Default to dark
     _isOledMode = box.get('isOledMode', defaultValue: false);

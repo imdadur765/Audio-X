@@ -22,6 +22,9 @@ import '../presentation/pages/recently_played_page.dart';
 import '../presentation/pages/playlist_details_page.dart';
 import '../presentation/pages/profile_page.dart';
 import '../presentation/pages/settings_page.dart';
+import '../presentation/pages/about/privacy_policy_page.dart';
+import '../presentation/pages/about/developer_page.dart';
+import '../presentation/pages/about/app_info_page.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/home',
@@ -263,7 +266,16 @@ final GoRouter appRouter = GoRouter(
       },
     ),
     GoRoute(path: '/profile', name: 'profile', builder: (context, state) => const ProfilePage()),
-    GoRoute(path: '/settings', name: 'settings', builder: (context, state) => const SettingsPage()),
+    GoRoute(
+      path: '/settings',
+      name: 'settings',
+      builder: (context, state) => const SettingsPage(),
+      routes: [
+        GoRoute(path: 'privacy_policy', name: 'privacy_policy', builder: (context, state) => const PrivacyPolicyPage()),
+        GoRoute(path: 'developer', name: 'developer', builder: (context, state) => const DeveloperPage()),
+        GoRoute(path: 'app_info', name: 'app_info', builder: (context, state) => const AppInfoPage()),
+      ],
+    ),
     GoRoute(path: '/equalizer', name: 'equalizer', builder: (context, state) => const EqualizerPage()),
     GoRoute(path: '/search', name: 'search', builder: (context, state) => const SearchPage()),
     GoRoute(

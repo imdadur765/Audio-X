@@ -559,9 +559,9 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
                       value: 'equalizer',
                       child: Row(
                         children: [
-                          Image.asset('assets/images/equalizer.png', width: 20, height: 20, color: Colors.black87),
+                          Image.asset('assets/images/equalizer.png', width: 20, height: 20, color: Theme.of(context).colorScheme.onSurface),
                           const SizedBox(width: 12),
-                          const Text('Equalizer', style: TextStyle(color: Colors.black87)),
+                          Text('Equalizer', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                         ],
                       ),
                     ),
@@ -576,25 +576,60 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
   }
 
   void _showSleepTimerDialog(BuildContext context) {
+    final accentColor = context.read<AudioController>().accentColor;
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Sleep Timer'),
+          backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade900 : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.bedtime, color: accentColor, size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Text('Sleep Timer', style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildSleepTimerOption(context, 15),
-              _buildSleepTimerOption(context, 30),
-              _buildSleepTimerOption(context, 45),
-              _buildSleepTimerOption(context, 60),
-              ListTile(
-                title: const Text('Turn Off Timer', style: TextStyle(color: Colors.red)),
-                leading: const Icon(Icons.close, color: Colors.red),
+              _buildSleepTimerOption(context, 15, accentColor),
+              _buildSleepTimerOption(context, 30, accentColor),
+              _buildSleepTimerOption(context, 45, accentColor),
+              _buildSleepTimerOption(context, 60, accentColor),
+              const SizedBox(height: 8),
+              GestureDetector(
                 onTap: () {
                   context.read<AudioController>().cancelSleepTimer();
                   Navigator.pop(context);
                 },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.close, color: Colors.red, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Turn Off Timer',
+                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -603,21 +638,42 @@ class _PlayerPageState extends State<PlayerPage> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildSleepTimerOption(BuildContext context, int minutes) {
-    return ListTile(
-      title: Text('$minutes minutes'),
-      leading: const Icon(Icons.timer),
+  Widget _buildSleepTimerOption(BuildContext context, int minutes, Color accentColor) {
+    return GestureDetector(
       onTap: () {
         context.read<AudioController>().scheduleSleepTimer(Duration(minutes: minutes));
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Sleep timer set for $minutes minutes'),
-            backgroundColor: Colors.deepPurple,
+            backgroundColor: accentColor,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
       },
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.timer, color: accentColor, size: 20),
+            const SizedBox(width: 12),
+            Text(
+              '$minutes minutes',
+              style: TextStyle(fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.onSurface),
+            ),
+            const Spacer(),
+            Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
+          ],
+        ),
+      ),
     );
   }
 }

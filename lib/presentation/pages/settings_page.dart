@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../data/services/artist_service.dart';
+import '../../data/services/backup_service.dart';
 import '../controllers/audio_controller.dart';
 import '../controllers/theme_controller.dart';
-import 'package:hive/hive.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -84,8 +86,8 @@ class SettingsPage extends StatelessWidget {
             icon: Icons.backup_outlined,
             iconColor: Colors.green,
             title: 'Backup & Restore',
-            subtitle: 'Coming Soon',
-            isComingSoon: true,
+            subtitle: 'Save or restore your data',
+            onTap: () => _showBackupDialog(context),
           ),
 
           const SizedBox(height: 24),
@@ -95,17 +97,23 @@ class SettingsPage extends StatelessWidget {
           _buildSettingsTile(
             icon: Icons.info_outline,
             iconColor: Colors.blueGrey,
-            title: 'App Version',
-            subtitle: '1.0.0',
+            title: 'App Info',
+            subtitle: 'Version 1.0.0',
+            onTap: () => context.goNamed('app_info'),
           ),
           _buildSettingsTile(
-            icon: Icons.code,
-            iconColor: Colors.grey,
+            icon: Icons.person_outline,
+            iconColor: Colors.deepPurple,
             title: 'Developer',
-            subtitle: 'Imdadur Rahman\ngithub.com/imdadur765',
-            onTap: () {
-              /* Open URL */
-            },
+            subtitle: 'Imdadur Rahman',
+            onTap: () => context.goNamed('developer'),
+          ),
+          _buildSettingsTile(
+            icon: Icons.privacy_tip_outlined,
+            iconColor: Colors.teal,
+            title: 'Privacy Policy',
+            subtitle: 'Permissions usage',
+            onTap: () => context.goNamed('privacy_policy'),
           ),
         ],
       ),
@@ -400,6 +408,81 @@ class SettingsPage extends StatelessWidget {
       scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Cache cleared successfully!')));
     } catch (e) {
       scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  void _showBackupDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Backup & Restore'),
+        content: const Text(
+          'Backup your favorites, play history, and settings to a file.\n\nYou can restore this file later or on another device.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _createBackup(context);
+            },
+            child: const Text('Create Backup'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _restoreBackup(context);
+            },
+            child: const Text('Restore Backup'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _createBackup(BuildContext context) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    try {
+      // Show loading indicator is tricky without context if dialog closed.
+      // Ideally we show a non-dismissible dialog or use a global loading overlay.
+      // For simplicity, we just show a starting snackbar.
+      scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Creating backup...')));
+
+      final backupService = BackupService();
+      await backupService.createBackup();
+
+      // Share sheet handles success notification mostly, but we can add one.
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Backup failed: $e')));
+    }
+  }
+
+  Future<void> _restoreBackup(BuildContext context) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    try {
+      final backupService = BackupService();
+      await backupService.restoreBackup();
+
+      // Notify user and potentially restart/reload
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Backup restored successfully! Please restart the app for changes to take full effect.'),
+          duration: Duration(seconds: 4),
+        ),
+      );
+
+      // Reload Theme immediately if possible
+      context.read<ThemeController>().loadSettings();
+      // AudioController reload might be needed too?
+      // Ideally a full app restart is best for clean state, but we can try hot-reload logic.
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Restore failed: $e')));
+    }
+  }
+
+  Future<void> _launchUrl(Uri url) async {
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      debugPrint('Could not launch $url');
     }
   }
 }
